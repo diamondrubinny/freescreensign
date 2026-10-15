@@ -1,0 +1,38 @@
+name: Bug report
+description: Something is not working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security vulnerabilities must not be reported here.** See SECURITY.md.
+        Please remove passwords, tokens, domains and personal data from logs before posting.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+  - type: input
+    id: version
+    attributes:
+      label: Rubinny version / commit
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [Server/API, CMS, Player, Deployment, Docs, Other]
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment (OS, browser, player hardware)

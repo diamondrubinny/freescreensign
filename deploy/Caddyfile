@@ -1,0 +1,34 @@
+# Rubinny reverse proxy: automatic HTTPS, security headers, routing.
+{$RUBINNY_DOMAIN:localhost} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE:31536000}; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+		-Via
+	}
+
+	# Readiness exposes dependency status; keep it on the internal network only.
+	@internal path /health/ready /health/ready/*
+	handle @internal {
+		respond 404
+	}
+
+	@api path /api/* /player/* /health
+	handle @api {
+		reverse_proxy server:3000 {
+			header_down -Server
+		}
+	}
+
+	# The CMS web app will be served here from Phase 2.
+	handle {
+		header Content-Type "text/plain; charset=utf-8"
+		header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		respond "Rubinny is running. The management dashboard arrives in Phase 2." 200
+	}
+}

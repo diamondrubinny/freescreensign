@@ -1,0 +1,6 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Only allow install scripts from packages we explicitly trust.
+onlyBuiltDependencies: []

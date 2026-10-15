@@ -1,0 +1,128 @@
+# Rubinny — single-host deployment.
+#   cd deploy && ./generate-env.sh && docker compose up -d --build
+name: rubinny
+
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+services:
+  caddy:
+    <<: *hardening
+    image: caddy:2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      RUBINNY_DOMAIN: ${RUBINNY_DOMAIN:-localhost}
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-31536000}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    depends_on:
+      server:
+        condition: service_healthy
+    networks: [edge]
+
+  server:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    image: rubinny/server:local
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PUBLIC_URL: https://${RUBINNY_DOMAIN:-localhost}
+      DATABASE_URL: postgres://${POSTGRES_USER:-rubinny}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-rubinny}
+      REDIS_URL: redis://valkey:6379
+      # Only private (Docker network) addresses may set X-Forwarded-* headers.
+      TRUST_PROXY: uniquelocal
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    networks: [edge, backend]
+
+  postgres:
+    <<: *hardening
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rubinny}
+      POSTGRES_DB: ${POSTGRES_DB:-rubinny}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  valkey:
+    <<: *hardening
+    image: valkey/valkey:8-alpine
+    command: ['valkey-server', '--appendonly', 'yes', '--save', '60', '1000']
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  storage:
+    <<: *hardening
+    image: chrislusf/seaweedfs:4.48
+    entrypoint: ['/bin/sh', '/rubinny/entrypoint.sh']
+    environment:
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}
+    volumes:
+      - ./seaweedfs/entrypoint.sh:/rubinny/entrypoint.sh:ro
+      - storage-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:9333/cluster/status']
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  # Malware scanning for uploads (used from Phase 3). Needs ~1.5–2 GB RAM and
+  # outbound access to download signature updates (freshclam).
+  clamav:
+    <<: *hardening
+    image: clamav/clamav:stable
+    volumes:
+      - clamav-data:/var/lib/clamav
+    networks: [backend, egress]
+
+networks:
+  edge: {}
+  # No outbound internet access for databases and storage.
+  backend:
+    internal: true
+  egress: {}
+
+volumes:
+  caddy-data: {}
+  caddy-config: {}
+  postgres-data: {}
+  valkey-data: {}
+  storage-data: {}
+  clamav-data: {}
