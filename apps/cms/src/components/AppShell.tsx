@@ -27,13 +27,14 @@ import { Footer } from './Footer';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { SkipLink } from './SkipLink';
 
-// The active state switches instantly: animating into it showed white text on a pale
-// background for a moment (a contrast failure caught by axe). Only hover is animated.
+// No color transitions: when the active link changes, animating text and background
+// at once passes through low-contrast mixes (white or gray text on a half-faded
+// background), which axe caught on CI. Colors switch instantly.
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 rounded-lg px-3 py-2 font-medium ${
     isActive
       ? 'bg-brand-700 text-white shadow-sm dark:bg-brand-600'
-      : 'text-gray-800 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
+      : 'text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
   }`;
 
 function NavItem({

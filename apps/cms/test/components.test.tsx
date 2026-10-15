@@ -1,6 +1,9 @@
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { Button } from '../src/components/Button';
 import { Field } from '../src/components/Field';
 import { LanguageSwitcher } from '../src/components/LanguageSwitcher';
 import { AccessibilityMenu } from '../src/components/AccessibilityMenu';
@@ -55,5 +58,16 @@ describe('AccessibilityMenu', () => {
     await user.click(toggle);
     await user.click(screen.getByRole('button', { name: 'איפוס התאמות' }));
     expect(document.documentElement.classList.contains('a11y-contrast')).toBe(false);
+  });
+});
+
+describe('color transitions', () => {
+  // Fading between states mixes text and background colors with too little contrast
+  // (axe found it on CI): a button that becomes enabled, or the active navigation item.
+  it('are not used on buttons or navigation links', () => {
+    render(<Button disabled>Save</Button>);
+    expect(screen.getByRole('button', { name: 'Save' }).className).not.toMatch(/transition/);
+    const shell = readFileSync(resolve(process.cwd(), 'src/components/AppShell.tsx'), 'utf8');
+    expect(shell).not.toMatch(/transition-(colors|all)/);
   });
 });

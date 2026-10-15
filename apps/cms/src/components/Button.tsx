@@ -25,10 +25,12 @@ export function Button({
   type = 'button',
   ...rest
 }: Props) {
+  // No color transition: a button that becomes enabled would otherwise fade from the pale
+  // disabled color under white text, failing contrast for a moment.
   const base =
     variant === 'link'
       ? 'inline p-0'
-      : 'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium transition-colors [&>svg]:size-4 [&>svg]:shrink-0';
+      : 'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium [&>svg]:size-4 [&>svg]:shrink-0';
   return (
     <button
       type={type}
