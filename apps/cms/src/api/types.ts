@@ -96,6 +96,9 @@ export interface ScreenItem {
   name: string;
   playlistId: string | null;
   playlistName: string | null;
+  /** When set, the layout replaces the playlist. */
+  layoutId: string | null;
+  layoutName: string | null;
   orientation: Orientation;
   online: boolean;
   lastSeenAt: string | null;
@@ -111,15 +114,25 @@ export interface PlaylistSummary {
   updatedAt: string;
 }
 
-export interface PlaylistEntry {
-  mediaId: string;
-  name: string;
-  kind: 'image' | 'video';
-  status: string;
-  durationMs: number | null;
-  effectiveDurationMs: number;
-  thumbnailUrl: string | null;
-}
+export type PlaylistEntry =
+  | {
+      kind: 'media';
+      mediaId: string;
+      name: string;
+      mediaKind: 'image' | 'video';
+      status: string | null;
+      durationMs: number | null;
+      effectiveDurationMs: number;
+      thumbnailUrl: string | null;
+    }
+  | {
+      kind: 'widget';
+      widgetId: string;
+      widgetType: string;
+      name: string;
+      durationMs: number | null;
+      effectiveDurationMs: number;
+    };
 
 export interface PlaylistDetail {
   id: string;
@@ -127,4 +140,59 @@ export interface PlaylistDetail {
   updatedAt: string;
   screens: { id: string; name: string }[];
   items: PlaylistEntry[];
+}
+
+export interface WidgetItem {
+  id: string;
+  type: string;
+  name: string;
+  config: Record<string, unknown>;
+  /** Number of playlists using the widget. */
+  usage: number;
+  updatedAt: string;
+}
+
+export interface WidgetTypes {
+  types: { type: string; available: boolean; serverData: boolean }[];
+  weather: { enabled: boolean; attribution: string };
+}
+
+export interface WidgetData {
+  type: 'rss' | 'weather';
+  data: unknown;
+  fetchedAt: string;
+  stale: boolean;
+}
+
+export interface LayoutSummary {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  zoneCount: number;
+  screenCount: number;
+  updatedAt: string;
+}
+
+export interface LayoutZone {
+  id?: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: number;
+  playlistId: string | null;
+  playlistName?: string | null;
+}
+
+export interface LayoutDetail {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  background: string;
+  updatedAt: string;
+  screens: { id: string; name: string }[];
+  zones: LayoutZone[];
 }

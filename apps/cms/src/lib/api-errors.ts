@@ -9,6 +9,9 @@ const REASON_KEYS = [
   'too_common',
   'contains_email',
   'unsupported_type',
+  'out_of_bounds',
+  'own_origin',
+  'unavailable',
 ] as const;
 type ReasonKey = (typeof REASON_KEYS)[number];
 

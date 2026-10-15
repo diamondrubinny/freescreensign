@@ -235,6 +235,108 @@ test('a screen pairs with a code, plays a playlist and updates live', async ({ p
   await device.close();
 });
 
+test('a layout shows a clock and a ticker side by side on a screen', async ({ page, browser }) => {
+  const cmsCspViolations: string[] = [];
+  page.on('console', (message) => {
+    if (/Content Security Policy/i.test(message.text())) cmsCspViolations.push(message.text());
+  });
+  await signIn(page, ADMIN, true);
+
+  // Widgets.
+  await page.getByRole('link', { name: 'Widgets' }).click();
+  await expectAccessible(page, 'widgets');
+  await page.getByRole('link', { name: 'בחירה שעון ותאריך' }).click();
+  await page.getByLabel('שם ה-Widget').fill('שעון');
+  await page.getByRole('button', { name: 'Widget חדש' }).click();
+  await expect(page.getByText('ה-Widget נשמר והמסכים עודכנו.')).toBeVisible();
+  await expectAccessible(page, 'widget editor (clock)');
+
+  await page.getByRole('link', { name: 'חזרה לרשימת ה-Widgets' }).click();
+  await page.getByRole('link', { name: 'בחירה טקסט רץ' }).click();
+  await page.getByLabel('שם ה-Widget').fill('הודעות');
+  await page.getByLabel(/^טקסט/).fill('ברוכים הבאים לבית הספר');
+  await page.getByRole('button', { name: 'Widget חדש' }).click();
+  await expect(page.getByText('ה-Widget נשמר והמסכים עודכנו.')).toBeVisible();
+
+  // One playlist per zone.
+  for (const [playlist, widget] of [
+    ['שעון', 'שעון'],
+    ['פס הודעות', 'הודעות'],
+  ] as const) {
+    await page.getByRole('link', { name: 'פלייליסטים' }).click();
+    await page.getByLabel('שם הפלייליסט').fill(playlist);
+    await page.getByRole('button', { name: 'פלייליסט חדש' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: new RegExp(playlist) })).toBeVisible();
+    await page
+      .getByRole('region', { name: 'הוספת Widget' })
+      .getByRole('button', { name: `הוספה ${widget}` })
+      .click();
+    await page.getByRole('button', { name: 'שמירת הפלייליסט' }).click();
+    await expect(page.getByText('הפלייליסט נשמר והמסכים עודכנו.')).toBeVisible();
+  }
+
+  // Layout "main + ticker".
+  await page.getByRole('link', { name: 'תבניות תצוגה' }).click();
+  await expectAccessible(page, 'layouts');
+  await page.getByLabel('שם התבנית').fill('לובי ראשי');
+  await page.getByRole('button', { name: 'תבנית חדשה' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: /עריכת תבנית: לובי ראשי/ }),
+  ).toBeVisible();
+  await page
+    .getByRole('group', { name: /אזור 1/ })
+    .getByLabel('פלייליסט')
+    .selectOption({ label: 'שעון' });
+  await page
+    .getByRole('group', { name: /אזור 2/ })
+    .getByLabel('פלייליסט')
+    .selectOption({ label: 'פס הודעות' });
+  await page.getByRole('button', { name: 'שמירת התבנית' }).click();
+  await expect(page.getByText('התבנית נשמרה והמסכים עודכנו.')).toBeVisible();
+  await expectAccessible(page, 'layout editor');
+
+  // Pair a screen and assign the layout.
+  const device = await browser.newContext({ ignoreHTTPSErrors: true });
+  const player = await device.newPage();
+  // Widgets must work under the player's strict Content Security Policy.
+  const cspViolations: string[] = [];
+  player.on('console', (message) => {
+    if (/Content Security Policy/i.test(message.text())) cspViolations.push(message.text());
+  });
+  await player.goto('/player/');
+  const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
+  await page.getByRole('link', { name: 'מסכים' }).click();
+  const addForm = page.getByRole('form', { name: 'הוספת מסך' });
+  await addForm.getByLabel('קוד חיבור').fill(code ?? '');
+  await addForm.getByLabel('שם מלא').fill('מסך לובי');
+  await addForm.getByRole('button', { name: 'הוספת מסך' }).click();
+  await expect(page.getByText('המסך חובר בהצלחה.')).toBeVisible();
+  await page.getByRole('button', { name: 'עריכה מסך לובי' }).click();
+  const dialog = page.getByRole('dialog', { name: 'עריכת מסך' });
+  await dialog.getByLabel('תבנית תצוגה').selectOption({ label: 'לובי ראשי' });
+  await expectAccessible(page, 'screen edit dialog');
+  await dialog.getByRole('button', { name: 'שמירה' }).click();
+  await expect(page.getByRole('row', { name: /מסך לובי/ })).toContainText('תבנית: לובי ראשי');
+
+  // Both zones play at once: the clock (with the Hebrew date) and the RTL ticker.
+  await expect(player.locator('.w-clock-time')).toHaveText(/^\d{2}:\d{2}$/, { timeout: 20_000 });
+  await expect(player.locator('.w-clock-hebrew')).toHaveText(/^[\u05D0-\u05EA׳״ ]+$/);
+  const ticker = player.locator('.w-ticker');
+  await expect(ticker).toHaveAttribute('dir', 'rtl');
+  await expect(ticker).toContainText('ברוכים הבאים לבית הספר');
+  const zones = await player.locator('.zone').evaluateAll((elements) =>
+    elements.map((el) => {
+      const rect = el.getBoundingClientRect();
+      return { top: Math.round(rect.top), height: Math.round(rect.height) };
+    }),
+  );
+  expect(zones).toHaveLength(2);
+  expect(zones[1]!.top).toBeGreaterThan(zones[0]!.top);
+  expect(cspViolations).toEqual([]);
+  expect(cmsCspViolations).toEqual([]);
+  await device.close();
+});
+
 test('admin invites a teacher (mail disabled: link shown to admin)', async ({ page }) => {
   await signIn(page, ADMIN, true);
   await page.getByRole('link', { name: 'חברים' }).click();

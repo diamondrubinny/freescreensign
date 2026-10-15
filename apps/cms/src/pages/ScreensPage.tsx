@@ -5,7 +5,7 @@ import { useParams } from 'react-router';
 import { hasRole } from '@rubinny/shared';
 import { del, get, patch, post } from '../api/client';
 import { useSession } from '../api/session';
-import type { Orientation, PlaylistSummary, ScreenItem } from '../api/types';
+import type { LayoutSummary, Orientation, PlaylistSummary, ScreenItem } from '../api/types';
 import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { ConfirmDialog, Dialog } from '../components/Dialog';
@@ -23,31 +23,44 @@ const ORIENTATIONS: Orientation[] = [
   'portrait-flipped',
 ];
 
-function PlaylistSelect({
+function ContentSelect({
   id,
-  playlists,
+  name,
+  label,
+  emptyLabel,
+  hint,
+  options,
   defaultValue,
 }: {
   id: string;
-  playlists: PlaylistSummary[];
+  name: string;
+  label: string;
+  emptyLabel: string;
+  hint?: string;
+  options: { id: string; name: string }[];
   defaultValue: string | null;
 }) {
-  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="font-medium">
-        {t('screens.playlist')}
+        {label}
       </label>
+      {hint && (
+        <p id={`${id}-hint`} className="text-sm text-gray-700 dark:text-gray-300">
+          {hint}
+        </p>
+      )}
       <select
         id={id}
-        name="playlistId"
+        name={name}
         defaultValue={defaultValue ?? ''}
+        aria-describedby={hint ? `${id}-hint` : undefined}
         className="rounded-md border border-gray-500 bg-white px-3 py-2 dark:bg-gray-900"
       >
-        <option value="">{t('screens.noPlaylist')}</option>
-        {playlists.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
+        <option value="">{emptyLabel}</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
           </option>
         ))}
       </select>
@@ -73,6 +86,10 @@ export function ScreensPage() {
     queryKey: ['playlists', orgId],
     queryFn: () => get<{ playlists: PlaylistSummary[] }>(`/api/v1/orgs/${orgId}/playlists`),
   });
+  const layouts = useQuery({
+    queryKey: ['layouts', orgId],
+    queryFn: () => get<{ layouts: LayoutSummary[] }>(`/api/v1/orgs/${orgId}/layouts`),
+  });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['screens', orgId] });
 
   const add = useMutation({
@@ -89,6 +106,7 @@ export function ScreensPage() {
       id: string;
       name: string;
       playlistId: string | null;
+      layoutId: string | null;
       orientation: Orientation;
     }) => patch(`/api/v1/orgs/${orgId}/screens/${id}`, body),
     onSuccess: async () => {
@@ -154,9 +172,12 @@ export function ScreensPage() {
               error={addErrors.fields.code}
             />
             <Field label={t('fields.name')} name="name" required error={addErrors.fields.name} />
-            <PlaylistSelect
+            <ContentSelect
               id="add-screen-playlist"
-              playlists={playlists.data?.playlists ?? []}
+              name="playlistId"
+              label={t('screens.playlist')}
+              emptyLabel={t('screens.noPlaylist')}
+              options={playlists.data?.playlists ?? []}
               defaultValue={null}
             />
             <Button type="submit" loading={add.isPending}>
@@ -182,7 +203,7 @@ export function ScreensPage() {
                   {t('screens.status')}
                 </th>
                 <th scope="col" className="p-2 text-start">
-                  {t('screens.playlist')}
+                  {t('screens.content')}
                 </th>
                 <th scope="col" className="p-2 text-start">
                   {t('screens.resolution')}
@@ -219,7 +240,11 @@ export function ScreensPage() {
                       </span>
                     )}
                   </td>
-                  <td className="p-2">{screen.playlistName ?? t('screens.noPlaylist')}</td>
+                  <td className="p-2" dir="auto">
+                    {screen.layoutName
+                      ? t('screens.layoutContent', { name: screen.layoutName })
+                      : (screen.playlistName ?? t('screens.noPlaylist'))}
+                  </td>
                   <td className="p-2" dir="ltr">
                     {screen.resolution ?? '—'}
                   </td>
@@ -288,6 +313,7 @@ export function ScreensPage() {
                 id: editing.id,
                 name: value(data, 'name'),
                 playlistId: value(data, 'playlistId') || null,
+                layoutId: value(data, 'layoutId') || null,
                 orientation: value(data, 'orientation') as Orientation,
               });
             }}
@@ -299,9 +325,21 @@ export function ScreensPage() {
               defaultValue={editing.name}
               error={editErrors.fields.name}
             />
-            <PlaylistSelect
+            <ContentSelect
+              id="edit-screen-layout"
+              name="layoutId"
+              label={t('screens.layout')}
+              emptyLabel={t('screens.noLayout')}
+              hint={t('screens.layoutHint')}
+              options={layouts.data?.layouts ?? []}
+              defaultValue={editing.layoutId}
+            />
+            <ContentSelect
               id="edit-screen-playlist"
-              playlists={playlists.data?.playlists ?? []}
+              name="playlistId"
+              label={t('screens.playlist')}
+              emptyLabel={t('screens.noPlaylist')}
+              options={playlists.data?.playlists ?? []}
               defaultValue={editing.playlistId}
             />
             <div className="flex flex-col gap-1">

@@ -103,6 +103,16 @@ export function AppShell({ session }: { session: SessionInfo }) {
                     {t('media.nav')}
                   </NavLink>
                 </li>
+                <li>
+                  <NavLink to={`/orgs/${currentOrg.orgId}/layouts`} className={navClass}>
+                    {t('layouts.nav')}
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={`/orgs/${currentOrg.orgId}/widgets`} className={navClass}>
+                    {t('widgets.nav')}
+                  </NavLink>
+                </li>
               </>
             )}
             {currentOrg && isAdmin && (

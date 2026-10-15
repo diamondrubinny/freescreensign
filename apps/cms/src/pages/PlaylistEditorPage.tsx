@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { hasRole } from '@rubinny/shared';
 import { del, get, patch, put } from '../api/client';
 import { useSession } from '../api/session';
-import type { MediaItem, PlaylistDetail, PlaylistEntry } from '../api/types';
+import type { MediaItem, PlaylistDetail, PlaylistEntry, WidgetItem } from '../api/types';
 import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/Dialog';
@@ -17,6 +17,20 @@ import { formatDuration } from '../lib/format-bytes';
 import { useFormErrors } from '../lib/use-form-errors';
 
 const DEFAULT_IMAGE_MS = 10_000;
+const DEFAULT_WIDGET_MS = 15_000;
+
+/** Mirrors the server default: RSS widgets play one full rotation of their items. */
+function widgetDefaultMs(widget: WidgetItem): number {
+  if (widget.type === 'rss') {
+    const { maxItems, itemDurationMs } = widget.config;
+    if (typeof maxItems === 'number' && typeof itemDurationMs === 'number') {
+      return maxItems * itemDurationMs;
+    }
+  }
+  return DEFAULT_WIDGET_MS;
+}
+
+const itemId = (item: PlaylistEntry) => (item.kind === 'media' ? item.mediaId : item.widgetId);
 
 export function PlaylistEditorPage() {
   const { t } = useTranslation();
@@ -35,6 +49,11 @@ export function PlaylistEditorPage() {
   const library = useQuery({
     queryKey: ['media', orgId, 'ready-picker'],
     queryFn: () => get<{ media: MediaItem[] }>(`/api/v1/orgs/${orgId}/media`),
+    enabled: canEdit,
+  });
+  const widgets = useQuery({
+    queryKey: ['widgets', orgId],
+    queryFn: () => get<{ widgets: WidgetItem[] }>(`/api/v1/orgs/${orgId}/widgets`),
     enabled: canEdit,
   });
 
@@ -59,7 +78,11 @@ export function PlaylistEditorPage() {
   const save = useMutation({
     mutationFn: (list: PlaylistEntry[]) =>
       put<{ playlist: PlaylistDetail }>(`/api/v1/orgs/${orgId}/playlists/${playlistId}/items`, {
-        items: list.map((item) => ({ mediaId: item.mediaId, durationMs: item.durationMs })),
+        items: list.map((item) =>
+          item.kind === 'media'
+            ? { mediaId: item.mediaId, durationMs: item.durationMs }
+            : { widgetId: item.widgetId, durationMs: item.durationMs },
+        ),
       }),
     onSuccess: (data) => {
       queryClient.setQueryData(['playlist', orgId, playlistId], data);
@@ -145,14 +168,18 @@ export function PlaylistEditorPage() {
           <ol className="flex flex-col gap-2">
             {current.map((item, index) => (
               <li
-                key={`${item.mediaId}-${String(index)}`}
+                key={`${itemId(item)}-${String(index)}`}
                 className="flex flex-wrap items-center gap-3 rounded-md border border-gray-300 p-2 dark:border-gray-700"
               >
                 <span className="w-8 text-center font-semibold" aria-hidden="true">
                   {index + 1}
                 </span>
-                {item.thumbnailUrl ? (
+                {item.kind === 'media' && item.thumbnailUrl ? (
                   <img src={item.thumbnailUrl} alt="" className="h-12 w-20 rounded object-cover" />
+                ) : item.kind === 'widget' ? (
+                  <span className="flex h-12 w-20 items-center justify-center rounded bg-blue-100 px-1 text-center text-xs font-semibold text-blue-900 dark:bg-blue-950 dark:text-blue-100">
+                    {t(`widgets.types.${item.widgetType}`, { defaultValue: item.widgetType })}
+                  </span>
                 ) : (
                   <span className="h-12 w-20" />
                 )}
@@ -174,8 +201,9 @@ export function PlaylistEditorPage() {
                         inputMode="numeric"
                         placeholder={String(
                           Math.round(
-                            (item.kind === 'image' ? DEFAULT_IMAGE_MS : item.effectiveDurationMs) /
-                              1000,
+                            (item.kind === 'media' && item.mediaKind === 'image'
+                              ? DEFAULT_IMAGE_MS
+                              : item.effectiveDurationMs) / 1000,
                           ),
                         )}
                         value={item.durationMs === null ? '' : Math.round(item.durationMs / 1000)}
@@ -283,9 +311,10 @@ export function PlaylistEditorPage() {
                     edit([
                       ...current,
                       {
+                        kind: 'media',
                         mediaId: m.id,
                         name: m.name,
-                        kind: m.kind,
+                        mediaKind: m.kind,
                         status: m.status,
                         durationMs: null,
                         effectiveDurationMs:
@@ -297,6 +326,59 @@ export function PlaylistEditorPage() {
                 >
                   {t('playlists.add')}
                   <span className="sr-only"> {m.name}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {canEdit && (
+        <section aria-labelledby="widget-picker-heading" className="mb-8">
+          <h2 id="widget-picker-heading" className="mb-3 text-xl font-semibold">
+            {t('playlists.addWidget')}
+          </h2>
+          {widgets.isSuccess && widgets.data.widgets.length === 0 && (
+            <p>
+              {t('playlists.noWidgets')}{' '}
+              <Link
+                to={`/orgs/${orgId}/widgets`}
+                className="text-blue-700 underline dark:text-blue-300"
+              >
+                {t('playlists.createWidget')}
+              </Link>
+            </p>
+          )}
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {widgets.data?.widgets.map((w) => (
+              <li
+                key={w.id}
+                className="flex flex-col gap-2 rounded-md border border-gray-300 p-2 dark:border-gray-700"
+              >
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  {t(`widgets.types.${w.type}`, { defaultValue: w.type })}
+                </span>
+                <span className="text-sm font-medium break-words" dir="auto">
+                  {w.name}
+                </span>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    edit([
+                      ...current,
+                      {
+                        kind: 'widget',
+                        widgetId: w.id,
+                        widgetType: w.type,
+                        name: w.name,
+                        durationMs: null,
+                        effectiveDurationMs: widgetDefaultMs(w),
+                      },
+                    ]);
+                  }}
+                >
+                  {t('playlists.add')}
+                  <span className="sr-only"> {w.name}</span>
                 </Button>
               </li>
             ))}

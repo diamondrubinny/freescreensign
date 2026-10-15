@@ -7,7 +7,7 @@ Linux, Android / Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-> **Status: early development (Phase 4 of 9 complete: secure media library, playlists, screen pairing and an offline-first web player).** Not ready for production yet.
+> **Status: early development (Phase 5 of 9 complete: secure media library, playlists, screen pairing, an offline-first web player, layouts with zones and built-in widgets).** Not ready for production yet.
 
 ## Quick start (Docker)
 
@@ -32,16 +32,19 @@ certificate, and set `HSTS_MAX_AGE=31536000` in production.
 
 ## Repository layout
 
-| Path              | What                                                                                                  | License  |
-| ----------------- | ----------------------------------------------------------------------------------------------------- | -------- |
-| `apps/server`     | API server + media worker (Fastify, PostgreSQL, Valkey/BullMQ, sharp, ffmpeg)                         | AGPL-3.0 |
-| `apps/cms`        | Management dashboard (React, RTL-first, WCAG 2.1 AA target)                                           | AGPL-3.0 |
-| `apps/player`     | Offline-first web player (PWA) served at `/player/`: pairing, verified media cache, WebSocket updates | AGPL-3.0 |
-| `packages/shared` | Shared schemas: player manifest, pairing codes, roles, locales                                        | MIT      |
-| `deploy/`         | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV                                     | AGPL-3.0 |
-| `docs/`           | Specification, phase plans                                                                            | —        |
+| Path                  | What                                                                                                  | License  |
+| --------------------- | ----------------------------------------------------------------------------------------------------- | -------- |
+| `apps/server`         | API server + media worker (Fastify, PostgreSQL, Valkey/BullMQ, sharp, ffmpeg)                         | AGPL-3.0 |
+| `apps/cms`            | Management dashboard (React, RTL-first, WCAG 2.1 AA target)                                           | AGPL-3.0 |
+| `apps/player`         | Offline-first web player (PWA) served at `/player/`: pairing, verified media cache, WebSocket updates | AGPL-3.0 |
+| `packages/shared`     | Shared schemas: player manifest, layouts, widget settings, pairing codes, roles, Hebrew dates         | MIT      |
+| `packages/widget-sdk` | SDK for community widgets (the built-in widgets use it too)                                           | MIT      |
+| `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV                                     | AGPL-3.0 |
+| `docs/`               | Specification, phase plans                                                                            | —        |
 
-Coming next: layouts with zones, widgets and `packages/widget-sdk`, scheduling, and player wrappers for each platform.
+Built-in widgets: clock with Hebrew date, text, ticker, QR code, RSS, weather (opt-in, see `deploy/.env.example`) and web page.
+
+Coming next: scheduling, operations (proof of play, alerts) and player wrappers for each platform.
 
 ## Development
 

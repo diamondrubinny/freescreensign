@@ -12,7 +12,15 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "passThroughEnv": [
+        "RUBINNY_*",
+        "DATABASE_URL",
+        "REDIS_URL",
+        "S3_*",
+        "CLAMAV_*",
+        "TEST_WORKER_LOGS"
+      ]
     },
     "dev": {
       "dependsOn": ["^build"],
