@@ -1,6 +1,6 @@
 # Rubinny — תוכנית אפיון וארכיטקטורה (שלב 0)
 
-> **סטטוס:** אפיון אושר (2026-10-15). שלב 1 (Foundation) ✅ · שלב 2a (Auth & Orgs, שרת) ✅ — ראו [`phases/`](phases/).
+> **סטטוס:** אפיון אושר (2026-10-15). שלב 1 (Foundation) ✅ · שלב 2 (Auth & Orgs: שרת + CMS) ✅ — ראו [`phases/`](phases/).
 > **מטרה:** מערכת שילוט דיגיטלי (Digital Signage) בקוד פתוח, חינמית, ניתנת לאירוח עצמי (Self-Hosted), בעלת יכולות ברמה של מערכות מסחריות כמו NoviSign, Yodeck ו-ScreenCloud — עם תמיכה מלאה בעברית ו-RTL מהיום הראשון.
 
 ---
@@ -469,20 +469,20 @@ rubinny/
 
 ## 15. תוכנית עבודה בשלבים
 
-| שלב                         | תוצר                                                                                                                                            | הערות               |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| **0**                       | אפיון (מסמך זה) + החלטות רישיון                                                                                                                 | ✅                  |
-| **1 — Foundation**          | Monorepo, CI (lint/typecheck/test/CodeQL), Docker Compose (Postgres, Valkey, SeaweedFS, ClamAV, Caddy), README, CONTRIBUTING, SECURITY, LICENSE | ✅                  |
-| **2 — Auth & Orgs**         | הרשמה/התחברות/איפוס/אימות אימייל/MFA, ארגונים, תפקידים, Audit, Rate limit                                                                       | בדיקות חוצות-Tenant |
-| **3 — Media**               | Presigned upload, Quarantine, ClamAV, Thumbnails, ספריית מדיה ב-CMS                                                                             |                     |
-| **4 — Player Core**         | Pairing, Manifest spec, Offline cache, ניגון תמונה/וידאו מסך מלא, Heartbeat, WS                                                                 | נקודת "Demo" ראשונה |
-| **5 — Content**             | Playlists, Layouts+Zones Designer, Widgets מובנים + Widget SDK                                                                                  |                     |
-| **6 — Scheduling**          | מנוע תזמון (RRULE, עדיפויות, אזורי זמן), תצוגת Timeline                                                                                         |                     |
-| **7 — Ops**                 | Proof-of-Play, Uptime, צילום מסך, Reload מרחוק, התראות Offline במייל                                                                            |                     |
-| **8 — Wrappers**            | Raspberry Pi kiosk image, Electron, Android                                                                                                     |                     |
-| **9 — Hardening & Release** | PenTest פנימי, בדיקות נגישות, טיוטות משפטיות, תיעוד, v0.1.0                                                                                     | Checklist פרודקשן   |
-| **10 — Signage OS**         | Samsung Tizen, LG webOS                                                                                                                         | אחרי v0.1           |
-| **11+**                     | Roadmap D5                                                                                                                                      |                     |
+| שלב                         | תוצר                                                                                                                                            | הערות                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **0**                       | אפיון (מסמך זה) + החלטות רישיון                                                                                                                 | ✅                                 |
+| **1 — Foundation**          | Monorepo, CI (lint/typecheck/test/CodeQL), Docker Compose (Postgres, Valkey, SeaweedFS, ClamAV, Caddy), README, CONTRIBUTING, SECURITY, LICENSE | ✅                                 |
+| **2 — Auth & Orgs**         | הרשמה/התחברות/איפוס/אימות אימייל/MFA, ארגונים, תפקידים, Audit, Rate limit                                                                       | ✅ שרת + CMS · בדיקות חוצות-Tenant |
+| **3 — Media**               | Presigned upload, Quarantine, ClamAV, Thumbnails, ספריית מדיה ב-CMS                                                                             |                                    |
+| **4 — Player Core**         | Pairing, Manifest spec, Offline cache, ניגון תמונה/וידאו מסך מלא, Heartbeat, WS                                                                 | נקודת "Demo" ראשונה                |
+| **5 — Content**             | Playlists, Layouts+Zones Designer, Widgets מובנים + Widget SDK                                                                                  |                                    |
+| **6 — Scheduling**          | מנוע תזמון (RRULE, עדיפויות, אזורי זמן), תצוגת Timeline                                                                                         |                                    |
+| **7 — Ops**                 | Proof-of-Play, Uptime, צילום מסך, Reload מרחוק, התראות Offline במייל                                                                            |                                    |
+| **8 — Wrappers**            | Raspberry Pi kiosk image, Electron, Android                                                                                                     |                                    |
+| **9 — Hardening & Release** | PenTest פנימי, בדיקות נגישות, טיוטות משפטיות, תיעוד, v0.1.0                                                                                     | Checklist פרודקשן                  |
+| **10 — Signage OS**         | Samsung Tizen, LG webOS                                                                                                                         | אחרי v0.1                          |
+| **11+**                     | Roadmap D5                                                                                                                                      |                                    |
 
 ---
 
@@ -499,4 +499,4 @@ rubinny/
 
 ## 17. הצעד הבא המומלץ
 
-**שלב 2b — CMS:** שלד React עם RTL ונגישות, ומסכי Setup, התחברות, MFA וניהול חברים מעל ה-API של 2a.
+**שלב 3 — Media:** העלאה מאובטחת (presigned → quarantine → ClamAV → עיבוד ב-sandbox), ספריית מדיה ב-CMS. תוכנית מפורטת ב-`docs/phases/03-media.md` לפני תחילת הפיתוח.

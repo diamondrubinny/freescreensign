@@ -29,6 +29,15 @@ import { findValidInvitation, acceptInvitation } from '../orgs/invitations.js';
 
 const asLocale = (value: string): Locale => (value === 'en' ? 'en' : 'he');
 
+/**
+ * Email verification can only be enforced when the server can send email. With
+ * mail disabled, administrators hand out invitation links personally, and
+ * addresses stay marked as unverified (email_verified_at = null).
+ */
+export function verificationEnforced(ctx: AppContext): boolean {
+  return ctx.env.REQUIRE_EMAIL_VERIFICATION && ctx.mailer.delivers;
+}
+
 export async function listMemberships(ctx: AppContext, userId: string) {
   const rows = await ctx.db
     .selectFrom('memberships')
@@ -128,7 +137,8 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
       return reply.status(202).send({ status: 'verification_required' });
     }
 
-    const verified = invitation?.delivered_by_email === true || !ctx.env.REQUIRE_EMAIL_VERIFICATION;
+    const verified = invitation?.delivered_by_email === true;
+    const canSignIn = verified || !verificationEnforced(ctx);
     const passwordHash = await hashPassword(body.password);
 
     const user = await ctx.db.transaction().execute(async (trx) => {
@@ -139,7 +149,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
           name: body.name,
           password_hash: passwordHash,
           locale,
-          email_verified_at: verified ? new Date() : null,
+          email_verified_at: verified || !ctx.env.REQUIRE_EMAIL_VERIFICATION ? new Date() : null,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -169,7 +179,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
       ipHmac: ipKey(request),
     });
 
-    if (!verified) {
+    if (!canSignIn) {
       const token = await issueToken(ctx, user.id, 'verify_email');
       await ctx.mailer.send(user.email, locale, {
         kind: 'verify-email',
@@ -232,7 +242,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
     }
     await ctx.limiter.reset(LIMITS.loginEmail, emailKey);
 
-    if (ctx.env.REQUIRE_EMAIL_VERIFICATION && !user.email_verified_at) {
+    if (verificationEnforced(ctx) && !user.email_verified_at) {
       throw new HttpError(403, 'EMAIL_NOT_VERIFIED', 'Please verify your email address first');
     }
 

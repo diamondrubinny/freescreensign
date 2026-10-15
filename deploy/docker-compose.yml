@@ -8,9 +8,13 @@ x-hardening: &hardening
   restart: unless-stopped
 
 services:
-  caddy:
+  # Public entry point: Caddy with the CMS build (automatic HTTPS, security headers).
+  web:
     <<: *hardening
-    image: caddy:2-alpine
+    build:
+      context: ..
+      dockerfile: apps/cms/Dockerfile
+    image: rubinny/web:local
     ports:
       - '80:80'
       - '443:443'
@@ -19,7 +23,6 @@ services:
       RUBINNY_DOMAIN: ${RUBINNY_DOMAIN:-localhost}
       HSTS_MAX_AGE: ${HSTS_MAX_AGE:-31536000}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     cap_drop: [ALL]

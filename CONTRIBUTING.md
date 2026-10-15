@@ -40,6 +40,20 @@ cp apps/server/.env.example apps/server/.env
 pnpm --filter @rubinny/server dev        # migrations run automatically on start
 ```
 
+Run the management dashboard (CMS) with hot reload; it proxies `/api` to the server:
+
+```bash
+pnpm --filter @rubinny/cms dev          # http://localhost:5173
+```
+
+End-to-end and accessibility tests (Playwright + axe-core) run against the Docker stack
+and need an empty database:
+
+```bash
+cd deploy && ./generate-env.sh && ./e2e-reset.sh && cd ..
+E2E_SETUP_TOKEN=$(grep ^SETUP_TOKEN= deploy/.env | cut -d= -f2) pnpm e2e
+```
+
 Integration tests run against real services. Each test gets its own PostgreSQL
 schema, so they run in parallel without interfering:
 

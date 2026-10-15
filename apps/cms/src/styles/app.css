@@ -1,0 +1,96 @@
+@import 'tailwindcss';
+
+/* Base: system fonts (no third-party font requests), comfortable line height. */
+@layer base {
+  html {
+    font-family:
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      'Noto Sans Hebrew',
+      'Arial Hebrew',
+      Arial,
+      sans-serif;
+    line-height: 1.6;
+    color-scheme: light dark;
+  }
+  body {
+    @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+  }
+  /* Highly visible focus indicator for keyboard users (WCAG 2.4.7 / 2.4.11). */
+  :focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 2px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :focus-visible {
+      outline-color: #93c5fd;
+    }
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+/* Respect the OS "reduce motion" setting. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Accessibility menu options (classes set on <html> by a11y-prefs.ts) ---- */
+.a11y-stop-animations *,
+.a11y-stop-animations *::before,
+.a11y-stop-animations *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+.a11y-underline-links a {
+  text-decoration: underline !important;
+  text-decoration-thickness: 2px !important;
+}
+
+.a11y-readable-font,
+.a11y-readable-font * {
+  font-family: Arial, 'Arial Hebrew', Verdana, sans-serif !important;
+  letter-spacing: 0.03em;
+  word-spacing: 0.08em;
+}
+
+.a11y-contrast body,
+.a11y-contrast main,
+.a11y-contrast header,
+.a11y-contrast footer,
+.a11y-contrast nav,
+.a11y-contrast dialog,
+.a11y-contrast section,
+.a11y-contrast li,
+.a11y-contrast div {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
+}
+.a11y-contrast a,
+.a11y-contrast button,
+.a11y-contrast [role='status'],
+.a11y-contrast [role='alert'] {
+  color: #ffeb3b !important;
+}
+.a11y-contrast input,
+.a11y-contrast select {
+  background-color: #000 !important;
+  color: #fff !important;
+  border: 2px solid #fff !important;
+}
+.a11y-contrast button {
+  background-color: #000 !important;
+  border: 2px solid #ffeb3b !important;
+}

@@ -23,12 +23,22 @@ export const API_ERROR_CODES = [
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
 
+/** Field-level validation problem, e.g. { path: 'password', reason: 'too_short' }. */
+export const apiFieldErrorSchema = z.object({
+  path: z.string(),
+  reason: z.string(),
+});
+
 export const apiErrorSchema = z.object({
   error: z.object({
     code: z.enum(API_ERROR_CODES),
     message: z.string(),
     requestId: z.string().optional(),
+    /** Present for VALIDATION_FAILED. */
+    fields: z.array(apiFieldErrorSchema).optional(),
   }),
 });
+
+export type ApiFieldError = z.infer<typeof apiFieldErrorSchema>;
 
 export type ApiError = z.infer<typeof apiErrorSchema>;

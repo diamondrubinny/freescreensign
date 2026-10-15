@@ -67,7 +67,14 @@ describe.runIf(integrationEnabled)('setup', () => {
   it('enforces the password policy', async () => {
     const res = await new Client(h.app).post('/api/v1/setup', { ...payload, password: 'short' });
     expect(res.statusCode).toBe(400);
-    expect(res.json()).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
+    expect(res.json()).toMatchObject({
+      error: { code: 'VALIDATION_FAILED', fields: [{ path: 'password', reason: 'too_short' }] },
+    });
+    const missing = await new Client(h.app).post('/api/v1/setup', {
+      ...payload,
+      email: 'not-an-email',
+    });
+    expect(missing.json()).toMatchObject({ error: { fields: [{ path: 'email' }] } });
   });
 });
 

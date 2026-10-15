@@ -231,6 +231,39 @@ describe.runIf(integrationEnabled)('organizations, roles and tenant isolation', 
     });
   });
 
+  it('lets invitees sign in when outgoing mail is disabled (no verification possible)', async () => {
+    await h.close();
+    h = await createHarness({ MAIL_TRANSPORT: 'disabled' });
+    Object.defineProperty(h.mailer, 'delivers', { value: false });
+    const org = await insertOrg(h.db, await insertUser(h.db, 'owner@example.com'), 'Org', false);
+    const admin = await login(h.app, 'owner@example.com');
+    const created = await admin.post(`/api/v1/orgs/${org}/invitations`, {
+      email: 'teacher@example.com',
+      role: 'EDITOR',
+    });
+    const url = created.json<{ inviteUrl: string }>().inviteUrl;
+    const token = new URL(url).hash.replace('#token=', '');
+
+    const reg = await new Client(h.app).post('/api/v1/auth/register', {
+      email: 'teacher@example.com',
+      password: STRONG_PASSWORD,
+      name: 'Teacher',
+      inviteToken: token,
+    });
+    expect(reg.statusCode).toBe(201);
+    const teacher = await login(h.app, 'teacher@example.com');
+    expect((await teacher.get(`/api/v1/orgs/${org}`)).json()).toMatchObject({
+      org: { role: 'EDITOR' },
+    });
+    // The address is honestly recorded as unverified.
+    const row = await h.db
+      .selectFrom('users')
+      .select('email_verified_at')
+      .where('email', '=', 'teacher@example.com')
+      .executeTakeFirstOrThrow();
+    expect(row.email_verified_at).toBeNull();
+  });
+
   it('creates organizations up to the quota', async () => {
     await h.close();
     h = await createHarness({ MAX_ORGS_PER_USER: '2' });

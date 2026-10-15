@@ -5,6 +5,14 @@ import { HttpError } from './http-error.js';
 export function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T> {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
-  const fields = [...new Set(result.error.issues.map((issue) => issue.path.join('.') || '(body)'))];
-  throw new HttpError(400, 'VALIDATION_FAILED', `Invalid fields: ${fields.join(', ')}`);
+  const seen = new Set<string>();
+  const fields = result.error.issues
+    .map((issue) => ({ path: issue.path.join('.') || '(body)', reason: issue.code }))
+    .filter((field) => !seen.has(field.path) && seen.add(field.path));
+  throw new HttpError(
+    400,
+    'VALIDATION_FAILED',
+    `Invalid fields: ${fields.map((field) => field.path).join(', ')}`,
+    fields,
+  );
 }

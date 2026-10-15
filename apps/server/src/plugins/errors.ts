@@ -1,5 +1,5 @@
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { ApiError, ApiErrorCode } from '@rubinny/shared';
+import type { ApiError, ApiErrorCode, ApiFieldError } from '@rubinny/shared';
 import { HttpError } from '../lib/http-error.js';
 
 function send(
@@ -8,8 +8,11 @@ function send(
   statusCode: number,
   code: ApiErrorCode,
   message: string,
+  fields?: ApiFieldError[],
 ) {
-  const body: ApiError = { error: { code, message, requestId: request.id } };
+  const body: ApiError = {
+    error: { code, message, requestId: request.id, ...(fields ? { fields } : {}) },
+  };
   return reply.status(statusCode).send(body);
 }
 
@@ -34,7 +37,7 @@ export function registerErrorHandling(app: FastifyInstance) {
       const retryAfter = (error as HttpError & { retryAfter?: number }).retryAfter;
       if (retryAfter !== undefined) void reply.header('retry-after', String(retryAfter));
       if (error.statusCode >= 500) request.log.warn({ code: error.code }, 'service error');
-      return send(reply, request, error.statusCode, error.code, error.message);
+      return send(reply, request, error.statusCode, error.code, error.message, error.fields);
     }
 
     if ('validation' in error && Array.isArray(error.validation)) {

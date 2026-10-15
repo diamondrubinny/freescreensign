@@ -69,8 +69,51 @@ jobs:
           file: apps/server/Dockerfile
           push: false
           tags: rubinny/server:ci
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/cms/Dockerfile
+          push: false
+          tags: rubinny/web:ci
       - name: Validate docker compose file
         working-directory: deploy
         run: |
           cp .env.example .env
           docker compose config --quiet
+
+  e2e:
+    name: End-to-end and accessibility (Playwright + axe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [check]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @rubinny/cms exec playwright install --with-deps chromium
+      - name: Start the stack
+        working-directory: deploy
+        run: |
+          ./generate-env.sh
+          sed -i 's/^HSTS_MAX_AGE=.*/HSTS_MAX_AGE=0/' .env
+          docker compose up -d --build --wait server web
+      - name: Run Playwright
+        run: |
+          export E2E_SETUP_TOKEN="$(grep '^SETUP_TOKEN=' deploy/.env | cut -d= -f2)"
+          pnpm e2e
+      - name: Server logs
+        if: failure()
+        working-directory: deploy
+        run: docker compose logs server web
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-traces
+          path: apps/cms/test-results
+          retention-days: 7
