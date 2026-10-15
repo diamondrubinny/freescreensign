@@ -25,6 +25,7 @@ import { setupRoutes } from './modules/setup/routes.js';
 import { layoutRoutes } from './modules/layouts/routes.js';
 import { widgetRoutes } from './modules/widgets/routes.js';
 import { kitRoutes } from './modules/kits/routes.js';
+import { stockRoutes } from './modules/stock/routes.js';
 
 export interface BuildAppOptions {
   env: Env;
@@ -130,6 +131,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         throwFileSizeLimit: false,
       });
       mediaRoutes(app, ctx, ctx.media);
+      stockRoutes(app, ctx);
     }
   }
 

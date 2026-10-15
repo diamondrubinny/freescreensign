@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { designConfigSchema } from './design.js';
 
 /**
  * Built-in widget types and their configuration schemas. Shared by the server
@@ -108,6 +109,7 @@ export const WIDGET_CONFIG_SCHEMAS = {
   weather: weatherConfigSchema,
   webpage: webpageConfigSchema,
   countdown: countdownConfigSchema,
+  design: designConfigSchema,
 } as const;
 
 export type WidgetType = keyof typeof WIDGET_CONFIG_SCHEMAS;

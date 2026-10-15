@@ -125,6 +125,8 @@ export interface MediaTable {
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: NullableTimestamp;
+  source_url: Generated<string | null>;
+  attribution: Generated<string | null>;
 }
 
 export interface PlaylistsTable {

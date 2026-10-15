@@ -93,4 +93,6 @@ export const LIMITS = {
   screenClaimUser: { name: 'screen-claim-user', max: 30, windowSeconds: 3600 },
   /** Outbound widget fetches (cache misses only) per organization. */
   widgetFetchOrg: { name: 'widget-fetch-org', max: 120, windowSeconds: 3600 },
+  stockSearchUser: { name: 'stock-search-user', max: 120, windowSeconds: 3600 },
+  stockImportUser: { name: 'stock-import-user', max: 60, windowSeconds: 3600 },
 } as const satisfies Record<string, LimitRule>;

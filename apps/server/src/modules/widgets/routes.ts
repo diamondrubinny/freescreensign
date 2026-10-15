@@ -1,7 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { z } from 'zod';
-import { DATA_WIDGET_TYPES, WIDGET_TYPES, isWidgetType, parseWidgetConfig } from '@rubinny/shared';
+import {
+  DATA_WIDGET_TYPES,
+  WIDGET_TYPES,
+  designMediaIds,
+  isWidgetType,
+  parseWidgetConfig,
+  type DesignConfig,
+} from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import type { Widget } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
@@ -58,6 +65,37 @@ export function validateWidgetConfig(
     ]);
   }
   return result.config;
+}
+
+/**
+ * Designs may only use media of the same organization that is ready or still being
+ * checked (never blocked, failed or deleted files).
+ */
+export async function assertDesignMedia(
+  ctx: AppContext,
+  orgId: string,
+  type: string,
+  config: Record<string, unknown>,
+): Promise<void> {
+  if (type !== 'design') return;
+  const ids = designMediaIds(config as DesignConfig);
+  if (ids.length === 0) return;
+  const rows = await ctx.db
+    .selectFrom('media')
+    .select('id')
+    .where('id', 'in', ids)
+    .where('org_id', '=', orgId)
+    .where('deleted_at', 'is', null)
+    .where('status', 'not in', ['blocked', 'failed'])
+    .where('kind', '=', 'image')
+    .execute();
+  const valid = new Set(rows.map((row) => row.id));
+  const invalid = ids.filter((id) => !valid.has(id));
+  if (invalid.length > 0) {
+    throw new HttpError(400, 'VALIDATION_FAILED', 'Some images are not available', [
+      { path: 'config.elements', reason: 'invalid' },
+    ]);
+  }
 }
 
 export function isOwnOrigin(ctx: AppContext, url: string): boolean {
@@ -133,6 +171,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
       request.body,
     );
     const config = validateWidgetConfig(ctx, body.type, body.config);
+    await assertDesignMedia(ctx, org.id, body.type, config);
     await assertWidgetQuota(org.id);
     const widget = await ctx.db
       .insertInto('widgets')
@@ -178,6 +217,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     const current = await loadWidget(org.id, widgetId);
     const config =
       body.config !== undefined ? validateWidgetConfig(ctx, current.type, body.config) : undefined;
+    if (config) await assertDesignMedia(ctx, org.id, current.type, config);
     const widget = await ctx.db
       .updateTable('widgets')
       .set({

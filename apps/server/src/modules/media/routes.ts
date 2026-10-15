@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { z } from 'zod';
@@ -7,12 +6,15 @@ import type { Media } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
 import { LIMITS } from '../../lib/limiter.js';
-import { FileTooLargeError, HashingCounter, sniffStream } from '../../lib/sniff.js';
 import type { Storage } from '../../lib/storage.js';
 import { parse } from '../../lib/validation.js';
-import { displayName, sanitizeFilename } from '../../media/names.js';
+import {
+  assertQuota as sharedAssertQuota,
+  ingestMedia,
+  usedBytes as sharedUsedBytes,
+} from '../../media/ingest.js';
+import { sanitizeFilename } from '../../media/names.js';
 import { sendStoredFile } from '../../media/serve.js';
-import { ACCEPTED_TYPES } from '../../media/types.js';
 import type { MediaQueue } from '../../queue.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
@@ -39,6 +41,8 @@ export function mediaDto(row: Media, orgId: string) {
     durationMs: row.duration_ms,
     status: row.status,
     failureReason: row.failure_reason,
+    sourceUrl: row.source_url,
+    attribution: row.attribution,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
     ...(ready
@@ -77,24 +81,10 @@ export function mediaRoutes(
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
   const maxUpload = Math.max(ctx.env.MEDIA_MAX_IMAGE_BYTES, ctx.env.MEDIA_MAX_VIDEO_BYTES);
 
-  async function usedBytes(orgId: string, excludeId?: string): Promise<number> {
-    let query = ctx.db
-      .selectFrom('media')
-      .select(sql<string>`coalesce(sum(size_bytes), 0)`.as('total'))
-      .where('org_id', '=', orgId)
-      .where('deleted_at', 'is', null)
-      .where('status', 'not in', ['blocked', 'failed']);
-    if (excludeId) query = query.where('id', '!=', excludeId);
-    const row = await query.executeTakeFirstOrThrow();
-    return Number(row.total);
-  }
-
-  function assertQuota(used: number, adding: number) {
-    const quota = ctx.env.MEDIA_ORG_QUOTA_BYTES;
-    if (quota > 0 && used + adding > quota) {
-      throw new HttpError(403, 'QUOTA_EXCEEDED', 'Storage quota exceeded');
-    }
-  }
+  const usedBytes = (orgId: string) => sharedUsedBytes(ctx, orgId);
+  const assertQuota = (used: number, adding: number) => {
+    sharedAssertQuota(ctx, used, adding);
+  };
 
   async function loadMedia(orgId: string, mediaId: string): Promise<Media> {
     const row = await ctx.db
@@ -133,82 +123,12 @@ export function mediaRoutes(
         { path: 'file', reason: 'required' },
       ]);
     }
-
-    const { mime, stream } = await sniffStream(file.file);
-    const accepted = mime ? ACCEPTED_TYPES[mime] : undefined;
-    if (!mime || !accepted) {
-      stream.resume(); // drain the request
-      throw new HttpError(415, 'UNSUPPORTED_MEDIA_TYPE', 'This file type is not supported', [
-        { path: 'file', reason: 'unsupported_type' },
-      ]);
-    }
-
-    const limit =
-      accepted.kind === 'image' ? ctx.env.MEDIA_MAX_IMAGE_BYTES : ctx.env.MEDIA_MAX_VIDEO_BYTES;
-    const id = randomUUID();
-    const quarantineKey = `${org.id}/${id}`;
-    const originalFilename = sanitizeFilename(file.filename);
-    await ctx.db
-      .insertInto('media')
-      .values({
-        id,
-        org_id: org.id,
-        name: displayName(originalFilename),
-        original_filename: originalFilename,
-        kind: accepted.kind,
-        mime,
-        status: 'uploading',
-        quarantine_key: quarantineKey,
-        created_by: user.id,
-      })
-      .execute();
-
-    const counter = new HashingCounter(limit);
-    stream.on('error', (err) => counter.destroy(err));
-    const discard = async () => {
-      await storage.delete(storage.config.quarantineBucket, quarantineKey).catch(() => undefined);
-      await ctx.db.deleteFrom('media').where('id', '=', id).execute();
-    };
-
-    try {
-      await storage.put(
-        storage.config.quarantineBucket,
-        quarantineKey,
-        stream.pipe(counter),
-        'application/octet-stream',
-      );
-      if (file.file.truncated) throw new FileTooLargeError();
-      assertQuota(await usedBytes(org.id, id), counter.bytes);
-    } catch (error) {
-      stream.resume();
-      await discard();
-      if (error instanceof FileTooLargeError || counter.bytes > limit) {
-        throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'File is too large', [
-          { path: 'file', reason: 'too_large' },
-        ]);
-      }
-      throw error;
-    }
-
-    const row = await ctx.db
-      .updateTable('media')
-      .set({
-        status: 'queued',
-        size_bytes: counter.bytes,
-        sha256: counter.digest(),
-        updated_at: new Date(),
-      })
-      .where('id', '=', id)
-      .returningAll()
-      .executeTakeFirstOrThrow();
-    await queue.enqueue({ type: 'process', mediaId: id });
-    await audit(ctx.db, {
-      action: 'media.uploaded',
+    const row = await ingestMedia(ctx, media, {
       orgId: org.id,
-      actorUserId: user.id,
-      targetType: 'media',
-      targetId: id,
-      meta: { kind: accepted.kind, sizeBytes: counter.bytes },
+      userId: user.id,
+      filename: file.filename,
+      stream: file.file,
+      truncated: () => file.file.truncated,
     });
     return reply.status(202).send({ media: mediaDto(row, org.id) });
   });

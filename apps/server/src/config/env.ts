@@ -102,6 +102,12 @@ export const envSchema = z
     WEATHER_API_URL: z.url({ protocol: /^https?$/ }).optional(),
     /** API key for a commercial Open-Meteo plan (sent as the `apikey` query parameter). */
     WEATHER_API_KEY: z.string().min(1).optional(),
+    /**
+     * Free stock images (public-domain/CC0 only) from an Openverse-compatible API.
+     * Searches and downloads go through the server; browsers never contact it.
+     */
+    STOCK_IMAGES_ENABLED: booleanString.default(true),
+    STOCK_API_URL: z.url({ protocol: /^https?$/ }).default('https://api.openverse.org/v1'),
     /** Lets widget fetches reach private addresses. Tests only; refused in production. */
     WIDGET_FETCH_ALLOW_PRIVATE: booleanString.default(false),
 

@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import type { AppContext } from '../../context.js';
 
 async function publishAll(ctx: AppContext, screenIds: Iterable<string>): Promise<void> {
@@ -63,9 +64,19 @@ async function playlistsContaining(
   return rows.map((r) => r.playlist_id);
 }
 
-/** Screens affected by a media item (through any playlist that contains it). */
+/** Screens affected by a media item (in a playlist, or inside a design widget). */
 export async function notifyMediaScreens(ctx: AppContext, mediaId: string): Promise<void> {
-  await notifyPlaylistScreens(ctx, await playlistsContaining(ctx, 'media_id', mediaId));
+  const designs = await ctx.db
+    .selectFrom('widgets')
+    .select('id')
+    .where('type', '=', 'design')
+    .where(sql<boolean>`config::text LIKE ${`%${mediaId}%`}`)
+    .execute();
+  const viaDesigns = await Promise.all(designs.map((w) => widgetPlaylists(ctx, w.id)));
+  await notifyPlaylistScreens(ctx, [
+    ...(await playlistsContaining(ctx, 'media_id', mediaId)),
+    ...viaDesigns.flat(),
+  ]);
 }
 
 /** Screens affected by a widget. Call before deleting it (the items cascade away). */

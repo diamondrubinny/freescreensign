@@ -78,6 +78,7 @@ describe('parseWidgetConfig', () => {
       'weather',
       'webpage',
       'countdown',
+      'design',
     ]);
   });
 });

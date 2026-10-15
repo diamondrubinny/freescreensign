@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto';
-import { manifestV1Schema, parseWidgetConfig, type ManifestV1 } from '@rubinny/shared';
+import {
+  designMediaIds,
+  manifestV1Schema,
+  parseWidgetConfig,
+  type DesignConfig,
+  type ManifestV1,
+} from '@rubinny/shared';
 import type { Env } from '../../config/env.js';
 import type { Db } from '../../db/database.js';
 import type { Screen } from '../../db/schema.js';
@@ -202,6 +208,37 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
         ref: item.widget_id,
         durationMs: item.item_duration_ms ?? defaultWidgetDurationMs(type, parsed.config),
         transition: 'fade',
+      });
+    }
+  }
+
+  // Images used inside designs travel with the manifest like any other media.
+  const designMedia = [
+    ...new Set(
+      [...widgets.values()]
+        .filter((widget) => widget.type === 'design')
+        .flatMap((widget) => designMediaIds(widget.config as DesignConfig)),
+    ),
+  ].filter((id) => !media.has(id));
+  if (designMedia.length > 0) {
+    const rows = await db
+      .selectFrom('media')
+      .select(['id', 'mime', 'size_bytes', 'sha256', 'width', 'height'])
+      .where('id', 'in', designMedia)
+      .where('org_id', '=', screen.org_id)
+      .where('status', '=', 'ready')
+      .where('deleted_at', 'is', null)
+      .where('kind', '=', 'image')
+      .execute();
+    for (const row of rows) {
+      if (!row.sha256 || !(row.mime in ACCEPTED_TYPES)) continue;
+      media.set(row.id, {
+        id: row.id,
+        mime: row.mime as ManifestV1['media'][number]['mime'],
+        sizeBytes: Number(row.size_bytes),
+        sha256: row.sha256,
+        ...(row.width ? { width: row.width } : {}),
+        ...(row.height ? { height: row.height } : {}),
       });
     }
   }
