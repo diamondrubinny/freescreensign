@@ -31,6 +31,9 @@ const CLIENT_ERROR_CODES: Partial<Record<number, ApiErrorCode>> = {
 export function registerErrorHandling(app: FastifyInstance) {
   app.setErrorHandler((error: FastifyError | HttpError, request, reply) => {
     if (error instanceof HttpError) {
+      const retryAfter = (error as HttpError & { retryAfter?: number }).retryAfter;
+      if (retryAfter !== undefined) void reply.header('retry-after', String(retryAfter));
+      if (error.statusCode >= 500) request.log.warn({ code: error.code }, 'service error');
       return send(reply, request, error.statusCode, error.code, error.message);
     }
 

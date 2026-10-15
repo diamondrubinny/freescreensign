@@ -22,6 +22,7 @@ describe.runIf(enabled)('integration: real dependencies', () => {
       ...process.env,
       NODE_ENV: 'test',
       PUBLIC_URL: 'http://localhost:3000',
+      ENCRYPTION_KEY: Buffer.alloc(32).toString('base64'),
       RATE_LIMIT_MAX: '3',
     });
     pool = new pg.Pool({ connectionString: env.DATABASE_URL });

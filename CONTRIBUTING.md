@@ -36,10 +36,12 @@ Running the server locally needs PostgreSQL and Valkey/Redis:
 docker run -d --name rubinny-pg -e POSTGRES_PASSWORD=dev -e POSTGRES_USER=rubinny -p 5432:5432 postgres:17-alpine
 docker run -d --name rubinny-valkey -p 6379:6379 valkey/valkey:8-alpine
 cp apps/server/.env.example apps/server/.env
-pnpm --filter @rubinny/server dev
+# set ENCRYPTION_KEY in apps/server/.env:  openssl rand -base64 32
+pnpm --filter @rubinny/server dev        # migrations run automatically on start
 ```
 
-Integration tests run against real services:
+Integration tests run against real services. Each test gets its own PostgreSQL
+schema, so they run in parallel without interfering:
 
 ```bash
 RUBINNY_INTEGRATION=1 DATABASE_URL=postgres://rubinny:dev@localhost:5432/rubinny \

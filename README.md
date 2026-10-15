@@ -7,7 +7,7 @@ Linux, Android / Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-> **Status: early development (Phase 1 of 9 complete).** Not ready for production yet.
+> **Status: early development (Phase 2a of 9 complete: secure accounts & organizations API).** Not ready for production yet.
 
 ## Quick start (Docker)
 

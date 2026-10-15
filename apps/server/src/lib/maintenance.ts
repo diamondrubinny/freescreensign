@@ -1,0 +1,42 @@
+import type { Db } from '../db/database.js';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export interface MaintenanceResult {
+  sessions: number;
+  tokens: number;
+  invitations: number;
+  auditLogs: number;
+}
+
+/** Enforces retention: removes expired credentials and old audit entries. */
+export async function runMaintenance(
+  db: Db,
+  auditRetentionDays: number,
+): Promise<MaintenanceResult> {
+  const now = new Date();
+  const dayAgo = new Date(now.getTime() - DAY_MS);
+  const sessions = await db
+    .deleteFrom('sessions')
+    .where((eb) => eb.or([eb('expires_at', '<', now), eb('absolute_expires_at', '<', now)]))
+    .executeTakeFirst();
+  const tokens = await db
+    .deleteFrom('user_tokens')
+    .where((eb) => eb.or([eb('expires_at', '<', dayAgo), eb('used_at', '<', dayAgo)]))
+    .executeTakeFirst();
+  const invitations = await db
+    .deleteFrom('invitations')
+    .where('created_at', '<', new Date(now.getTime() - 30 * DAY_MS))
+    .where('accepted_at', 'is', null)
+    .executeTakeFirst();
+  const auditLogs = await db
+    .deleteFrom('audit_logs')
+    .where('created_at', '<', new Date(now.getTime() - auditRetentionDays * DAY_MS))
+    .executeTakeFirst();
+  return {
+    sessions: Number(sessions.numDeletedRows),
+    tokens: Number(tokens.numDeletedRows),
+    invitations: Number(invitations.numDeletedRows),
+    auditLogs: Number(auditLogs.numDeletedRows),
+  };
+}

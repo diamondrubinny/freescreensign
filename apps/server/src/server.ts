@@ -2,9 +2,15 @@ import pg from 'pg';
 import { Redis } from 'ioredis';
 import { buildApp } from './app.js';
 import { ConfigError, loadEnv } from './config/env.js';
+import { createDb, migrateToLatest } from './db/database.js';
+import { KeyRing } from './lib/crypto.js';
 import { postgresCheck, redisCheck } from './lib/health-checks.js';
+import { RedisLimiter } from './lib/limiter.js';
+import { createMailer } from './lib/mail/mailer.js';
+import { runMaintenance } from './lib/maintenance.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
+const MAINTENANCE_INTERVAL_MS = 60 * 60 * 1000;
 
 async function main() {
   const env = loadEnv();
@@ -16,10 +22,19 @@ async function main() {
     enableOfflineQueue: false,
   });
 
+  const db = createDb(pool);
+  const keys = new KeyRing(env.ENCRYPTION_KEY);
+
   const app = await buildApp({
     env,
     redis,
     checks: [postgresCheck(pool), redisCheck(redis)],
+    services: {
+      db,
+      keys,
+      limiter: new RedisLimiter(redis),
+      mailer: (log) => createMailer(env, log),
+    },
   });
 
   pool.on('error', (err) => {
@@ -56,7 +71,27 @@ async function main() {
     void shutdown('unhandledRejection');
   });
 
+  if (env.MIGRATE_ON_START) {
+    const applied = await migrateToLatest(db);
+    if (applied.length > 0) app.log.info({ migrations: applied }, 'database migrations applied');
+  }
+
+  const maintenance = async () => {
+    try {
+      const result = await runMaintenance(db, env.AUDIT_RETENTION_DAYS);
+      app.log.info({ removed: result }, 'maintenance completed');
+    } catch (err) {
+      app.log.error({ err }, 'maintenance failed');
+    }
+  };
+  const maintenanceTimer = setInterval(() => void maintenance(), MAINTENANCE_INTERVAL_MS);
+  maintenanceTimer.unref();
+  app.addHook('onClose', () => {
+    clearInterval(maintenanceTimer);
+  });
+
   await app.listen({ host: env.HOST, port: env.PORT });
+  void maintenance();
 }
 
 main().catch((err: unknown) => {

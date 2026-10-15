@@ -8,6 +8,14 @@ if [ -e .env ]; then
   exit 1
 fi
 
+rand_b64() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -base64 "$1"
+  else
+    head -c "$1" /dev/urandom | base64
+  fi
+}
+
 rand() {
   # Hex output is safe inside URLs and JSON without escaping.
   if command -v openssl >/dev/null 2>&1; then
@@ -22,6 +30,9 @@ sed \
   -e "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(rand 32)/" \
   -e "s/^S3_ACCESS_KEY_ID=.*/S3_ACCESS_KEY_ID=rubinny$(rand 8)/" \
   -e "s/^S3_SECRET_ACCESS_KEY=.*/S3_SECRET_ACCESS_KEY=$(rand 32)/" \
+  -e "s|^ENCRYPTION_KEY=.*|ENCRYPTION_KEY=$(rand_b64 32)|" \
+  -e "s/^SETUP_TOKEN=.*/SETUP_TOKEN=$(rand 24)/" \
   .env.example > .env
 
 echo "Created deploy/.env (permissions 600). Review RUBINNY_DOMAIN before starting."
+echo "Back up ENCRYPTION_KEY safely. Use SETUP_TOKEN once to create the first administrator."

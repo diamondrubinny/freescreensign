@@ -44,6 +44,24 @@ export const envSchema = z
       .default(1024 * 1024),
     RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(300),
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60_000),
+
+    /** 32 random bytes, base64 encoded. Used to derive encryption/HMAC keys (HKDF). */
+    ENCRYPTION_KEY: z
+      .string()
+      .refine((value) => Buffer.from(value, 'base64').length === 32, 'must be 32 bytes, base64'),
+    /** Required in production to claim a fresh installation via POST /api/v1/setup. */
+    SETUP_TOKEN: z.string().min(16).optional(),
+    REGISTRATION_MODE: z.enum(['open', 'invite', 'closed']).default('invite'),
+    REQUIRE_EMAIL_VERIFICATION: booleanString.default(true),
+    MAX_ORGS_PER_USER: z.coerce.number().int().min(1).default(10),
+    SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(14),
+    SESSION_ABSOLUTE_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+    AUDIT_RETENTION_DAYS: z.coerce.number().int().min(30).default(365),
+    MIGRATE_ON_START: booleanString.default(true),
+
+    MAIL_TRANSPORT: z.enum(['smtp', 'console', 'disabled']).default('disabled'),
+    SMTP_URL: z.url({ protocol: /^smtps?$/ }).optional(),
+    MAIL_FROM: z.string().min(3).optional(),
   })
   .superRefine((env, ctx) => {
     if (
@@ -55,6 +73,45 @@ export const envSchema = z
         code: 'custom',
         path: ['PUBLIC_URL'],
         message: 'must use https:// in production (set ALLOW_INSECURE_PUBLIC_URL=true to override)',
+      });
+    }
+    if (env.NODE_ENV === 'production' && env.MAIL_TRANSPORT === 'console') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['MAIL_TRANSPORT'],
+        message: 'must not be "console" in production (it would log secret links)',
+      });
+    }
+    if (env.NODE_ENV === 'production' && !env.SETUP_TOKEN) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SETUP_TOKEN'],
+        message: 'is required in production (protects the first-run setup)',
+      });
+    }
+    if (env.MAIL_TRANSPORT === 'smtp' && (!env.SMTP_URL || !env.MAIL_FROM)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SMTP_URL'],
+        message: 'and MAIL_FROM are required when MAIL_TRANSPORT=smtp',
+      });
+    }
+    if (
+      env.REGISTRATION_MODE === 'open' &&
+      env.REQUIRE_EMAIL_VERIFICATION &&
+      env.MAIL_TRANSPORT === 'disabled'
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['MAIL_TRANSPORT'],
+        message: 'must be enabled when REGISTRATION_MODE=open and email verification is required',
+      });
+    }
+    if (env.SESSION_ABSOLUTE_DAYS < env.SESSION_TTL_DAYS) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['SESSION_ABSOLUTE_DAYS'],
+        message: 'must be greater than or equal to SESSION_TTL_DAYS',
       });
     }
   });
@@ -74,7 +131,11 @@ export class ConfigError extends Error {
  * so secrets (e.g. passwords inside DATABASE_URL) are not leaked to logs.
  */
 export function loadEnv(source: Record<string, string | undefined> = process.env): Env {
-  const result = envSchema.safeParse(source);
+  // Treat empty values as unset (Docker Compose passes `VAR=` as an empty string).
+  const cleaned = Object.fromEntries(
+    Object.entries(source).filter(([, value]) => value !== undefined && value.trim() !== ''),
+  );
+  const result = envSchema.safeParse(cleaned);
   if (!result.success) {
     throw new ConfigError(
       result.error.issues.map((issue) => {

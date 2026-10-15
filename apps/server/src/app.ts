@@ -1,13 +1,21 @@
 import { randomUUID } from 'node:crypto';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import cookie from '@fastify/cookie';
 import type { Redis } from 'ioredis';
 import type { Env } from './config/env.js';
+import type { AppContext } from './context.js';
 import type { HealthCheck } from './lib/health-checks.js';
+import type { Mailer } from './lib/mail/mailer.js';
 import { HttpError } from './lib/http-error.js';
 import { registerErrorHandling } from './plugins/errors.js';
 import { healthRoutes } from './routes/health.js';
+import { authRoutes } from './modules/auth/routes.js';
+import { registerAuth } from './modules/auth/guards.js';
+import { meRoutes } from './modules/me/routes.js';
+import { orgRoutes } from './modules/orgs/routes.js';
+import { setupRoutes } from './modules/setup/routes.js';
 
 export interface BuildAppOptions {
   env: Env;
@@ -16,6 +24,11 @@ export interface BuildAppOptions {
   redis?: Redis;
   /** Override logging (tests pass `false`). */
   logger?: boolean;
+  /** Services for the /api routes. When omitted only health endpoints are served. */
+  services?: Omit<AppContext, 'env' | 'mailer'> & {
+    /** A mailer, or a factory receiving the app logger. */
+    mailer: Mailer | ((log: FastifyBaseLogger) => Mailer);
+  };
 }
 
 /** Paths and keys that must never be written to logs. */
@@ -75,8 +88,24 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       new HttpError(429, 'RATE_LIMITED', 'Too many requests, please try again later'),
   });
 
+  await app.register(cookie);
+
   registerErrorHandling(app);
   healthRoutes(app, { checks: options.checks ?? [] });
+
+  if (options.services) {
+    const { mailer, ...services } = options.services;
+    const ctx: AppContext = {
+      env,
+      ...services,
+      mailer: typeof mailer === 'function' ? mailer(app.log) : mailer,
+    };
+    registerAuth(app, ctx);
+    setupRoutes(app, ctx);
+    authRoutes(app, ctx);
+    meRoutes(app, ctx);
+    orgRoutes(app, ctx);
+  }
 
   return app;
 }
