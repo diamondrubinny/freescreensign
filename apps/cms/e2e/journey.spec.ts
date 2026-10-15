@@ -48,6 +48,15 @@ async function signIn(page: Page, user: { email: string; password: string }, wit
 /** The main navigation (the dashboard also links to the same pages). */
 const mainNav = (page: Page) => page.getByRole('navigation', { name: 'ניווט ראשי' });
 
+/**
+ * Opens a page from the main navigation and waits for its heading, so that typing or an
+ * accessibility check never hits the previous page (some share field labels).
+ */
+async function openPage(page: Page, link: string, heading = link) {
+  await mainNav(page).getByRole('link', { name: link, exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
+}
+
 test.describe.configure({ mode: 'serial' });
 
 test('first-run setup creates the administrator (RTL, accessible)', async ({ page }) => {
@@ -111,7 +120,7 @@ test('admin uploads, previews and deletes media; disguised files are rejected', 
     'base64',
   );
   await signIn(page, ADMIN, true);
-  await mainNav(page).getByRole('link', { name: 'מדיה', exact: true }).click();
+  await openPage(page, 'מדיה', 'ספריית מדיה');
   await expect(page.getByRole('heading', { level: 1, name: 'ספריית מדיה' })).toBeVisible();
   await expect(page.getByText('אין עדיין קבצים בספרייה.')).toBeVisible();
   await expectAccessible(page, 'media (empty)');
@@ -166,7 +175,7 @@ test('a screen pairs with a code, plays a playlist and updates live', async ({ p
   await signIn(page, ADMIN, true);
 
   // Media + playlist.
-  await mainNav(page).getByRole('link', { name: 'מדיה', exact: true }).click();
+  await openPage(page, 'מדיה', 'ספריית מדיה');
   await page
     .getByLabel('בחירת קבצים להעלאה')
     .setInputFiles([{ name: 'מבצע השבוע.png', mimeType: 'image/png', buffer: pngBytes }]);
@@ -175,7 +184,7 @@ test('a screen pairs with a code, plays a playlist and updates live', async ({ p
     .filter({ has: page.getByRole('heading', { name: 'מבצע השבוע' }) });
   await expect(card.getByText('מוכן')).toBeVisible({ timeout: 30_000 });
 
-  await mainNav(page).getByRole('link', { name: 'פלייליסטים', exact: true }).click();
+  await openPage(page, 'פלייליסטים');
   await expectAccessible(page, 'playlists');
   await page.getByLabel('שם הפלייליסט').fill('לובי');
   await page.getByRole('button', { name: 'פלייליסט חדש' }).click();
@@ -194,7 +203,7 @@ test('a screen pairs with a code, plays a playlist and updates live', async ({ p
   const code = codeText?.trim() ?? '';
   expect(code).toMatch(/^[A-Z2-9]{3}-[A-Z2-9]{3}$/);
 
-  await mainNav(page).getByRole('link', { name: 'מסכים', exact: true }).click();
+  await openPage(page, 'מסכים');
   await expectAccessible(page, 'screens');
   const addForm = page.getByRole('form', { name: 'הוספת מסך' });
   await addForm.getByLabel('קוד חיבור').fill(code.toLowerCase().replace('-', ''));
@@ -222,7 +231,7 @@ test('a screen pairs with a code, plays a playlist and updates live', async ({ p
   await expect(player.locator('.layer img')).toBeVisible({ timeout: 20_000 });
 
   // Live update: emptying the playlist reaches the screen over WebSocket.
-  await mainNav(page).getByRole('link', { name: 'פלייליסטים', exact: true }).click();
+  await openPage(page, 'פלייליסטים');
   await page.getByRole('link', { name: /עריכה לובי/ }).click();
   await page.getByRole('button', { name: 'הסרת מבצע השבוע' }).click();
   await page.getByRole('button', { name: 'שמירת הפלייליסט' }).click();
@@ -231,7 +240,7 @@ test('a screen pairs with a code, plays a playlist and updates live', async ({ p
   });
 
   // Disconnecting the screen sends the device back to pairing.
-  await mainNav(page).getByRole('link', { name: 'מסכים', exact: true }).click();
+  await openPage(page, 'מסכים');
   await page.getByRole('button', { name: /ניתוק המסך מסך כניסה/ }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'ניתוק המסך' }).click();
   await expect(player.getByTestId('pairing-code')).toBeVisible({ timeout: 15_000 });
@@ -246,7 +255,7 @@ test('a layout shows a clock and a ticker side by side on a screen', async ({ pa
   await signIn(page, ADMIN, true);
 
   // Widgets.
-  await mainNav(page).getByRole('link', { name: 'Widgets', exact: true }).click();
+  await openPage(page, 'Widgets');
   await expectAccessible(page, 'widgets');
   await page.getByRole('link', { name: 'בחירה שעון ותאריך' }).click();
   await page.getByLabel('שם ה-Widget').fill('שעון');
@@ -266,7 +275,7 @@ test('a layout shows a clock and a ticker side by side on a screen', async ({ pa
     ['שעון', 'שעון'],
     ['פס הודעות', 'הודעות'],
   ] as const) {
-    await mainNav(page).getByRole('link', { name: 'פלייליסטים', exact: true }).click();
+    await openPage(page, 'פלייליסטים');
     await page.getByLabel('שם הפלייליסט').fill(playlist);
     await page.getByRole('button', { name: 'פלייליסט חדש' }).click();
     await expect(page.getByRole('heading', { level: 1, name: new RegExp(playlist) })).toBeVisible();
@@ -279,7 +288,7 @@ test('a layout shows a clock and a ticker side by side on a screen', async ({ pa
   }
 
   // Layout "main + ticker".
-  await mainNav(page).getByRole('link', { name: 'תבניות תצוגה', exact: true }).click();
+  await openPage(page, 'תבניות תצוגה');
   await expectAccessible(page, 'layouts');
   await page.getByLabel('שם התבנית').fill('לובי ראשי');
   await page.getByRole('button', { name: 'תבנית חדשה' }).click();
@@ -308,7 +317,7 @@ test('a layout shows a clock and a ticker side by side on a screen', async ({ pa
   });
   await player.goto('/player/');
   const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
-  await mainNav(page).getByRole('link', { name: 'מסכים', exact: true }).click();
+  await openPage(page, 'מסכים');
   const addForm = page.getByRole('form', { name: 'הוספת מסך' });
   await addForm.getByLabel('קוד חיבור').fill(code ?? '');
   await addForm.getByLabel('שם מלא').fill('מסך לובי');
@@ -358,7 +367,7 @@ test('the free-form designer: drag, images, and the result on a screen', async (
   browser,
 }) => {
   await signIn(page, ADMIN, true);
-  await mainNav(page).getByRole('link', { name: 'Widgets', exact: true }).click();
+  await openPage(page, 'Widgets');
   await page.getByRole('link', { name: 'בחירה עיצוב חופשי' }).click();
   await expectAccessible(page, 'designer templates');
   await page.getByRole('button', { name: 'התחלה ברוכים הבאים' }).click();
@@ -392,7 +401,7 @@ test('the free-form designer: drag, images, and the result on a screen', async (
   ).toBeVisible();
 
   // Show it on a screen.
-  await mainNav(page).getByRole('link', { name: 'פלייליסטים', exact: true }).click();
+  await openPage(page, 'פלייליסטים');
   await page.getByLabel('שם הפלייליסט').fill('שקפים');
   await page.getByRole('button', { name: 'פלייליסט חדש' }).click();
   await page
@@ -406,7 +415,7 @@ test('the free-form designer: drag, images, and the result on a screen', async (
   const player = await device.newPage();
   await player.goto('/player/');
   const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
-  await mainNav(page).getByRole('link', { name: 'מסכים', exact: true }).click();
+  await openPage(page, 'מסכים');
   const addForm = page.getByRole('form', { name: 'הוספת מסך' });
   await addForm.getByLabel('קוד חיבור').fill(code ?? '');
   await addForm.getByLabel('שם מלא').fill('מסך שקפים');
@@ -425,7 +434,7 @@ test('the free-form designer: drag, images, and the result on a screen', async (
 
 test('a schedule switches what a screen shows, live', async ({ page, browser }) => {
   await signIn(page, ADMIN, true);
-  await mainNav(page).getByRole('link', { name: 'תזמון', exact: true }).click();
+  await openPage(page, 'תזמון');
   await expectAccessible(page, 'schedules');
   await page.getByLabel('שם הלוח').fill('אירועים');
   await page.getByRole('button', { name: 'לוח זמנים חדש' }).click();
@@ -450,7 +459,7 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   const player = await device.newPage();
   await player.goto('/player/');
   const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
-  await mainNav(page).getByRole('link', { name: 'מסכים', exact: true }).click();
+  await openPage(page, 'מסכים');
   const addForm = page.getByRole('form', { name: 'הוספת מסך' });
   await addForm.getByLabel('קוד חיבור').fill(code ?? '');
   await addForm.getByLabel('שם מלא').fill('מסך אירועים');
@@ -471,7 +480,7 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   await expect(player.locator('.w-clock-time')).toHaveCount(0);
 
   // Disabling the entry brings the layout back, without touching the screen.
-  await mainNav(page).getByRole('link', { name: 'תזמון', exact: true }).click();
+  await openPage(page, 'תזמון');
   await page.getByRole('link', { name: 'עריכה אירועים' }).click();
   await page
     .getByRole('group', { name: /^שורה 1:/ })
@@ -537,7 +546,7 @@ test('admin changes the role, reviews the audit log and legal pages', async ({ p
     page.getByRole('combobox', { name: `שינוי תפקיד עבור ${TEACHER.name}` }),
   ).toHaveValue('VIEWER');
 
-  await mainNav(page).getByRole('link', { name: 'יומן פעולות', exact: true }).click();
+  await openPage(page, 'יומן פעולות');
   await expect(page.getByRole('cell', { name: 'member.role_changed' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'invitation.accepted' })).toBeVisible();
   await expectAccessible(page, 'audit');
