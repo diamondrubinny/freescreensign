@@ -26,7 +26,13 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        ...(executablePath ? { launchOptions: { executablePath } } : {}),
+        launchOptions: {
+          ...(executablePath ? { executablePath } : {}),
+          // The local stack uses Caddy's self-signed certificate. Chrome refuses to
+          // register service workers on untrusted certificates (even with
+          // ignoreHTTPSErrors), which the offline player test needs. Test-only.
+          args: ['--ignore-certificate-errors'],
+        },
       },
     },
   ],

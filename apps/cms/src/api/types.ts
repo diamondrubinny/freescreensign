@@ -88,3 +88,43 @@ export interface MediaItem {
   fileUrl?: string;
   thumbnailUrl?: string | null;
 }
+
+export type Orientation = 'landscape' | 'portrait' | 'landscape-flipped' | 'portrait-flipped';
+
+export interface ScreenItem {
+  id: string;
+  name: string;
+  playlistId: string | null;
+  playlistName: string | null;
+  orientation: Orientation;
+  online: boolean;
+  lastSeenAt: string | null;
+  playerVersion: string | null;
+  resolution: string | null;
+}
+
+export interface PlaylistSummary {
+  id: string;
+  name: string;
+  itemCount: number;
+  screenCount: number;
+  updatedAt: string;
+}
+
+export interface PlaylistEntry {
+  mediaId: string;
+  name: string;
+  kind: 'image' | 'video';
+  status: string;
+  durationMs: number | null;
+  effectiveDurationMs: number;
+  thumbnailUrl: string | null;
+}
+
+export interface PlaylistDetail {
+  id: string;
+  name: string;
+  updatedAt: string;
+  screens: { id: string; name: string }[];
+  items: PlaylistEntry[];
+}

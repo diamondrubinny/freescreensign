@@ -127,6 +127,51 @@ export interface MediaTable {
   deleted_at: NullableTimestamp;
 }
 
+export interface PlaylistsTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface PlaylistItemsTable {
+  id: Generated<string>;
+  playlist_id: string;
+  position: number;
+  media_id: string;
+  duration_ms: number | null;
+}
+
+export type ScreenOrientation = 'landscape' | 'portrait' | 'landscape-flipped' | 'portrait-flipped';
+
+export interface ScreensTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  token_hash: string;
+  playlist_id: string | null;
+  orientation: Generated<ScreenOrientation>;
+  timezone: Generated<string>;
+  last_seen_at: NullableTimestamp;
+  player_version: string | null;
+  resolution: string | null;
+  manifest_version: string | null;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface PairingCodesTable {
+  code_hash: string;
+  poll_token_hash: string;
+  screen_id: string | null;
+  device_token_enc: Buffer | null;
+  expires_at: Timestamp;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   users: UsersTable;
   recovery_codes: RecoveryCodesTable;
@@ -137,6 +182,10 @@ export interface Database {
   invitations: InvitationsTable;
   audit_logs: AuditLogsTable;
   media: MediaTable;
+  playlists: PlaylistsTable;
+  playlist_items: PlaylistItemsTable;
+  screens: ScreensTable;
+  pairing_codes: PairingCodesTable;
 }
 
 export type User = Selectable<UsersTable>;
@@ -145,3 +194,5 @@ export type Organization = Selectable<OrganizationsTable>;
 export type Membership = Selectable<MembershipsTable>;
 
 export type Media = Selectable<MediaTable>;
+export type Screen = Selectable<ScreensTable>;
+export type Playlist = Selectable<PlaylistsTable>;

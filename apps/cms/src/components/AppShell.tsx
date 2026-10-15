@@ -87,11 +87,23 @@ export function AppShell({ session }: { session: SessionInfo }) {
               </NavLink>
             </li>
             {currentOrg && (
-              <li>
-                <NavLink to={`/orgs/${currentOrg.orgId}/media`} className={navClass}>
-                  {t('media.nav')}
-                </NavLink>
-              </li>
+              <>
+                <li>
+                  <NavLink to={`/orgs/${currentOrg.orgId}/screens`} className={navClass}>
+                    {t('screens.nav')}
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={`/orgs/${currentOrg.orgId}/playlists`} className={navClass}>
+                    {t('playlists.nav')}
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={`/orgs/${currentOrg.orgId}/media`} className={navClass}>
+                    {t('media.nav')}
+                  </NavLink>
+                </li>
+              </>
             )}
             {currentOrg && isAdmin && (
               <>

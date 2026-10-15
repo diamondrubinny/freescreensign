@@ -1,0 +1,197 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { ManifestV1 } from '@rubinny/shared';
+import { PairingExpiredError, UnauthorizedError, type PlayerApi } from '../src/api';
+import { MediaCache, MemoryBlobStore } from '../src/media-cache';
+import { Player, type PlayerDeps } from '../src/player';
+import type { Renderer } from '../src/renderer';
+import type { PlayableItem } from '../src/sequence';
+import type { ServerEvent } from '../src/socket';
+import { manifest, sha256Hex } from './fixtures';
+
+const bytes = new Uint8Array([7, 7, 7]);
+
+async function realManifest(version = 'v1'): Promise<ManifestV1> {
+  const sha = await sha256Hex(bytes);
+  const m = manifest({ version });
+  m.media = m.media.map((item) => ({ ...item, sha256: sha }));
+  return m;
+}
+
+function memoryStore(initial: { token?: string; manifest?: ManifestV1 } = {}) {
+  let token = initial.token ?? null;
+  let saved: ManifestV1 | null = initial.manifest ?? null;
+  return {
+    token: () => token,
+    setToken: (t: string | null) => {
+      token = t;
+    },
+    manifest: () => saved,
+    setManifest: (m: ManifestV1 | null) => {
+      saved = m;
+    },
+    clear: vi.fn(() => {
+      token = null;
+      saved = null;
+    }),
+  };
+}
+
+function setup(options: {
+  api: Partial<PlayerApi>;
+  store: ReturnType<typeof memoryStore>;
+  stopAfterPlays?: number;
+  blobStore?: MemoryBlobStore;
+  download?: () => Promise<Blob>;
+}) {
+  const played: PlayableItem[] = [];
+  const messages: { title: string; code?: string }[] = [];
+  let emit: (e: ServerEvent) => void = () => undefined;
+  const ref: { player?: Player } = {};
+  const renderer: Renderer = {
+    setOrientation: vi.fn(),
+    showMessage: (m) => messages.push(m),
+    clear: vi.fn(),
+    play: (item) => {
+      played.push(item);
+      if (played.length >= (options.stopAfterPlays ?? 3)) ref.player?.stop();
+      // Each item takes a real (short) tick, like a timer-driven display.
+      return new Promise((resolve) => setTimeout(resolve, 1));
+    },
+  };
+  const reload = vi.fn(() => {
+    ref.player?.stop();
+  });
+  const deps: PlayerDeps = {
+    api: options.api as PlayerApi,
+    renderer,
+    store: options.store,
+    createCache: () =>
+      new MediaCache(
+        options.blobStore ?? new MemoryBlobStore(),
+        options.download ?? (() => Promise.resolve(new Blob([bytes]))),
+      ),
+    createSocket: (_token, onEvent) => {
+      emit = onEvent;
+      return { start: vi.fn(), stop: vi.fn() };
+    },
+    sleep: () => new Promise((resolve) => setTimeout(resolve, 0)),
+    now: () => new Date('2026-10-15T10:00:00Z'),
+    reload,
+    resolution: () => '1920x1080',
+    host: 'signage.example.com',
+    version: 'test',
+  };
+  const player = new Player(deps);
+  ref.player = player;
+  return {
+    player,
+    played,
+    messages,
+    reload,
+    emit: (e: ServerEvent) => {
+      emit(e);
+    },
+  };
+}
+
+describe('Player', () => {
+  it('pairs, stores the token, then downloads and plays the playlist in order', async () => {
+    const m = await realManifest();
+    const pairStatus = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 'pending' })
+      .mockResolvedValueOnce({ status: 'paired', deviceToken: 'device-token' });
+    const store = memoryStore();
+    const { player, played, messages } = setup({
+      store,
+      api: {
+        pairStart: vi
+          .fn()
+          .mockResolvedValue({ code: 'K7Q-29M', pollToken: 'poll', expiresIn: 600 }),
+        pairStatus,
+        manifest: vi.fn().mockResolvedValue(m),
+        heartbeat: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+    await player.start();
+    expect(messages[0]).toMatchObject({ code: 'K7Q-29M' });
+    expect(store.token()).toBe('device-token');
+    expect(played.map((p) => p.media.id)).toEqual(['m1', 'm2', 'm1']);
+    expect(store.manifest()?.version).toBe('v1');
+  });
+
+  it('requests a new code when the pairing code expires', async () => {
+    const pairStart = vi
+      .fn()
+      .mockResolvedValueOnce({ code: 'AAA-AAA', pollToken: 'p1', expiresIn: 600 })
+      .mockResolvedValueOnce({ code: 'BBB-BBB', pollToken: 'p2', expiresIn: 600 });
+    const pairStatus = vi
+      .fn()
+      .mockRejectedValueOnce(new PairingExpiredError())
+      .mockResolvedValue({ status: 'paired', deviceToken: 't' });
+    const { player, messages } = setup({
+      store: memoryStore(),
+      api: {
+        pairStart,
+        pairStatus,
+        manifest: vi.fn().mockResolvedValue(await realManifest()),
+        heartbeat: vi.fn(),
+      },
+    });
+    await player.start();
+    expect(messages.map((m) => m.code).filter(Boolean)).toEqual(['AAA-AAA', 'BBB-BBB']);
+  });
+
+  it('boots offline and keeps playing from the cache', async () => {
+    const m = await realManifest();
+    // Media cached during an earlier online session.
+    const blobStore = new MemoryBlobStore();
+    await new MediaCache(blobStore, () => Promise.resolve(new Blob([bytes]))).sync(m.media);
+    const download = vi.fn(() => Promise.reject(new TypeError('Failed to fetch')));
+    const { player, played } = setup({
+      store: memoryStore({ token: 't', manifest: m }),
+      api: {
+        manifest: vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+        heartbeat: vi.fn(),
+      },
+      blobStore,
+      download,
+    });
+    await player.start();
+    expect(player.offline).toBe(true);
+    expect(played.map((p) => p.media.id)).toEqual(['m1', 'm2', 'm1']);
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it('unpairs and reloads when the device token is revoked', async () => {
+    const store = memoryStore({ token: 'revoked' });
+    const { player, reload } = setup({
+      store,
+      api: { manifest: vi.fn().mockRejectedValue(new UnauthorizedError()), heartbeat: vi.fn() },
+    });
+    await player.start();
+    expect(store.clear).toHaveBeenCalled();
+    expect(reload).toHaveBeenCalled();
+    expect(store.token()).toBeNull();
+  });
+
+  it('switches to new content after a manifest.changed event', async () => {
+    const v1 = await realManifest('v1');
+    const v2 = await realManifest('v2');
+    v2.playlists = [
+      { id: 'p1', items: [{ kind: 'media', ref: 'm2', durationMs: 1000, transition: 'none' }] },
+    ];
+    const manifestFn = vi.fn().mockResolvedValueOnce(v1).mockResolvedValue(v2);
+    const ctx = setup({
+      store: memoryStore({ token: 't' }),
+      api: { manifest: manifestFn, heartbeat: vi.fn() },
+      stopAfterPlays: 20,
+    });
+    const run = ctx.player.start();
+    await vi.waitUntil(() => ctx.played.length >= 2);
+    ctx.emit({ type: 'manifest.changed' });
+    await run;
+    expect(ctx.played.at(-1)?.media.id).toBe('m2');
+    expect(ctx.player.manifest?.version).toBe('v2');
+  });
+});

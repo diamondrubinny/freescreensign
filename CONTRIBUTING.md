@@ -44,6 +44,7 @@ Run the management dashboard (CMS) with hot reload; it proxies `/api` to the ser
 
 ```bash
 pnpm --filter @rubinny/cms dev          # http://localhost:5173
+pnpm --filter @rubinny/player dev       # http://localhost:5174/player/ (proxies /player/v1 incl. WebSocket)
 ```
 
 End-to-end and accessibility tests (Playwright + axe-core) run against the Docker stack

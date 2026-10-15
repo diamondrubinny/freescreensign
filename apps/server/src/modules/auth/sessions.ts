@@ -20,7 +20,7 @@ export interface AuthState {
 }
 
 export function clientIp(request: FastifyRequest): string {
-  return request.ip;
+  return request.ip || 'unknown';
 }
 
 export async function createSession(

@@ -46,6 +46,14 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   {
+    files: ['apps/player/public/sw.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
+    files: ['apps/player/**/*.ts'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
+  {
     files: ['**/*.js', '**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },

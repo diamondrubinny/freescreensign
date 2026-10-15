@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
@@ -10,12 +10,13 @@ import { LIMITS } from '../../lib/limiter.js';
 import { FileTooLargeError, HashingCounter, sniffStream } from '../../lib/sniff.js';
 import type { Storage } from '../../lib/storage.js';
 import { parse } from '../../lib/validation.js';
-import { contentDisposition, displayName, sanitizeFilename } from '../../media/names.js';
-import { parseRange } from '../../media/range.js';
+import { displayName, sanitizeFilename } from '../../media/names.js';
+import { sendStoredFile } from '../../media/serve.js';
 import { ACCEPTED_TYPES } from '../../media/types.js';
 import type { MediaQueue } from '../../queue.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
+import { notifyMediaScreens } from '../screens/notify.js';
 
 const mediaParams = z.object({ orgId: z.uuid(), mediaId: z.uuid() });
 const notFound = () => new HttpError(404, 'NOT_FOUND', 'Resource not found');
@@ -268,62 +269,19 @@ export function mediaRoutes(
   });
 
   // ------------------------------------------------------------ file access
-  async function sendObject(
-    request: FastifyRequest,
-    reply: FastifyReply,
-    key: string,
-    size: number,
-    contentType: string,
-    filename: string,
-    etag: string | null,
-  ) {
-    const range = parseRange(request.headers.range, size);
-    void reply
-      .header('content-type', contentType)
-      .header('accept-ranges', 'bytes')
-      .header('cache-control', 'private, max-age=3600')
-      .header('content-disposition', contentDisposition(filename))
-      // Even if a browser opens the file directly, nothing in it may run.
-      .header(
-        'content-security-policy',
-        "default-src 'none'; img-src 'self'; media-src 'self'; sandbox",
-      );
-    if (etag) void reply.header('etag', `"${etag}"`);
-    if (etag && request.headers['if-none-match'] === `"${etag}"`) return reply.status(304).send();
-
-    if (range.type === 'unsatisfiable') {
-      return reply.status(416).header('content-range', `bytes */${size}`).send();
-    }
-    if (range.type === 'partial') {
-      const object = await storage.get(
-        storage.config.mediaBucket,
-        key,
-        `bytes=${range.start}-${range.end}`,
-      );
-      return reply
-        .status(206)
-        .header('content-range', `bytes ${range.start}-${range.end}/${size}`)
-        .header('content-length', String(range.end - range.start + 1))
-        .send(object.body);
-    }
-    const object = await storage.get(storage.config.mediaBucket, key);
-    return reply.header('content-length', String(object.contentLength)).send(object.body);
-  }
-
   app.get('/api/v1/orgs/:orgId/media/:mediaId/file', viewer, async (request, reply) => {
     const org = requireOrg(request);
     const { mediaId } = parse(mediaParams, request.params);
     const row = await loadMedia(org.id, mediaId);
     if (row.status !== 'ready' || !row.storage_key) throw notFound();
-    return sendObject(
-      request,
-      reply,
-      row.storage_key,
-      Number(row.size_bytes),
-      row.mime,
-      row.original_filename,
-      row.sha256,
-    );
+    return sendStoredFile(storage, request, reply, {
+      key: row.storage_key,
+      size: Number(row.size_bytes),
+      contentType: row.mime,
+      filename: row.original_filename,
+      etag: row.sha256,
+      cacheControl: 'private, max-age=3600',
+    });
   });
 
   app.get('/api/v1/orgs/:orgId/media/:mediaId/thumbnail', viewer, async (request, reply) => {
@@ -375,6 +333,7 @@ export function mediaRoutes(
       .where('id', '=', mediaId)
       .where('org_id', '=', org.id)
       .execute();
+    await notifyMediaScreens(ctx, mediaId);
     await queue.enqueue({ type: 'delete', mediaId });
     await audit(ctx.db, {
       action: 'media.deleted',

@@ -11,6 +11,7 @@ import { cleanupStaleUploads, runMaintenance } from './lib/maintenance.js';
 import { Storage, storageConfigFromEnv } from './lib/storage.js';
 import { pingClamav } from './lib/clamav.js';
 import { createMediaQueue } from './queue.js';
+import { RedisScreenEvents } from './lib/screen-events.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 const MAINTENANCE_INTERVAL_MS = 60 * 60 * 1000;
@@ -27,6 +28,10 @@ async function main() {
 
   const db = createDb(pool);
   const keys = new KeyRing(env.ENCRYPTION_KEY);
+  // Pub/sub needs its own connection; it may queue commands until connected.
+  const subscriber = redis.duplicate({ enableOfflineQueue: true });
+  const events = new RedisScreenEvents(redis, subscriber);
+  await events.start();
   const storageConfig = storageConfigFromEnv(env);
   const media = storageConfig
     ? { storage: new Storage(storageConfig), queue: createMediaQueue(env.REDIS_URL) }
@@ -43,6 +48,7 @@ async function main() {
         : []),
     ],
     services: {
+      events,
       ...(media ? { media } : {}),
       db,
       keys,
@@ -70,7 +76,8 @@ async function main() {
     timer.unref();
     try {
       await app.close();
-      await Promise.allSettled([pool.end(), redis.quit()]);
+      await events.close();
+      await Promise.allSettled([pool.end(), redis.quit(), subscriber.quit()]);
       process.exit(0);
     } catch (err) {
       app.log.error({ err }, 'error during shutdown');

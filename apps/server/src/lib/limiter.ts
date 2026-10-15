@@ -89,4 +89,6 @@ export const LIMITS = {
   setupIp: { name: 'setup-ip', max: 10, windowSeconds: 3600 },
   passwordChangeUser: { name: 'password-change-user', max: 10, windowSeconds: 3600 },
   mediaUploadUser: { name: 'media-upload-user', max: 120, windowSeconds: 3600 },
+  pairStartIp: { name: 'pair-start-ip', max: 20, windowSeconds: 3600 },
+  screenClaimUser: { name: 'screen-claim-user', max: 30, windowSeconds: 3600 },
 } as const satisfies Record<string, LimitRule>;

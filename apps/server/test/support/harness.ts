@@ -9,6 +9,7 @@ import { KeyRing } from '../../src/lib/crypto.js';
 import { RedisLimiter } from '../../src/lib/limiter.js';
 import { Storage, storageConfigFromEnv } from '../../src/lib/storage.js';
 import { createMediaQueue } from '../../src/queue.js';
+import { RedisScreenEvents } from '../../src/lib/screen-events.js';
 import { startMediaWorker } from '../../src/worker/worker.js';
 import { MemoryMailer } from '../../src/lib/mail/mailer.js';
 import { hashPassword } from '../../src/lib/password.js';
@@ -82,6 +83,10 @@ export async function createHarness(
       )
     : undefined;
 
+  const subscriber = redis.duplicate();
+  const events = new RedisScreenEvents(redis, subscriber, `rubinny:screen-events:${schema}`);
+  await events.start();
+
   const app = await buildApp({
     env,
     logger: false,
@@ -90,6 +95,7 @@ export async function createHarness(
       keys: new KeyRing(env.ENCRYPTION_KEY),
       mailer,
       limiter: new RedisLimiter(redis, `rubinny:test:${schema}:`),
+      events,
       ...(storage && queue ? { media: { storage, queue } } : {}),
     },
   });
@@ -103,6 +109,8 @@ export async function createHarness(
     ...(storage ? { storage } : {}),
     async close() {
       await app.close();
+      await events.close();
+      await subscriber.quit();
       await worker?.close();
       await queue?.close();
       const bullKeys = await redis.keys(`${queuePrefix}:*`);
@@ -117,7 +125,7 @@ export async function createHarness(
   };
 }
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /** A cookie-keeping API client, like a browser tab. */
 export class Client {
@@ -176,6 +184,7 @@ export class Client {
 
   get = (url: string) => this.request('GET', url);
   post = (url: string, body?: unknown) => this.request('POST', url, body ?? {});
+  put = (url: string, body?: unknown) => this.request('PUT', url, body ?? {});
   patch = (url: string, body?: unknown) => this.request('PATCH', url, body ?? {});
   delete = (url: string, body?: unknown) => this.request('DELETE', url, body);
 }

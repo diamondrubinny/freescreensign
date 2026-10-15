@@ -23,6 +23,7 @@
     "@fastify/helmet": "13.2.0",
     "@fastify/multipart": "10.1.4",
     "@fastify/rate-limit": "11.2.1",
+    "@fastify/websocket": "11.3.4",
     "@node-rs/argon2": "2.2.2",
     "@rubinny/shared": "workspace:*",
     "bullmq": "6.3.15",
@@ -39,8 +40,10 @@
   "devDependencies": {
     "@types/nodemailer": "8.0.2",
     "@types/pg": "8.23.1",
+    "@types/ws": "8.18.2",
     "pino-pretty": "13.2.0",
-    "tsx": "4.23.15"
+    "tsx": "4.23.15",
+    "ws": "8.22.0"
   },
   "files": [
     "dist"

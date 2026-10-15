@@ -30,6 +30,10 @@ export async function runMaintenance(
     .where('created_at', '<', new Date(now.getTime() - 30 * DAY_MS))
     .where('accepted_at', 'is', null)
     .executeTakeFirst();
+  await db
+    .deleteFrom('pairing_codes')
+    .where('expires_at', '<', new Date(now.getTime() - DAY_MS))
+    .execute();
   const auditLogs = await db
     .deleteFrom('audit_logs')
     .where('created_at', '<', new Date(now.getTime() - auditRetentionDays * DAY_MS))

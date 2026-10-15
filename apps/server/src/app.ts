@@ -17,6 +17,10 @@ import { registerAuth } from './modules/auth/guards.js';
 import { meRoutes } from './modules/me/routes.js';
 import { orgRoutes } from './modules/orgs/routes.js';
 import { mediaRoutes } from './modules/media/routes.js';
+import websocket from '@fastify/websocket';
+import { playerRoutes } from './modules/player/routes.js';
+import { playlistRoutes } from './modules/playlists/routes.js';
+import { screenRoutes } from './modules/screens/routes.js';
 import { setupRoutes } from './modules/setup/routes.js';
 
 export interface BuildAppOptions {
@@ -86,6 +90,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     // Global limit fails open if Redis is unavailable; sensitive endpoints
     // (auth, pairing) will add their own fail-closed limits.
     skipOnError: true,
+    // request.ip can be missing (e.g. Unix sockets, injected upgrades); never crash on it.
+    keyGenerator: (request) => request.ip || 'unknown',
     errorResponseBuilder: () =>
       new HttpError(429, 'RATE_LIMITED', 'Too many requests, please try again later'),
   });
@@ -107,6 +113,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     authRoutes(app, ctx);
     meRoutes(app, ctx);
     orgRoutes(app, ctx);
+    await app.register(websocket, { options: { maxPayload: 4096 } });
+    playerRoutes(app, ctx);
+    screenRoutes(app, ctx);
+    playlistRoutes(app, ctx);
     if (ctx.media) {
       await app.register(multipart, {
         // Per-request limits are tightened in the upload handler.

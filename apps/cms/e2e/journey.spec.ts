@@ -154,6 +154,87 @@ test('admin uploads, previews and deletes media; disguised files are rejected', 
   await expect(page.getByText('אין עדיין קבצים בספרייה.')).toBeVisible();
 });
 
+test('a screen pairs with a code, plays a playlist and updates live', async ({ page, browser }) => {
+  // 4×4 red PNG (generated with sharp).
+  const pngBytes = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEElEQVQImWO4o6YGRwzEcQDsoxKBowvaFAAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  await signIn(page, ADMIN, true);
+
+  // Media + playlist.
+  await page.getByRole('link', { name: 'מדיה' }).click();
+  await page
+    .getByLabel('בחירת קבצים להעלאה')
+    .setInputFiles([{ name: 'מבצע השבוע.png', mimeType: 'image/png', buffer: pngBytes }]);
+  const card = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: 'מבצע השבוע' }) });
+  await expect(card.getByText('מוכן')).toBeVisible({ timeout: 30_000 });
+
+  await page.getByRole('link', { name: 'פלייליסטים' }).click();
+  await expectAccessible(page, 'playlists');
+  await page.getByLabel('שם הפלייליסט').fill('לובי');
+  await page.getByRole('button', { name: 'פלייליסט חדש' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: /עריכת פלייליסט: לובי/ })).toBeVisible();
+  await page.getByRole('button', { name: 'הוספה מבצע השבוע' }).click();
+  await page.getByLabel('משך בשניות עבור מבצע השבוע').fill('5');
+  await page.getByRole('button', { name: 'שמירת הפלייליסט' }).click();
+  await expect(page.getByText('הפלייליסט נשמר והמסכים עודכנו.')).toBeVisible();
+  await expectAccessible(page, 'playlist editor');
+
+  // The player runs in its own browser context (like a separate device).
+  const device = await browser.newContext({ ignoreHTTPSErrors: true });
+  const player = await device.newPage();
+  await player.goto('/player/');
+  const codeText = await player.getByTestId('pairing-code').textContent({ timeout: 15_000 });
+  const code = codeText?.trim() ?? '';
+  expect(code).toMatch(/^[A-Z2-9]{3}-[A-Z2-9]{3}$/);
+
+  await page.getByRole('link', { name: 'מסכים' }).click();
+  await expectAccessible(page, 'screens');
+  const addForm = page.getByRole('form', { name: 'הוספת מסך' });
+  await addForm.getByLabel('קוד חיבור').fill(code.toLowerCase().replace('-', ''));
+  await addForm.getByLabel('שם מלא').fill('מסך כניסה');
+  await addForm.getByLabel('פלייליסט').selectOption({ label: 'לובי' });
+  await addForm.getByRole('button', { name: 'הוספת מסך' }).click();
+  await expect(page.getByText('המסך חובר בהצלחה.')).toBeVisible();
+
+  // The device receives its token, downloads and verifies the media, and plays it.
+  const shown = player.locator('.layer img');
+  await expect(shown).toBeVisible({ timeout: 20_000 });
+  await expect.poll(() => shown.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(4);
+  await expect(page.getByRole('row', { name: /מסך כניסה/ }).getByText('מחובר')).toBeVisible({
+    timeout: 20_000,
+  });
+
+  // Offline-first: with the network gone, a reboot (reload) still plays from the
+  // service-worker shell, the stored manifest and the verified media cache.
+  await player.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await device.setOffline(true);
+  await player.reload();
+  await expect(player.locator('.layer img')).toBeVisible({ timeout: 20_000 });
+  await device.setOffline(false);
+  await player.reload(); // reconnect (fresh WebSocket)
+  await expect(player.locator('.layer img')).toBeVisible({ timeout: 20_000 });
+
+  // Live update: emptying the playlist reaches the screen over WebSocket.
+  await page.getByRole('link', { name: 'פלייליסטים' }).click();
+  await page.getByRole('link', { name: /עריכה לובי/ }).click();
+  await page.getByRole('button', { name: 'הסרת מבצע השבוע' }).click();
+  await page.getByRole('button', { name: 'שמירת הפלייליסט' }).click();
+  await expect(player.getByText('אין תוכן להצגה · Nothing to show')).toBeVisible({
+    timeout: 15_000,
+  });
+
+  // Disconnecting the screen sends the device back to pairing.
+  await page.getByRole('link', { name: 'מסכים' }).click();
+  await page.getByRole('button', { name: /ניתוק המסך מסך כניסה/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'ניתוק המסך' }).click();
+  await expect(player.getByTestId('pairing-code')).toBeVisible({ timeout: 15_000 });
+  await device.close();
+});
+
 test('admin invites a teacher (mail disabled: link shown to admin)', async ({ page }) => {
   await signIn(page, ADMIN, true);
   await page.getByRole('link', { name: 'חברים' }).click();

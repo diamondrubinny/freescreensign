@@ -1,0 +1,22 @@
+{
+  "name": "@rubinny/player",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rubinny web player (offline-first PWA).",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@rubinny/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "jsdom": "29.1.1",
+    "vite": "8.3.4"
+  }
+}

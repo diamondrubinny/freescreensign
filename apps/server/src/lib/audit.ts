@@ -30,7 +30,14 @@ export type AuditAction =
   | 'media.uploaded'
   | 'media.blocked'
   | 'media.renamed'
-  | 'media.deleted';
+  | 'media.deleted'
+  | 'screen.paired'
+  | 'screen.updated'
+  | 'screen.reloaded'
+  | 'screen.removed'
+  | 'playlist.created'
+  | 'playlist.updated'
+  | 'playlist.deleted';
 
 export interface AuditEvent {
   action: AuditAction;
