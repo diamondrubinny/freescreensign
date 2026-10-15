@@ -2,7 +2,7 @@ name: CodeQL
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/sharp-volta-n0yetk]
   pull_request:
   schedule:
     - cron: '23 4 * * 1'

@@ -2,8 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # The default branch of this repository, plus main for forks and a future rename.
+    branches: [main, claude/sharp-volta-n0yetk]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
