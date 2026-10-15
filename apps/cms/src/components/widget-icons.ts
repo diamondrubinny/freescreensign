@@ -3,6 +3,7 @@ import {
   Clock,
   CloudSun,
   Globe,
+  Palette,
   Puzzle,
   QrCode,
   Rss,
@@ -24,6 +25,7 @@ export const WIDGET_ICONS: Record<
   weather: { icon: CloudSun, tone: 'sky' },
   webpage: { icon: Globe, tone: 'green' },
   countdown: { icon: CalendarClock, tone: 'amber' },
+  design: { icon: Palette, tone: 'rose' },
 };
 
 export const widgetIcon = (type: string) =>

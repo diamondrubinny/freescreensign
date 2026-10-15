@@ -203,6 +203,8 @@ export const WIDGET_FIELDS: Record<WidgetType, WidgetFieldSpec[]> = {
     locale,
     ...colors(),
   ],
+  // Designs have their own visual editor (pages/design).
+  design: [],
 };
 
 /** Default values from the shared schemas (fields without a default stay empty). */

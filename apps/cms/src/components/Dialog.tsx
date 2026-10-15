@@ -8,13 +8,15 @@ interface Props {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Wider dialog for galleries. */
+  wide?: boolean;
 }
 
 /**
  * Modal built on the native <dialog> element: focus is trapped, Escape closes it,
  * the rest of the page is inert, and focus returns to the opener on close.
  */
-export function Dialog({ open, onClose, title, children, footer }: Props) {
+export function Dialog({ open, onClose, title, children, footer, wide = false }: Props) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -37,7 +39,7 @@ export function Dialog({ open, onClose, title, children, footer }: Props) {
       aria-labelledby={titleId}
       onClose={onClose}
       onCancel={onClose}
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-lg bg-white p-0 text-gray-900 shadow-xl backdrop:bg-black/50 dark:bg-gray-900 dark:text-gray-100"
+      className={`m-auto ${wide ? 'w-[min(56rem,calc(100vw-2rem))]' : 'w-[min(32rem,calc(100vw-2rem))]'} rounded-lg bg-white p-0 text-gray-900 shadow-xl backdrop:bg-black/50 dark:bg-gray-900 dark:text-gray-100`}
     >
       <div className="flex flex-col gap-4 p-6">
         <h2 id={titleId} className="text-xl font-bold">

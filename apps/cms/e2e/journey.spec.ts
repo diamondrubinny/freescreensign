@@ -353,6 +353,76 @@ test('a layout shows a clock and a ticker side by side on a screen', async ({ pa
   await device.close();
 });
 
+test('the free-form designer: drag, images, and the result on a screen', async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, ADMIN, true);
+  await mainNav(page).getByRole('link', { name: 'Widgets', exact: true }).click();
+  await page.getByRole('link', { name: 'בחירה עיצוב חופשי' }).click();
+  await expectAccessible(page, 'designer templates');
+  await page.getByRole('button', { name: 'התחלה ברוכים הבאים' }).click();
+  await page.getByLabel('שם ה-Widget').fill('שקף כניסה');
+
+  // Drag the title with the mouse: it moves (with snapping) and can be undone.
+  const title = page.locator('[data-element]', { hasText: 'ברוכים הבאים' });
+  const x = page.getByLabel('X', { exact: true });
+  await title.click();
+  const before = Number(await x.inputValue());
+  const box = (await title.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 40, { steps: 8 });
+  await page.mouse.up();
+  expect(Number(await x.inputValue())).toBeGreaterThan(before + 100);
+  await page.getByRole('button', { name: 'ביטול' }).click();
+  expect(Number(await x.inputValue())).toBe(before);
+
+  // An image from the media library.
+  await page.getByRole('button', { name: 'תמונה', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'בחירת תמונה' });
+  await expectAccessible(page, 'image picker');
+  await picker.getByRole('button', { name: /שימוש בתמונה מבצע השבוע/ }).click();
+  await expect(picker).toBeHidden();
+  await expect(page.locator('[data-element] img')).toBeVisible();
+  await expectAccessible(page, 'designer');
+  await page.getByRole('button', { name: 'Widget חדש' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: /עריכת Widget: שקף כניסה/ }),
+  ).toBeVisible();
+
+  // Show it on a screen.
+  await mainNav(page).getByRole('link', { name: 'פלייליסטים', exact: true }).click();
+  await page.getByLabel('שם הפלייליסט').fill('שקפים');
+  await page.getByRole('button', { name: 'פלייליסט חדש' }).click();
+  await page
+    .getByRole('region', { name: 'הוספת Widget' })
+    .getByRole('button', { name: 'הוספה שקף כניסה' })
+    .click();
+  await page.getByRole('button', { name: 'שמירת הפלייליסט' }).click();
+  await expect(page.getByText('הפלייליסט נשמר והמסכים עודכנו.')).toBeVisible();
+
+  const device = await browser.newContext({ ignoreHTTPSErrors: true });
+  const player = await device.newPage();
+  await player.goto('/player/');
+  const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
+  await mainNav(page).getByRole('link', { name: 'מסכים', exact: true }).click();
+  const addForm = page.getByRole('form', { name: 'הוספת מסך' });
+  await addForm.getByLabel('קוד חיבור').fill(code ?? '');
+  await addForm.getByLabel('שם מלא').fill('מסך שקפים');
+  await addForm.getByLabel('פלייליסט').selectOption({ label: 'שקפים' });
+  await addForm.getByRole('button', { name: 'הוספת מסך' }).click();
+
+  await expect(player.locator('.w-design-text', { hasText: 'ברוכים הבאים' })).toBeVisible({
+    timeout: 20_000,
+  });
+  const image = player.locator('.w-design-image img');
+  await expect
+    .poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth), { timeout: 20_000 })
+    .toBeGreaterThan(0);
+  await device.close();
+});
+
 test('admin invites a teacher (mail disabled: link shown to admin)', async ({ page }) => {
   await signIn(page, ADMIN, true);
   await mainNav(page).getByRole('link', { name: 'חברים', exact: true }).click();

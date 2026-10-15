@@ -14,6 +14,8 @@ import { Field } from '../components/Field';
 import { Form, value } from '../components/Form';
 import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
+import { StockImageSearch } from '../components/StockImageSearch';
+import { Card, SectionHeading } from '../components/ui';
 import { toFormErrors } from '../lib/api-errors';
 import { formatBytes, formatDuration } from '../lib/format-bytes';
 import { useFormErrors } from '../lib/use-form-errors';
@@ -95,6 +97,9 @@ export function MediaPage() {
       queryClient.invalidateQueries({ queryKey: ['media', orgId] }),
       queryClient.invalidateQueries({ queryKey: ['media-usage', orgId] }),
     ]);
+
+  const [showStock, setShowStock] = useState(false);
+  const [stockImported, setStockImported] = useState(false);
 
   // ---------------------------------------------------------------- uploads
   const [uploads, setUploads] = useState<UploadState[]>([]);
@@ -264,6 +269,45 @@ export function MediaPage() {
         </section>
       )}
 
+      {canEdit && (
+        <section aria-labelledby="stock-heading" className="mb-8">
+          <SectionHeading
+            id="stock-heading"
+            title={t('stock.title')}
+            description={t('stock.intro')}
+          >
+            <Button
+              variant="secondary"
+              aria-expanded={showStock}
+              aria-controls="stock-panel"
+              onClick={() => {
+                setShowStock((open) => !open);
+              }}
+            >
+              {showStock ? t('common.close') : t('stock.searchButton')}
+            </Button>
+          </SectionHeading>
+          {stockImported && (
+            <div className="mb-3">
+              <Alert variant="success">{t('stock.imported')}</Alert>
+            </div>
+          )}
+          {showStock && (
+            <Card className="p-4">
+              <div id="stock-panel">
+                <StockImageSearch
+                  orgId={orgId}
+                  onImported={() => {
+                    setStockImported(true);
+                    void refresh();
+                  }}
+                />
+              </div>
+            </Card>
+          )}
+        </section>
+      )}
+
       <section aria-labelledby="library-heading">
         <h2 id="library-heading" className="sr-only">
           {t('media.title')}
@@ -333,6 +377,11 @@ export function MediaPage() {
                   <span aria-hidden="true">{STATUS_ICON[item.status]} </span>
                   {t(`media.status.${item.status}`)}
                 </p>
+                {item.attribution && (
+                  <p className="text-xs text-gray-700 dark:text-gray-300" dir="auto">
+                    {item.attribution}
+                  </p>
+                )}
                 {item.failureReason && (
                   <p className="text-sm text-red-800 dark:text-red-300">
                     {t(`media.reasons.${item.failureReason as 'processing_error'}`, {

@@ -17,6 +17,7 @@ import { formatDateTime } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
 import { useDuplicate } from '../lib/use-duplicate';
 import { useOrgRole } from '../lib/use-org-role';
+import { DesignPage } from './design/DesignPage';
 import {
   WIDGET_FIELDS,
   readWidgetConfig,
@@ -303,6 +304,28 @@ export function WidgetEditorPage() {
     return <Alert variant="error">{loadErrors.form ?? t('errors.NOT_FOUND')}</Alert>;
   }
   const widgetType: WidgetType = type;
+  if (widgetType === 'design') {
+    return (
+      <>
+        <PageHeading
+          title={
+            isNew
+              ? t('widgets.createTitle', { type: t('widgets.types.design') })
+              : `${t('widgets.editTitle')}: ${widget?.name ?? ''}`
+          }
+        />
+        <p className="mb-6">
+          <Link
+            to={`/orgs/${orgId}/widgets`}
+            className="text-brand-700 underline dark:text-brand-300"
+          >
+            {t('widgets.back')}
+          </Link>
+        </p>
+        <DesignPage orgId={orgId} widget={widget} canEdit={canEdit} key={widget?.id ?? 'new'} />
+      </>
+    );
+  }
   const initial = widget?.config ?? widgetDefaults(widgetType);
   const fieldErrors = configErrors(errors);
   const typeLabel = t(`widgets.types.${widgetType}`);

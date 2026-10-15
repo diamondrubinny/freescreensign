@@ -142,6 +142,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'weather',
       'webpage',
       'countdown',
+      'design',
     ]);
 
     const clock = await createWidget('clock', {});

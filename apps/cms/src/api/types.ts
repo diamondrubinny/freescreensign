@@ -84,6 +84,8 @@ export interface MediaItem {
   durationMs: number | null;
   status: MediaStatus;
   failureReason: string | null;
+  attribution?: string | null;
+  sourceUrl?: string | null;
   createdAt: string;
   fileUrl?: string;
   thumbnailUrl?: string | null;
