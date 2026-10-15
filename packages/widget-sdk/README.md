@@ -17,7 +17,11 @@ export const countdown = defineWidget<CountdownConfig>({
   type: 'countdown',
   parseConfig(config) {
     const c = config as Partial<CountdownConfig>;
-    if (typeof c.title !== 'string' || typeof c.target !== 'string' || Number.isNaN(Date.parse(c.target))) {
+    if (
+      typeof c.title !== 'string' ||
+      typeof c.target !== 'string' ||
+      Number.isNaN(Date.parse(c.target))
+    ) {
       throw new Error('invalid countdown config');
     }
     return { title: c.title.slice(0, 100), target: c.target };
@@ -26,7 +30,10 @@ export const countdown = defineWidget<CountdownConfig>({
     const value = el('p', { className: 'value' });
     container.append(el('h2', { text: config.title, dir: 'auto' }), value);
     const update = () => {
-      const days = Math.max(0, Math.ceil((Date.parse(config.target) - ctx.now().getTime()) / 86_400_000));
+      const days = Math.max(
+        0,
+        Math.ceil((Date.parse(config.target) - ctx.now().getTime()) / 86_400_000),
+      );
       value.textContent = ctx.locale === 'he' ? `עוד ${days} ימים` : `${days} days to go`;
     };
     update();

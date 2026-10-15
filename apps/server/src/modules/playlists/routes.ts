@@ -7,12 +7,32 @@ import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
-import { DEFAULT_IMAGE_DURATION_MS } from '../player/manifest.js';
+import { DEFAULT_IMAGE_DURATION_MS, defaultWidgetDurationMs } from '../player/manifest.js';
 import { notifyPlaylistScreens } from '../screens/notify.js';
 
 const playlistParams = z.object({ orgId: z.uuid(), playlistId: z.uuid() });
 const notFound = () => new HttpError(404, 'NOT_FOUND', 'Resource not found');
 const MAX_ITEMS = 500;
+
+type PlaylistItemDto =
+  | {
+      kind: 'widget';
+      widgetId: string;
+      widgetType: string;
+      name: string;
+      durationMs: number | null;
+      effectiveDurationMs: number;
+    }
+  | {
+      kind: 'media';
+      mediaId: string;
+      name: string;
+      mediaKind: 'image' | 'video';
+      status: string | null;
+      durationMs: number | null;
+      effectiveDurationMs: number;
+      thumbnailUrl: string | null;
+    };
 
 export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
@@ -33,17 +53,22 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     const playlist = await loadPlaylist(orgId, playlistId);
     const items = await ctx.db
       .selectFrom('playlist_items')
-      .innerJoin('media', 'media.id', 'playlist_items.media_id')
+      .leftJoin('media', 'media.id', 'playlist_items.media_id')
+      .leftJoin('widgets', 'widgets.id', 'playlist_items.widget_id')
       .select([
         'playlist_items.position',
         'playlist_items.duration_ms',
-        'media.id as media_id',
-        'media.name',
+        'playlist_items.media_id',
+        'playlist_items.widget_id',
+        'media.name as media_name',
         'media.kind',
         'media.status',
         'media.duration_ms as media_duration_ms',
         'media.thumbnail_key',
         'media.deleted_at',
+        'widgets.name as widget_name',
+        'widgets.type as widget_type',
+        'widgets.config as widget_config',
       ])
       .where('playlist_items.playlist_id', '=', playlistId)
       .orderBy('playlist_items.position')
@@ -60,24 +85,42 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
         name: playlist.name,
         updatedAt: playlist.updated_at.toISOString(),
         screens,
-        items: items
-          .filter((item) => item.deleted_at === null)
-          .map((item) => ({
-            mediaId: item.media_id,
-            name: item.name,
-            kind: item.kind,
-            status: item.status,
-            durationMs: item.duration_ms,
-            effectiveDurationMs:
-              item.duration_ms ??
-              (item.kind === 'video' && item.media_duration_ms
-                ? item.media_duration_ms
-                : DEFAULT_IMAGE_DURATION_MS),
-            thumbnailUrl:
-              item.status === 'ready' && item.thumbnail_key
-                ? `/api/v1/orgs/${orgId}/media/${item.media_id}/thumbnail`
-                : null,
-          })),
+        items: items.flatMap((item): PlaylistItemDto[] => {
+          if (item.widget_id !== null) {
+            const type = item.widget_type ?? '';
+            return [
+              {
+                kind: 'widget',
+                widgetId: item.widget_id,
+                widgetType: type,
+                name: item.widget_name ?? '',
+                durationMs: item.duration_ms,
+                effectiveDurationMs:
+                  item.duration_ms ?? defaultWidgetDurationMs(type, item.widget_config ?? {}),
+              },
+            ];
+          }
+          if (item.media_id === null || item.deleted_at !== null || item.kind === null) return [];
+          return [
+            {
+              kind: 'media',
+              mediaId: item.media_id,
+              name: item.media_name ?? '',
+              mediaKind: item.kind,
+              status: item.status,
+              durationMs: item.duration_ms,
+              effectiveDurationMs:
+                item.duration_ms ??
+                (item.kind === 'video' && item.media_duration_ms
+                  ? item.media_duration_ms
+                  : DEFAULT_IMAGE_DURATION_MS),
+              thumbnailUrl:
+                item.status === 'ready' && item.thumbnail_key
+                  ? `/api/v1/orgs/${orgId}/media/${item.media_id}/thumbnail`
+                  : null,
+            },
+          ];
+        }),
       },
     };
   }
@@ -169,14 +212,15 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { playlistId } = parse(playlistParams, request.params);
+    const duration = z.number().int().min(1000).max(86_400_000).nullable();
     const { items } = parse(
       z.object({
         items: z
           .array(
-            z.object({
-              mediaId: z.uuid(),
-              durationMs: z.number().int().min(1000).max(86_400_000).nullable(),
-            }),
+            z.union([
+              z.object({ mediaId: z.uuid(), durationMs: duration }),
+              z.object({ widgetId: z.uuid(), durationMs: duration }),
+            ]),
           )
           .max(MAX_ITEMS),
       }),
@@ -184,24 +228,37 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     );
     await loadPlaylist(org.id, playlistId);
 
-    const ids = [...new Set(items.map((item) => item.mediaId))];
-    const valid = ids.length
+    const mediaIds = [
+      ...new Set(items.flatMap((item) => ('mediaId' in item ? [item.mediaId] : []))),
+    ];
+    const widgetIds = [
+      ...new Set(items.flatMap((item) => ('widgetId' in item ? [item.widgetId] : []))),
+    ];
+    const validMedia = mediaIds.length
       ? await ctx.db
           .selectFrom('media')
           .select('id')
-          .where('id', 'in', ids)
+          .where('id', 'in', mediaIds)
           .where('org_id', '=', org.id)
           .where('status', '=', 'ready')
           .where('deleted_at', 'is', null)
           .execute()
       : [];
-    const validIds = new Set(valid.map((row) => row.id));
-    const invalid = items
-      .map((item, index) => ({ item, index }))
-      .filter(({ item }) => !validIds.has(item.mediaId))
-      .map(({ index }) => ({ path: `items.${String(index)}.mediaId`, reason: 'invalid' }));
+    const validWidgets = widgetIds.length
+      ? await ctx.db
+          .selectFrom('widgets')
+          .select('id')
+          .where('id', 'in', widgetIds)
+          .where('org_id', '=', org.id)
+          .execute()
+      : [];
+    const valid = new Set([...validMedia, ...validWidgets].map((row) => row.id));
+    const invalid = items.flatMap((item, index) => {
+      const [key, id] = 'mediaId' in item ? ['mediaId', item.mediaId] : ['widgetId', item.widgetId];
+      return valid.has(id) ? [] : [{ path: `items.${String(index)}.${key}`, reason: 'invalid' }];
+    });
     if (invalid.length > 0)
-      throw new HttpError(400, 'VALIDATION_FAILED', 'Some media items are not available', invalid);
+      throw new HttpError(400, 'VALIDATION_FAILED', 'Some items are not available', invalid);
 
     await ctx.db.transaction().execute(async (trx) => {
       await trx.deleteFrom('playlist_items').where('playlist_id', '=', playlistId).execute();
@@ -212,7 +269,8 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
             items.map((item, position) => ({
               playlist_id: playlistId,
               position,
-              media_id: item.mediaId,
+              media_id: 'mediaId' in item ? item.mediaId : null,
+              widget_id: 'widgetId' in item ? item.widgetId : null,
               duration_ms: item.durationMs,
             })),
           )

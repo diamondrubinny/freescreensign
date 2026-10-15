@@ -140,8 +140,46 @@ export interface PlaylistItemsTable {
   id: Generated<string>;
   playlist_id: string;
   position: number;
-  media_id: string;
+  media_id: string | null;
+  widget_id: string | null;
   duration_ms: number | null;
+}
+
+export interface WidgetsTable {
+  id: Generated<string>;
+  org_id: string;
+  type: string;
+  name: string;
+  /** Validated against the widget type's schema on write; jsonb. */
+  config: ColumnType<Record<string, unknown>, string, string>;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface LayoutsTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  width: number;
+  height: number;
+  background: Generated<string>;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface LayoutZonesTable {
+  id: Generated<string>;
+  layout_id: string;
+  position: number;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: Generated<number>;
+  playlist_id: string | null;
 }
 
 export type ScreenOrientation = 'landscape' | 'portrait' | 'landscape-flipped' | 'portrait-flipped';
@@ -152,6 +190,7 @@ export interface ScreensTable {
   name: string;
   token_hash: string;
   playlist_id: string | null;
+  layout_id: Generated<string | null>;
   orientation: Generated<ScreenOrientation>;
   timezone: Generated<string>;
   last_seen_at: NullableTimestamp;
@@ -186,6 +225,9 @@ export interface Database {
   playlist_items: PlaylistItemsTable;
   screens: ScreensTable;
   pairing_codes: PairingCodesTable;
+  widgets: WidgetsTable;
+  layouts: LayoutsTable;
+  layout_zones: LayoutZonesTable;
 }
 
 export type User = Selectable<UsersTable>;
@@ -196,3 +238,6 @@ export type Membership = Selectable<MembershipsTable>;
 export type Media = Selectable<MediaTable>;
 export type Screen = Selectable<ScreensTable>;
 export type Playlist = Selectable<PlaylistsTable>;
+export type Widget = Selectable<WidgetsTable>;
+export type Layout = Selectable<LayoutsTable>;
+export type LayoutZone = Selectable<LayoutZonesTable>;

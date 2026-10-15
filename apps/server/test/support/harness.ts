@@ -7,6 +7,7 @@ import { loadEnv, type Env } from '../../src/config/env.js';
 import { createDb, migrateToLatest, type Db } from '../../src/db/database.js';
 import { KeyRing } from '../../src/lib/crypto.js';
 import { RedisLimiter } from '../../src/lib/limiter.js';
+import { RedisKvCache } from '../../src/lib/kv-cache.js';
 import { Storage, storageConfigFromEnv } from '../../src/lib/storage.js';
 import { createMediaQueue } from '../../src/queue.js';
 import { RedisScreenEvents } from '../../src/lib/screen-events.js';
@@ -95,6 +96,7 @@ export async function createHarness(
       keys: new KeyRing(env.ENCRYPTION_KEY),
       mailer,
       limiter: new RedisLimiter(redis, `rubinny:test:${schema}:`),
+      cache: new RedisKvCache(redis, `rubinny:test:${schema}:cache:`),
       events,
       ...(storage && queue ? { media: { storage, queue } } : {}),
     },

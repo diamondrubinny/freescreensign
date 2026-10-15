@@ -37,7 +37,13 @@ export type AuditAction =
   | 'screen.removed'
   | 'playlist.created'
   | 'playlist.updated'
-  | 'playlist.deleted';
+  | 'playlist.deleted'
+  | 'widget.created'
+  | 'widget.updated'
+  | 'widget.deleted'
+  | 'layout.created'
+  | 'layout.updated'
+  | 'layout.deleted';
 
 export interface AuditEvent {
   action: AuditAction;

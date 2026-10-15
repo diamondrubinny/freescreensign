@@ -41,7 +41,9 @@ export interface WidgetDefinition<Config> {
 }
 
 /** Identity helper that gives type inference to widget definitions. */
-export function defineWidget<Config>(definition: WidgetDefinition<Config>): WidgetDefinition<Config> {
+export function defineWidget<Config>(
+  definition: WidgetDefinition<Config>,
+): WidgetDefinition<Config> {
   if (!/^[a-z][a-z0-9-]{0,63}$/.test(definition.type)) {
     throw new Error(`Invalid widget type "${definition.type}" (use kebab-case)`);
   }
@@ -51,7 +53,12 @@ export function defineWidget<Config>(definition: WidgetDefinition<Config>): Widg
 /** Creates an element with text content only (never HTML) — the safe way to show strings. */
 export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
-  options: { className?: string; text?: string; dir?: 'auto' | 'rtl' | 'ltr'; style?: Partial<CSSStyleDeclaration> } = {},
+  options: {
+    className?: string;
+    text?: string;
+    dir?: 'auto' | 'rtl' | 'ltr';
+    style?: Partial<CSSStyleDeclaration>;
+  } = {},
   ...children: Node[]
 ): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -66,13 +73,20 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 /** setInterval that is cleared automatically when `signal` aborts. */
 export function every(ms: number, signal: AbortSignal, task: () => void): void {
   const timer = setInterval(task, ms);
-  signal.addEventListener('abort', () => {
-    clearInterval(timer);
-  }, { once: true });
+  signal.addEventListener(
+    'abort',
+    () => {
+      clearInterval(timer);
+    },
+    { once: true },
+  );
 }
 
 /** Strong text direction of a string (first strong character), for RTL/LTR layout. */
 export function textDirection(text: string): 'rtl' | 'ltr' {
-  const match = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]|[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]/.exec(text);
+  const match =
+    /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]|[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]/.exec(
+      text,
+    );
   return match && /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(match[0]) ? 'rtl' : 'ltr';
 }

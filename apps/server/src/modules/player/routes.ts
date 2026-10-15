@@ -13,6 +13,7 @@ import { sendStoredFile } from '../../media/serve.js';
 import { clientIp } from '../auth/sessions.js';
 import { findScreenByToken, requireScreen } from './auth.js';
 import { buildManifest } from './manifest.js';
+import { getWidgetData } from '../widgets/data.js';
 
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
 const WS_AUTH_TIMEOUT_MS = 5000;
@@ -87,7 +88,7 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
   // --------------------------------------------------------------- manifest
   app.get('/player/v1/manifest', async (request, reply) => {
     const screen = await requireScreen(ctx, request);
-    const manifest = await buildManifest(ctx.db, screen);
+    const manifest = await buildManifest(ctx.db, screen, ctx.env);
     await ctx.db
       .updateTable('screens')
       .set({ last_seen_at: new Date() })
@@ -122,6 +123,23 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
       // Content is immutable per id+hash; players keep their own cache.
       cacheControl: 'private, max-age=86400',
     });
+  });
+
+  // ---------------------------------------------------------- widget data
+  /** RSS/weather content for a widget of the screen's own organization. */
+  app.get('/player/v1/widgets/:widgetId/data', async (request, reply) => {
+    const screen = await requireScreen(ctx, request);
+    const { widgetId } = parse(z.object({ widgetId: z.uuid() }), request.params);
+    const widget = await ctx.db
+      .selectFrom('widgets')
+      .select(['org_id', 'type', 'config'])
+      .where('id', '=', widgetId)
+      .where('org_id', '=', screen.org_id)
+      .executeTakeFirst();
+    if (!widget) throw new HttpError(404, 'NOT_FOUND', 'Resource not found');
+    const result = await getWidgetData(ctx, widget);
+    void reply.header('cache-control', 'no-store');
+    return result;
   });
 
   // -------------------------------------------------------------- heartbeat

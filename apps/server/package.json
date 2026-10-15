@@ -27,6 +27,7 @@
     "@node-rs/argon2": "2.2.2",
     "@rubinny/shared": "workspace:*",
     "bullmq": "6.3.15",
+    "fast-xml-parser": "5.11.2",
     "fastify": "5.12.7",
     "file-type": "22.2.0",
     "ioredis": "6.0.0",

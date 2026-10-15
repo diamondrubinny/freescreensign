@@ -3,8 +3,20 @@ import { defineWidget, el, every, textDirection } from '../src/index.js';
 
 describe('widget-sdk', () => {
   it('validates widget types', () => {
-    expect(() => defineWidget({ type: 'Bad Type', parseConfig: (c: unknown) => c, render: () => ({ destroy() {} }) })).toThrow();
-    expect(defineWidget({ type: 'count-down', parseConfig: (c: unknown) => c, render: () => ({ destroy() {} }) }).type).toBe('count-down');
+    expect(() =>
+      defineWidget({
+        type: 'Bad Type',
+        parseConfig: (c: unknown) => c,
+        render: () => ({ destroy() {} }),
+      }),
+    ).toThrow();
+    expect(
+      defineWidget({
+        type: 'count-down',
+        parseConfig: (c: unknown) => c,
+        render: () => ({ destroy() {} }),
+      }).type,
+    ).toBe('count-down');
   });
 
   it('el() sets text, never HTML', () => {

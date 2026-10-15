@@ -91,4 +91,6 @@ export const LIMITS = {
   mediaUploadUser: { name: 'media-upload-user', max: 120, windowSeconds: 3600 },
   pairStartIp: { name: 'pair-start-ip', max: 20, windowSeconds: 3600 },
   screenClaimUser: { name: 'screen-claim-user', max: 30, windowSeconds: 3600 },
+  /** Outbound widget fetches (cache misses only) per organization. */
+  widgetFetchOrg: { name: 'widget-fetch-org', max: 120, windowSeconds: 3600 },
 } as const satisfies Record<string, LimitRule>;

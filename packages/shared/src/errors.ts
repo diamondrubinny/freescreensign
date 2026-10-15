@@ -19,6 +19,8 @@ export const API_ERROR_CODES = [
   'QUOTA_EXCEEDED',
   'INTERNAL_ERROR',
   'SERVICE_UNAVAILABLE',
+  /** An external source (e.g. an RSS feed) could not be fetched or parsed. */
+  'UPSTREAM_FAILED',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

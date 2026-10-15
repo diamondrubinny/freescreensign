@@ -104,12 +104,16 @@ export type WidgetConfigResult =
 
 /** Validates (and fills defaults for) a widget configuration. Never throws. */
 export function parseWidgetConfig(type: string, config: unknown): WidgetConfigResult {
-  if (!isWidgetType(type)) return { success: false, issues: [{ path: 'type', message: 'Unknown widget type' }] };
+  if (!isWidgetType(type))
+    return { success: false, issues: [{ path: 'type', message: 'Unknown widget type' }] };
   const result = WIDGET_CONFIG_SCHEMAS[type].safeParse(config);
   if (result.success) return { success: true, config: result.data };
   return {
     success: false,
-    issues: result.error.issues.map((issue) => ({ path: issue.path.map(String).join('.'), message: issue.message })),
+    issues: result.error.issues.map((issue) => ({
+      path: issue.path.map(String).join('.'),
+      message: issue.message,
+    })),
   };
 }
 

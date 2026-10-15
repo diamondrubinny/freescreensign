@@ -7,7 +7,14 @@ export function parse<T extends z.ZodType>(schema: T, input: unknown): z.infer<T
   if (result.success) return result.data;
   const seen = new Set<string>();
   const fields = result.error.issues
-    .map((issue) => ({ path: issue.path.join('.') || '(body)', reason: issue.code }))
+    .map((issue) => ({
+      path: issue.path.join('.') || '(body)',
+      // Custom refinements may name a specific reason, e.g. { params: { reason: 'out_of_bounds' } }.
+      reason:
+        issue.code === 'custom' && typeof issue.params?.reason === 'string'
+          ? issue.params.reason
+          : issue.code,
+    }))
     .filter((field) => !seen.has(field.path) && seen.add(field.path));
   throw new HttpError(
     400,

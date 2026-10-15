@@ -28,9 +28,13 @@ describe('hebrewNumeral', () => {
 
 describe('formatHebrewDate', () => {
   it('formats with Hebrew numerals and the screen time zone', () => {
-    expect(formatHebrewDate(new Date('2026-10-15T10:00:00Z'), 'Asia/Jerusalem')).toBe('ד׳ בחשוון תשפ״ז');
+    expect(formatHebrewDate(new Date('2026-10-15T10:00:00Z'), 'Asia/Jerusalem')).toBe(
+      'ד׳ בחשוון תשפ״ז',
+    );
     // 22:30 UTC is already the next day in Jerusalem.
-    expect(formatHebrewDate(new Date('2026-10-15T22:30:00Z'), 'Asia/Jerusalem')).toBe('ה׳ בחשוון תשפ״ז');
+    expect(formatHebrewDate(new Date('2026-10-15T22:30:00Z'), 'Asia/Jerusalem')).toBe(
+      'ה׳ בחשוון תשפ״ז',
+    );
   });
 });
 
@@ -39,7 +43,11 @@ describe('parseWidgetConfig', () => {
     const result = parseWidgetConfig('clock', {});
     expect(result).toEqual({
       success: true,
-      config: expect.objectContaining({ format: '24h', showHebrewDate: true, textColor: '#ffffff' }) as unknown,
+      config: expect.objectContaining({
+        format: '24h',
+        showHebrewDate: true,
+        textColor: '#ffffff',
+      }) as unknown,
     });
   });
 
@@ -50,7 +58,9 @@ describe('parseWidgetConfig', () => {
     expect(parseWidgetConfig('qr', { url: 'javascript:alert(1)' }).success).toBe(false);
     expect(parseWidgetConfig('webpage', { url: 'https://example.com' }).success).toBe(true);
     expect(parseWidgetConfig('clock', { timezone: 'Mars/Olympus' }).success).toBe(false);
-    expect(parseWidgetConfig('weather', { latitude: 95, longitude: 0, locationName: 'x' }).success).toBe(false);
+    expect(
+      parseWidgetConfig('weather', { latitude: 95, longitude: 0, locationName: 'x' }).success,
+    ).toBe(false);
   });
 
   it('accepts http and https feeds for RSS (fetched server-side)', () => {

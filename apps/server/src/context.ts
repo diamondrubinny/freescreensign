@@ -1,6 +1,7 @@
 import type { Env } from './config/env.js';
 import type { Db } from './db/database.js';
 import type { KeyRing } from './lib/crypto.js';
+import type { KvCache } from './lib/kv-cache.js';
 import type { Limiter } from './lib/limiter.js';
 import type { Mailer } from './lib/mail/mailer.js';
 import type { ScreenEvents } from './lib/screen-events.js';
@@ -14,6 +15,8 @@ export interface AppContext {
   keys: KeyRing;
   mailer: Mailer;
   limiter: Limiter;
+  /** Cache for derived, non-personal data (widget feeds). */
+  cache: KvCache;
   /** Pushes events (manifest changes, reload) to connected players. */
   events: ScreenEvents;
   /** Present when object storage is configured; media routes are disabled otherwise. */

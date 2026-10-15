@@ -6,6 +6,7 @@ import { createDb, migrateToLatest } from './db/database.js';
 import { KeyRing } from './lib/crypto.js';
 import { postgresCheck, redisCheck } from './lib/health-checks.js';
 import { RedisLimiter } from './lib/limiter.js';
+import { RedisKvCache } from './lib/kv-cache.js';
 import { createMailer } from './lib/mail/mailer.js';
 import { cleanupStaleUploads, runMaintenance } from './lib/maintenance.js';
 import { Storage, storageConfigFromEnv } from './lib/storage.js';
@@ -53,6 +54,7 @@ async function main() {
       db,
       keys,
       limiter: new RedisLimiter(redis),
+      cache: new RedisKvCache(redis),
       mailer: (log) => createMailer(env, log),
     },
   });

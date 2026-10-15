@@ -22,6 +22,8 @@ import { playerRoutes } from './modules/player/routes.js';
 import { playlistRoutes } from './modules/playlists/routes.js';
 import { screenRoutes } from './modules/screens/routes.js';
 import { setupRoutes } from './modules/setup/routes.js';
+import { layoutRoutes } from './modules/layouts/routes.js';
+import { widgetRoutes } from './modules/widgets/routes.js';
 
 export interface BuildAppOptions {
   env: Env;
@@ -117,6 +119,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     playerRoutes(app, ctx);
     screenRoutes(app, ctx);
     playlistRoutes(app, ctx);
+    widgetRoutes(app, ctx);
+    layoutRoutes(app, ctx);
     if (ctx.media) {
       await app.register(multipart, {
         // Per-request limits are tightened in the upload handler.

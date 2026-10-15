@@ -95,6 +95,7 @@ export const en: Messages = {
     QUOTA_EXCEEDED: 'You have reached the limit.',
     INTERNAL_ERROR: 'An unexpected error occurred. Please try again.',
     SERVICE_UNAVAILABLE: 'The service is temporarily unavailable. Please try again shortly.',
+    UPSTREAM_FAILED: 'The external data source could not be loaded. Check the address and try again.',
     network: 'Cannot reach the server. Check your connection and try again.',
     reference: 'Support reference: {{id}}',
   },

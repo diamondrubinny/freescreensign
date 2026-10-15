@@ -23,13 +23,19 @@ const invalidCode = () =>
     { path: 'code', reason: 'invalid' },
   ]);
 
-export function screenDto(screen: Screen, playlistName: string | null) {
+export function screenDto(
+  screen: Screen,
+  playlistName: string | null,
+  layoutName: string | null = null,
+) {
   const lastSeen = screen.last_seen_at;
   return {
     id: screen.id,
     name: screen.name,
     playlistId: screen.playlist_id,
     playlistName,
+    layoutId: screen.layout_id,
+    layoutName,
     orientation: screen.orientation,
     timezone: screen.timezone,
     online: lastSeen !== null && Date.now() - lastSeen.getTime() < ONLINE_WINDOW_MS,
@@ -61,18 +67,34 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
     }
   }
 
+  async function assertLayoutInOrg(orgId: string, layoutId: string | null | undefined) {
+    if (!layoutId) return;
+    const found = await ctx.db
+      .selectFrom('layouts')
+      .select('id')
+      .where('id', '=', layoutId)
+      .where('org_id', '=', orgId)
+      .executeTakeFirst();
+    if (!found) {
+      throw new HttpError(400, 'VALIDATION_FAILED', 'Unknown layout', [
+        { path: 'layoutId', reason: 'invalid' },
+      ]);
+    }
+  }
+
   async function loadScreen(orgId: string, screenId: string) {
     const row = await ctx.db
       .selectFrom('screens')
       .leftJoin('playlists', 'playlists.id', 'screens.playlist_id')
+      .leftJoin('layouts', 'layouts.id', 'screens.layout_id')
       .selectAll('screens')
-      .select('playlists.name as playlist_name')
+      .select(['playlists.name as playlist_name', 'layouts.name as layout_name'])
       .where('screens.id', '=', screenId)
       .where('screens.org_id', '=', orgId)
       .executeTakeFirst();
     if (!row) throw notFound();
-    const { playlist_name: playlistName, ...screen } = row;
-    return { screen, playlistName };
+    const { playlist_name: playlistName, layout_name: layoutName, ...screen } = row;
+    return { screen, playlistName, layoutName };
   }
 
   app.get('/api/v1/orgs/:orgId/screens', viewer, async (request) => {
@@ -80,14 +102,15 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
     const rows = await ctx.db
       .selectFrom('screens')
       .leftJoin('playlists', 'playlists.id', 'screens.playlist_id')
+      .leftJoin('layouts', 'layouts.id', 'screens.layout_id')
       .selectAll('screens')
-      .select('playlists.name as playlist_name')
+      .select(['playlists.name as playlist_name', 'layouts.name as layout_name'])
       .where('screens.org_id', '=', org.id)
       .orderBy('screens.name')
       .execute();
     return {
-      screens: rows.map(({ playlist_name: playlistName, ...screen }) =>
-        screenDto(screen, playlistName),
+      screens: rows.map(({ playlist_name: playlistName, layout_name: layoutName, ...screen }) =>
+        screenDto(screen, playlistName, layoutName),
       ),
     };
   });
@@ -102,12 +125,14 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
         code: z.string().max(20),
         name: nameSchema,
         playlistId: z.uuid().nullable().optional(),
+        layoutId: z.uuid().nullable().optional(),
       }),
       request.body,
     );
     const normalized = normalizePairingCode(body.code);
     if (!normalized) throw invalidCode();
     await assertPlaylistInOrg(org.id, body.playlistId);
+    await assertLayoutInOrg(org.id, body.layoutId);
     const codeHash = pairingCodeHash(normalized);
 
     const deviceToken = randomToken();
@@ -119,6 +144,7 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
           name: body.name,
           token_hash: sha256Hex(deviceToken),
           playlist_id: body.playlistId ?? null,
+          layout_id: body.layoutId ?? null,
           created_by: user.id,
         })
         .returningAll()
@@ -145,8 +171,8 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
       targetType: 'screen',
       targetId: screen.id,
     });
-    const { playlistName } = await loadScreen(org.id, screen.id);
-    return reply.status(201).send({ screen: screenDto(screen, playlistName) });
+    const { playlistName, layoutName } = await loadScreen(org.id, screen.id);
+    return reply.status(201).send({ screen: screenDto(screen, playlistName, layoutName) });
   });
 
   app.patch('/api/v1/orgs/:orgId/screens/:screenId', editor, async (request) => {
@@ -158,6 +184,7 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
         .object({
           name: nameSchema.optional(),
           playlistId: z.uuid().nullable().optional(),
+          layoutId: z.uuid().nullable().optional(),
           orientation: z.enum(ORIENTATIONS).optional(),
         })
         .refine((v) => Object.keys(v).length > 0, { message: 'Nothing to update' }),
@@ -165,11 +192,13 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
     );
     await loadScreen(org.id, screenId);
     await assertPlaylistInOrg(org.id, body.playlistId);
+    await assertLayoutInOrg(org.id, body.layoutId);
     await ctx.db
       .updateTable('screens')
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.playlistId !== undefined ? { playlist_id: body.playlistId } : {}),
+        ...(body.layoutId !== undefined ? { layout_id: body.layoutId } : {}),
         ...(body.orientation !== undefined ? { orientation: body.orientation } : {}),
         updated_at: new Date(),
       })
@@ -185,8 +214,8 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
       targetId: screenId,
       meta: { fields: Object.keys(body) },
     });
-    const { screen, playlistName } = await loadScreen(org.id, screenId);
-    return { screen: screenDto(screen, playlistName) };
+    const { screen, playlistName, layoutName } = await loadScreen(org.id, screenId);
+    return { screen: screenDto(screen, playlistName, layoutName) };
   });
 
   app.post('/api/v1/orgs/:orgId/screens/:screenId/reload', editor, async (request, reply) => {

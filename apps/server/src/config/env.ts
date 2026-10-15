@@ -93,6 +93,18 @@ export const envSchema = z
     MEDIA_ORG_QUOTA_BYTES: z.coerce.number().int().min(0).default(0),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
 
+    // --- Widgets.
+    /**
+     * Forecast endpoint compatible with the Open-Meteo API. Weather widgets are
+     * disabled when unset: the free public Open-Meteo API is for non-commercial
+     * use only, so operators must choose it (or a commercial/self-hosted one) explicitly.
+     */
+    WEATHER_API_URL: z.url({ protocol: /^https?$/ }).optional(),
+    /** API key for a commercial Open-Meteo plan (sent as the `apikey` query parameter). */
+    WEATHER_API_KEY: z.string().min(1).optional(),
+    /** Lets widget fetches reach private addresses. Tests only; refused in production. */
+    WIDGET_FETCH_ALLOW_PRIVATE: booleanString.default(false),
+
     MAIL_TRANSPORT: z.enum(['smtp', 'console', 'disabled']).default('disabled'),
     SMTP_URL: z.url({ protocol: /^smtps?$/ }).optional(),
     MAIL_FROM: z.string().min(3).optional(),
@@ -121,6 +133,13 @@ export const envSchema = z
         code: 'custom',
         path: ['SETUP_TOKEN'],
         message: 'is required in production (protects the first-run setup)',
+      });
+    }
+    if (env.NODE_ENV === 'production' && env.WIDGET_FETCH_ALLOW_PRIVATE) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WIDGET_FETCH_ALLOW_PRIVATE'],
+        message: 'must not be enabled in production (it disables SSRF protection)',
       });
     }
     if (env.MAIL_TRANSPORT === 'smtp' && (!env.SMTP_URL || !env.MAIL_FROM)) {
