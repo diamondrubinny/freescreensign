@@ -158,8 +158,23 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('layouts.org_id', '=', org.id)
       .orderBy(sql`lower(layouts.name)`)
       .execute();
+    const zones = rows.length
+      ? await ctx.db
+          .selectFrom('layout_zones')
+          .select(['layout_id', 'x', 'y', 'w', 'h'])
+          .where(
+            'layout_id',
+            'in',
+            rows.map((row) => row.id),
+          )
+          .orderBy('position')
+          .execute()
+      : [];
     return {
       layouts: rows.map((row) => ({
+        zones: zones
+          .filter((zone) => zone.layout_id === row.id)
+          .map(({ x, y, w, h }) => ({ x, y, w, h })),
         id: row.id,
         name: row.name,
         width: row.width,

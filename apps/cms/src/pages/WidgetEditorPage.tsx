@@ -15,6 +15,7 @@ import { PageHeading } from '../components/PageHeading';
 import type { FormErrors } from '../lib/api-errors';
 import { formatDateTime } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
+import { useDuplicate } from '../lib/use-duplicate';
 import { useOrgRole } from '../lib/use-org-role';
 import {
   WIDGET_FIELDS,
@@ -112,7 +113,7 @@ function ConfigField({
     control = (
       <input
         {...common}
-        type={field.kind === 'url' ? 'url' : 'text'}
+        type={field.kind === 'url' ? 'url' : field.kind === 'datetime' ? 'datetime-local' : 'text'}
         required={field.required}
         maxLength={field.maxLength}
         dir={field.ltr ? 'ltr' : 'auto'}
@@ -177,7 +178,7 @@ function DataPreview({ orgId, widget }: { orgId: string; widget: WidgetItem }) {
       <div aria-live="polite" className="mt-3">
         {errors.form && <Alert variant="error">{errors.form}</Alert>}
         {result && (
-          <div className="rounded-md border border-gray-300 p-3 dark:border-gray-700">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-3 dark:border-gray-800 dark:bg-gray-900">
             <p className="mb-2 text-sm">
               {result.stale
                 ? t('widgets.stale', { when: formatDateTime(result.fetchedAt, i18n.language) })
@@ -291,8 +292,9 @@ export function WidgetEditorPage() {
     },
   });
 
+  const duplicate = useDuplicate(orgId, 'widgets', widgetId ?? '');
   const errors = useFormErrors(save.error);
-  const loadErrors = useFormErrors(existing.error ?? remove.error);
+  const loadErrors = useFormErrors(existing.error ?? remove.error ?? duplicate.error);
 
   if (!isNew && existing.isPending) return <Loading />;
   const widget = existing.data?.widget;
@@ -315,7 +317,10 @@ export function WidgetEditorPage() {
         }
       />
       <p className="mb-6">
-        <Link to={`/orgs/${orgId}/widgets`} className="text-blue-700 underline dark:text-blue-300">
+        <Link
+          to={`/orgs/${orgId}/widgets`}
+          className="text-brand-700 underline dark:text-brand-300"
+        >
           {t('widgets.back')}
         </Link>
       </p>
@@ -376,14 +381,25 @@ export function WidgetEditorPage() {
       {widget && canEdit && (
         <>
           {loadErrors.form && <Alert variant="error">{loadErrors.form}</Alert>}
-          <Button
-            variant="danger"
-            onClick={() => {
-              setDeleting(true);
-            }}
-          >
-            {t('widgets.delete')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              loading={duplicate.isPending}
+              onClick={() => {
+                duplicate.mutate(widget.name);
+              }}
+            >
+              {t('widgets.duplicate')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setDeleting(true);
+              }}
+            >
+              {t('widgets.delete')}
+            </Button>
+          </div>
           <ConfirmDialog
             open={deleting}
             message={t('widgets.deleteConfirm', { name: widget.name })}

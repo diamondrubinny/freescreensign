@@ -61,7 +61,10 @@ export function PlaylistsPage() {
       {list.data?.playlists.length === 0 && <p>{t('playlists.empty')}</p>}
       <ul className="grid gap-3 sm:grid-cols-2">
         {list.data?.playlists.map((p) => (
-          <li key={p.id} className="rounded-lg border border-gray-300 p-4 dark:border-gray-700">
+          <li
+            key={p.id}
+            className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 dark:border-gray-800 dark:bg-gray-900"
+          >
             <h3 className="text-lg font-semibold" dir="auto">
               {p.name}
             </h3>
@@ -71,7 +74,7 @@ export function PlaylistsPage() {
             </p>
             <Link
               to={`/orgs/${orgId}/playlists/${p.id}`}
-              className="mt-2 inline-block text-blue-700 underline dark:text-blue-300"
+              className="mt-2 inline-block text-brand-700 underline dark:text-brand-300"
             >
               {t('playlists.open')} <span className="sr-only">{p.name}</span>
             </Link>

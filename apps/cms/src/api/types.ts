@@ -121,6 +121,7 @@ export type PlaylistEntry =
       name: string;
       mediaKind: 'image' | 'video';
       status: string | null;
+      fit: 'contain' | 'cover' | 'blur';
       durationMs: number | null;
       effectiveDurationMs: number;
       thumbnailUrl: string | null;
@@ -169,6 +170,7 @@ export interface LayoutSummary {
   name: string;
   width: number;
   height: number;
+  zones: { x: number; y: number; w: number; h: number }[];
   zoneCount: number;
   screenCount: number;
   updatedAt: string;

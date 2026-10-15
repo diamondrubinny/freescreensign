@@ -1,7 +1,22 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useId } from 'react';
+import {
+  Blocks,
+  Images,
+  LayoutDashboard,
+  LayoutTemplate,
+  ListVideo,
+  LogOut,
+  Menu,
+  Monitor,
+  ScrollText,
+  Settings,
+  UserRound,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink, Outlet, useNavigate, useParams } from 'react-router';
+import { NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router';
 import { hasRole } from '@rubinny/shared';
 import { patch, post } from '../api/client';
 import type { SessionInfo } from '../api/types';
@@ -12,18 +27,73 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { SkipLink } from './SkipLink';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  `block rounded-md px-3 py-2 ${isActive ? 'bg-blue-700 text-white' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`;
+  `flex items-center gap-3 rounded-lg px-3 py-2 font-medium transition-colors ${
+    isActive
+      ? 'bg-brand-700 text-white shadow-sm dark:bg-brand-600'
+      : 'text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
+  }`;
 
-/** Layout for signed-in pages: header, organization navigation and footer. */
+function NavItem({
+  to,
+  icon: Icon,
+  label,
+  end,
+}: {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  end?: boolean;
+}) {
+  return (
+    <li>
+      <NavLink to={to} end={end ?? false} className={navClass}>
+        <Icon aria-hidden="true" className="size-5 shrink-0" />
+        <span>{label}</span>
+      </NavLink>
+    </li>
+  );
+}
+
+function NavGroup({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p
+        id={id}
+        className="px-3 pt-4 pb-1 text-xs font-bold tracking-wider text-gray-600 uppercase dark:text-gray-400"
+      >
+        {title}
+      </p>
+      <ul aria-labelledby={id} className="flex flex-col gap-1">
+        {children}
+      </ul>
+    </div>
+  );
+}
+
+/** Layout for signed-in pages: header, grouped navigation (collapsible on mobile) and footer. */
 export function AppShell({ session }: { session: SessionInfo }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { orgId } = useParams();
   const orgSelectId = useId();
+  const navId = useId();
+  // The mobile menu stays open only on the page where it was opened (closes on navigation).
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const menuOpen = openOn === location.pathname;
 
   const currentOrg = session.memberships.find((m) => m.orgId === orgId) ?? session.memberships[0];
   const isAdmin = currentOrg ? hasRole(currentOrg.role, 'ADMIN') : false;
+  const org = currentOrg ? `/orgs/${currentOrg.orgId}` : '';
 
   const logout = useMutation({
     mutationFn: () => post('/api/v1/auth/logout'),
@@ -36,9 +106,23 @@ export function AppShell({ session }: { session: SessionInfo }) {
   return (
     <div className="flex min-h-screen flex-col">
       <SkipLink />
-      <header className="border-b border-gray-300 px-4 py-3 dark:border-gray-700">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
-          <Brand />
+      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={menuOpen}
+              aria-controls={navId}
+              onClick={() => {
+                setOpenOn(menuOpen ? null : location.pathname);
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 md:hidden dark:border-gray-600"
+            >
+              <Menu aria-hidden="true" className="size-5" />
+              {t('nav.menu')}
+            </button>
+            <Brand />
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             {session.memberships.length > 1 && currentOrg && (
               <div className="flex items-center gap-2">
@@ -49,7 +133,7 @@ export function AppShell({ session }: { session: SessionInfo }) {
                   id={orgSelectId}
                   value={currentOrg.orgId}
                   onChange={(event) => void navigate(`/orgs/${event.target.value}`)}
-                  className="rounded-md border border-gray-400 bg-white px-2 py-2 dark:bg-gray-900"
+                  className="rounded-lg border border-gray-300 bg-white px-2 py-2 dark:border-gray-600 dark:bg-gray-900"
                 >
                   {session.memberships.map((m) => (
                     <option key={m.orgId} value={m.orgId}>
@@ -71,75 +155,46 @@ export function AppShell({ session }: { session: SessionInfo }) {
               onClick={() => {
                 logout.mutate();
               }}
-              className="rounded-md border border-gray-400 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800"
             >
+              <LogOut aria-hidden="true" className="size-4" />
               {t('nav.logout')}
             </button>
           </div>
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-6 md:flex-row">
-        <nav aria-label={t('nav.main')} className="md:w-56 md:shrink-0">
-          <ul className="flex flex-wrap gap-1 md:flex-col">
-            <li>
-              <NavLink to="/" end className={navClass}>
-                {t('nav.dashboard')}
-              </NavLink>
-            </li>
-            {currentOrg && (
-              <>
-                <li>
-                  <NavLink to={`/orgs/${currentOrg.orgId}/screens`} className={navClass}>
-                    {t('screens.nav')}
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to={`/orgs/${currentOrg.orgId}/playlists`} className={navClass}>
-                    {t('playlists.nav')}
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to={`/orgs/${currentOrg.orgId}/media`} className={navClass}>
-                    {t('media.nav')}
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to={`/orgs/${currentOrg.orgId}/layouts`} className={navClass}>
-                    {t('layouts.nav')}
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to={`/orgs/${currentOrg.orgId}/widgets`} className={navClass}>
-                    {t('widgets.nav')}
-                  </NavLink>
-                </li>
-              </>
-            )}
-            {currentOrg && isAdmin && (
-              <>
-                <li>
-                  <NavLink to={`/orgs/${currentOrg.orgId}/members`} className={navClass}>
-                    {t('nav.members')}
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to={`/orgs/${currentOrg.orgId}/settings`} className={navClass}>
-                    {t('nav.settings')}
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink to={`/orgs/${currentOrg.orgId}/audit`} className={navClass}>
-                    {t('nav.audit')}
-                  </NavLink>
-                </li>
-              </>
-            )}
-            <li>
-              <NavLink to="/account" className={navClass}>
-                {t('nav.account')}
-              </NavLink>
-            </li>
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-6 md:flex-row">
+        <nav
+          id={navId}
+          aria-label={t('nav.main')}
+          className={`${menuOpen ? 'block' : 'hidden'} md:sticky md:top-20 md:block md:w-60 md:shrink-0 md:self-start`}
+        >
+          <ul className="flex flex-col gap-1">
+            <NavItem to="/" end icon={LayoutDashboard} label={t('nav.dashboard')} />
           </ul>
+          {currentOrg && (
+            <>
+              <NavGroup id={`${navId}-content`} title={t('nav.groupContent')}>
+                <NavItem to={`${org}/media`} icon={Images} label={t('media.nav')} />
+                <NavItem to={`${org}/playlists`} icon={ListVideo} label={t('playlists.nav')} />
+                <NavItem to={`${org}/widgets`} icon={Blocks} label={t('widgets.nav')} />
+                <NavItem to={`${org}/layouts`} icon={LayoutTemplate} label={t('layouts.nav')} />
+              </NavGroup>
+              <NavGroup id={`${navId}-devices`} title={t('nav.groupDevices')}>
+                <NavItem to={`${org}/screens`} icon={Monitor} label={t('screens.nav')} />
+              </NavGroup>
+            </>
+          )}
+          {currentOrg && isAdmin && (
+            <NavGroup id={`${navId}-org`} title={t('nav.groupOrg')}>
+              <NavItem to={`${org}/members`} icon={Users} label={t('nav.members')} />
+              <NavItem to={`${org}/settings`} icon={Settings} label={t('nav.settings')} />
+              <NavItem to={`${org}/audit`} icon={ScrollText} label={t('nav.audit')} />
+            </NavGroup>
+          )}
+          <NavGroup id={`${navId}-personal`} title={t('nav.groupPersonal')}>
+            <NavItem to="/account" icon={UserRound} label={t('nav.account')} />
+          </NavGroup>
         </nav>
         <main id="main" className="min-w-0 flex-1">
           <Outlet />

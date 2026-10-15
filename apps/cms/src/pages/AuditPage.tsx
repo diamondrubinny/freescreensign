@@ -35,18 +35,18 @@ export function AuditPage() {
       {audit.isPending && <Loading />}
       {audit.isSuccess && events.length === 0 && <p>{t('audit.empty')}</p>}
       {events.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="table-wrap">
+          <table className="data-table">
             <caption className="sr-only">{t('audit.title')}</caption>
             <thead>
               <tr className="border-b border-gray-400">
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('audit.when')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('audit.who')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('audit.what')}
                 </th>
               </tr>
@@ -57,8 +57,8 @@ export function AuditPage() {
                   <td className="p-2 whitespace-nowrap">
                     {formatDateTime(event.createdAt, i18n.language)}
                   </td>
-                  <td className="p-2">{event.actorName ?? t('audit.system')}</td>
-                  <td className="p-2">
+                  <td>{event.actorName ?? t('audit.system')}</td>
+                  <td>
                     <code dir="ltr">{event.action}</code>
                   </td>
                 </tr>

@@ -5,7 +5,12 @@ type FieldLabel = keyof Messages['widgets']['fields'];
 
 /** Declarative form fields per widget type; validation itself happens on the server. */
 export type WidgetFieldSpec = { key: string; label: FieldLabel; hint?: FieldLabel } & (
-  | { kind: 'text' | 'url' | 'textarea'; required?: boolean; maxLength: number; ltr?: boolean }
+  | {
+      kind: 'text' | 'url' | 'textarea' | 'datetime';
+      required?: boolean;
+      maxLength: number;
+      ltr?: boolean;
+    }
   | {
       kind: 'number';
       min: number;
@@ -60,6 +65,7 @@ export const WIDGET_FIELDS: Record<WidgetType, WidgetFieldSpec[]> = {
     ...colors(),
   ],
   text: [
+    { key: 'title', label: 'titleOptional', kind: 'text', maxLength: 200 },
     { key: 'text', label: 'text', kind: 'textarea', required: true, maxLength: 1000 },
     {
       key: 'align',
@@ -86,6 +92,7 @@ export const WIDGET_FIELDS: Record<WidgetType, WidgetFieldSpec[]> = {
   ],
   ticker: [
     { key: 'text', label: 'text', kind: 'textarea', required: true, maxLength: 500 },
+    { key: 'label', label: 'tickerLabel', kind: 'text', maxLength: 40 },
     {
       key: 'speed',
       label: 'speed',
@@ -171,6 +178,30 @@ export const WIDGET_FIELDS: Record<WidgetType, WidgetFieldSpec[]> = {
       ltr: true,
     },
     { key: 'refreshMinutes', label: 'refreshMinutes', kind: 'number', min: 0, max: 1440, step: 1 },
+  ],
+  countdown: [
+    { key: 'title', label: 'title', kind: 'text', required: true, maxLength: 200 },
+    {
+      key: 'target',
+      label: 'target',
+      hint: 'targetHint',
+      kind: 'datetime',
+      required: true,
+      maxLength: 16,
+      ltr: true,
+    },
+    {
+      key: 'timezone',
+      label: 'timezone',
+      hint: 'timezoneHint',
+      kind: 'text',
+      maxLength: 64,
+      ltr: true,
+    },
+    { key: 'doneText', label: 'doneText', kind: 'text', maxLength: 200 },
+    { key: 'showSeconds', label: 'showSeconds', kind: 'checkbox' },
+    locale,
+    ...colors(),
   ],
 };
 

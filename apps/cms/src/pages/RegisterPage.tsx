@@ -30,7 +30,10 @@ export function RegisterPage() {
         <Alert variant="success">
           {verified ? t('register.registered') : t('register.checkEmail')}
         </Alert>
-        <Link to="/login" className="mt-4 inline-block text-blue-700 underline dark:text-blue-300">
+        <Link
+          to="/login"
+          className="mt-4 inline-block text-brand-700 underline dark:text-brand-300"
+        >
           {t('login.submit')}
         </Link>
       </>
@@ -81,9 +84,9 @@ export function RegisterPage() {
           <Trans
             i18nKey="register.consent"
             components={{
-              terms: <Link to="/terms" className="text-blue-700 underline dark:text-blue-300" />,
+              terms: <Link to="/terms" className="text-brand-700 underline dark:text-brand-300" />,
               privacy: (
-                <Link to="/privacy" className="text-blue-700 underline dark:text-blue-300" />
+                <Link to="/privacy" className="text-brand-700 underline dark:text-brand-300" />
               ),
             }}
           />
@@ -94,7 +97,7 @@ export function RegisterPage() {
       </Form>
       <p className="mt-6">
         {t('register.haveAccount')}{' '}
-        <Link to="/login" className="text-blue-700 underline dark:text-blue-300">
+        <Link to="/login" className="text-brand-700 underline dark:text-brand-300">
           {t('login.submit')}
         </Link>
       </p>

@@ -13,6 +13,7 @@ import { Field } from '../components/Field';
 import { Form, value } from '../components/Form';
 import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
+import { StatusPill } from '../components/ui';
 import { formatDateTime } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
 
@@ -191,25 +192,25 @@ export function ScreensPage() {
       {screens.isPending && <Loading />}
       {screens.data?.screens.length === 0 && <p>{t('screens.empty')}</p>}
       {screens.data && screens.data.screens.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+        <div className="table-wrap">
+          <table className="data-table">
             <caption className="sr-only">{t('screens.title')}</caption>
             <thead>
-              <tr className="border-b border-gray-400">
-                <th scope="col" className="p-2 text-start">
+              <tr>
+                <th scope="col" className="text-start">
                   {t('fields.name')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('screens.status')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('screens.content')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('screens.resolution')}
                 </th>
                 {canEdit && (
-                  <th scope="col" className="p-2 text-start">
+                  <th scope="col" className="text-start">
                     {t('members.actions')}
                   </th>
                 )}
@@ -217,19 +218,14 @@ export function ScreensPage() {
             </thead>
             <tbody>
               {screens.data.screens.map((screen) => (
-                <tr key={screen.id} className="border-b border-gray-200 dark:border-gray-700">
-                  <th scope="row" className="p-2 text-start font-semibold" dir="auto">
+                <tr key={screen.id}>
+                  <th scope="row" className="text-start font-semibold" dir="auto">
                     {screen.name}
                   </th>
-                  <td className="p-2">
-                    <span
-                      className={
-                        screen.online ? 'font-semibold text-green-800 dark:text-green-300' : ''
-                      }
-                    >
-                      <span aria-hidden="true">{screen.online ? '● ' : '○ '}</span>
+                  <td>
+                    <StatusPill tone={screen.online ? 'green' : 'gray'}>
                       {screen.online ? t('screens.online') : t('screens.offline')}
-                    </span>
+                    </StatusPill>
                     {!screen.online && (
                       <span className="block text-sm text-gray-700 dark:text-gray-300">
                         {screen.lastSeenAt
@@ -240,16 +236,14 @@ export function ScreensPage() {
                       </span>
                     )}
                   </td>
-                  <td className="p-2" dir="auto">
+                  <td dir="auto">
                     {screen.layoutName
                       ? t('screens.layoutContent', { name: screen.layoutName })
                       : (screen.playlistName ?? t('screens.noPlaylist'))}
                   </td>
-                  <td className="p-2" dir="ltr">
-                    {screen.resolution ?? '—'}
-                  </td>
+                  <td dir="ltr">{screen.resolution ?? '—'}</td>
                   {canEdit && (
-                    <td className="p-2">
+                    <td>
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="secondary"
@@ -259,7 +253,7 @@ export function ScreensPage() {
                           }}
                         >
                           {t('screens.edit')}
-                          <span className="sr-only"> {screen.name}</span>
+                          <span className="sr-only">{` ${screen.name}`}</span>
                         </Button>
                         <Button
                           variant="secondary"
@@ -269,7 +263,7 @@ export function ScreensPage() {
                           }}
                         >
                           {t('screens.reload')}
-                          <span className="sr-only"> {screen.name}</span>
+                          <span className="sr-only">{` ${screen.name}`}</span>
                         </Button>
                         {canRemove && (
                           <Button
@@ -279,7 +273,7 @@ export function ScreensPage() {
                             }}
                           >
                             {t('screens.remove')}
-                            <span className="sr-only"> {screen.name}</span>
+                            <span className="sr-only">{` ${screen.name}`}</span>
                           </Button>
                         )}
                       </div>

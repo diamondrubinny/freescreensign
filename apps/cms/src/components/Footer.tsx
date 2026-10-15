@@ -11,8 +11,8 @@ export const SOURCE_URL = 'https://github.com/diamondrubinny/freescreensign';
 export function Footer() {
   const { t } = useTranslation();
   return (
-    <footer className="mt-auto border-t border-gray-300 bg-gray-50 px-4 py-6 text-sm dark:border-gray-700 dark:bg-gray-950">
-      <div className="mx-auto flex max-w-6xl flex-col gap-3">
+    <footer className="mt-auto border-t border-gray-200 bg-white px-4 py-6 text-sm dark:border-gray-800 dark:bg-gray-900">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3">
         <nav aria-label={t('footer.footerNav')}>
           <ul className="flex flex-wrap gap-x-4 gap-y-2">
             <li>

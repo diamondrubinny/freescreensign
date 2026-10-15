@@ -88,24 +88,24 @@ export function MembersPage() {
       {actionErrors.form && <Alert variant="error">{actionErrors.form}</Alert>}
       {members.isPending && <Loading />}
       {members.data && (
-        <div className="mb-10 overflow-x-auto">
-          <table className="w-full border-collapse text-start">
+        <div className="table-wrap mb-10">
+          <table className="data-table">
             <caption className="sr-only">{t('members.title')}</caption>
             <thead>
               <tr className="border-b border-gray-400">
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('members.member')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('fields.role')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('members.mfa')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('members.joined')}
                 </th>
-                <th scope="col" className="p-2 text-start">
+                <th scope="col" className="text-start">
                   {t('members.actions')}
                 </th>
               </tr>
@@ -123,7 +123,7 @@ export function MembersPage() {
                         {member.email}
                       </span>
                     </th>
-                    <td className="p-2">
+                    <td>
                       {editable ? (
                         <>
                           <label htmlFor={`${roleSelectId}-${member.userId}`} className="sr-only">
@@ -152,9 +152,9 @@ export function MembersPage() {
                         t(`roles.${member.role}`)
                       )}
                     </td>
-                    <td className="p-2">{member.mfaEnabled ? t('common.yes') : t('common.no')}</td>
-                    <td className="p-2">{formatDate(member.joinedAt, i18n.language)}</td>
-                    <td className="p-2">
+                    <td>{member.mfaEnabled ? t('common.yes') : t('common.no')}</td>
+                    <td>{formatDate(member.joinedAt, i18n.language)}</td>
+                    <td>
                       {(editable || self) && (
                         <Button
                           variant="secondary"
@@ -163,7 +163,7 @@ export function MembersPage() {
                           }}
                         >
                           {self ? t('members.leave') : t('members.remove')}
-                          {!self && <span className="sr-only"> {member.name}</span>}
+                          {!self && <span className="sr-only">{` ${member.name}`}</span>}
                         </Button>
                       )}
                     </td>
@@ -244,7 +244,7 @@ export function MembersPage() {
           {invitations.data?.invitations.map((inv) => (
             <li
               key={inv.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-300 p-3 dark:border-gray-700"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white shadow-sm p-3 dark:border-gray-800 dark:bg-gray-900"
             >
               <span>
                 <span dir="ltr">{inv.email}</span> · {t(`roles.${inv.role}`)} ·{' '}
@@ -257,7 +257,7 @@ export function MembersPage() {
                 }}
               >
                 {t('members.revoke')}
-                <span className="sr-only"> {inv.email}</span>
+                <span className="sr-only">{` ${inv.email}`}</span>
               </Button>
             </li>
           ))}

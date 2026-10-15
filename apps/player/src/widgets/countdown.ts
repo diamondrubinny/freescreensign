@@ -76,6 +76,10 @@ export const countdownWidget = defineWidget<WidgetConfig<'countdown'>>({
     };
     update();
     every(1000, ctx.signal, update);
-    return { destroy: () => { root.remove(); } };
+    return {
+      destroy: () => {
+        root.remove();
+      },
+    };
   },
 });

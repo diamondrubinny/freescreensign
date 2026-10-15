@@ -14,6 +14,7 @@ import { Form, value } from '../components/Form';
 import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
 import { formatDuration } from '../lib/format-bytes';
+import { useDuplicate } from '../lib/use-duplicate';
 import { useFormErrors } from '../lib/use-form-errors';
 
 const DEFAULT_IMAGE_MS = 10_000;
@@ -80,7 +81,7 @@ export function PlaylistEditorPage() {
       put<{ playlist: PlaylistDetail }>(`/api/v1/orgs/${orgId}/playlists/${playlistId}/items`, {
         items: list.map((item) =>
           item.kind === 'media'
-            ? { mediaId: item.mediaId, durationMs: item.durationMs }
+            ? { mediaId: item.mediaId, durationMs: item.durationMs, fit: item.fit }
             : { widgetId: item.widgetId, durationMs: item.durationMs },
         ),
       }),
@@ -108,9 +109,10 @@ export function PlaylistEditorPage() {
     },
   });
 
+  const duplicate = useDuplicate(orgId, 'playlists', playlistId);
   const saveErrors = useFormErrors(save.error);
   const renameErrors = useFormErrors(rename.error);
-  const loadErrors = useFormErrors(detail.error ?? remove.error);
+  const loadErrors = useFormErrors(detail.error ?? remove.error ?? duplicate.error);
 
   if (detail.isPending) return <Loading />;
   if (!detail.data)
@@ -169,7 +171,7 @@ export function PlaylistEditorPage() {
             {current.map((item, index) => (
               <li
                 key={`${itemId(item)}-${String(index)}`}
-                className="flex flex-wrap items-center gap-3 rounded-md border border-gray-300 p-2 dark:border-gray-700"
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white shadow-sm p-2 dark:border-gray-800 dark:bg-gray-900"
               >
                 <span className="w-8 text-center font-semibold" aria-hidden="true">
                   {index + 1}
@@ -177,7 +179,7 @@ export function PlaylistEditorPage() {
                 {item.kind === 'media' && item.thumbnailUrl ? (
                   <img src={item.thumbnailUrl} alt="" className="h-12 w-20 rounded object-cover" />
                 ) : item.kind === 'widget' ? (
-                  <span className="flex h-12 w-20 items-center justify-center rounded bg-blue-100 px-1 text-center text-xs font-semibold text-blue-900 dark:bg-blue-950 dark:text-blue-100">
+                  <span className="flex h-12 w-20 items-center justify-center rounded bg-brand-100 px-1 text-center text-xs font-semibold text-brand-900 dark:bg-brand-950 dark:text-brand-100">
                     {t(`widgets.types.${item.widgetType}`, { defaultValue: item.widgetType })}
                   </span>
                 ) : (
@@ -222,6 +224,30 @@ export function PlaylistEditorPage() {
                         className="w-24 rounded-md border border-gray-500 bg-white px-2 py-1 dark:bg-gray-900"
                       />
                     </div>
+                    {item.kind === 'media' && (
+                      <div className="flex flex-col">
+                        <label htmlFor={`fit-${String(index)}`} className="sr-only">
+                          {t('playlists.fitLabel', { name: item.name })}
+                        </label>
+                        <select
+                          id={`fit-${String(index)}`}
+                          value={item.fit}
+                          aria-describedby="fit-hint"
+                          onChange={(event) => {
+                            const next = [...current];
+                            next[index] = { ...item, fit: event.target.value as typeof item.fit };
+                            edit(next);
+                          }}
+                          className="rounded-lg border border-gray-400 bg-white px-2 py-1 dark:border-gray-600 dark:bg-gray-900"
+                        >
+                          {(['contain', 'cover', 'blur'] as const).map((fit) => (
+                            <option key={fit} value={fit}>
+                              {t(`playlists.fits.${fit}`)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <div className="flex gap-1">
                       <Button
                         variant="secondary"
@@ -266,6 +292,9 @@ export function PlaylistEditorPage() {
             <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
               {t('playlists.durationHint')}
             </p>
+            <p id="fit-hint" className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+              {t('playlists.fitHint')}
+            </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Button
                 loading={save.isPending}
@@ -293,7 +322,7 @@ export function PlaylistEditorPage() {
             {readyMedia.map((m) => (
               <li
                 key={m.id}
-                className="flex flex-col gap-2 rounded-md border border-gray-300 p-2 dark:border-gray-700"
+                className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white shadow-sm p-2 dark:border-gray-800 dark:bg-gray-900"
               >
                 {m.thumbnailUrl && (
                   <img
@@ -316,6 +345,7 @@ export function PlaylistEditorPage() {
                         name: m.name,
                         mediaKind: m.kind,
                         status: m.status,
+                        fit: 'contain',
                         durationMs: null,
                         effectiveDurationMs:
                           m.kind === 'video' && m.durationMs ? m.durationMs : DEFAULT_IMAGE_MS,
@@ -325,7 +355,7 @@ export function PlaylistEditorPage() {
                   }}
                 >
                   {t('playlists.add')}
-                  <span className="sr-only"> {m.name}</span>
+                  <span className="sr-only">{` ${m.name}`}</span>
                 </Button>
               </li>
             ))}
@@ -343,7 +373,7 @@ export function PlaylistEditorPage() {
               {t('playlists.noWidgets')}{' '}
               <Link
                 to={`/orgs/${orgId}/widgets`}
-                className="text-blue-700 underline dark:text-blue-300"
+                className="text-brand-700 underline dark:text-brand-300"
               >
                 {t('playlists.createWidget')}
               </Link>
@@ -353,7 +383,7 @@ export function PlaylistEditorPage() {
             {widgets.data?.widgets.map((w) => (
               <li
                 key={w.id}
-                className="flex flex-col gap-2 rounded-md border border-gray-300 p-2 dark:border-gray-700"
+                className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white shadow-sm p-2 dark:border-gray-800 dark:bg-gray-900"
               >
                 <span className="text-sm text-gray-700 dark:text-gray-300">
                   {t(`widgets.types.${w.type}`, { defaultValue: w.type })}
@@ -378,7 +408,7 @@ export function PlaylistEditorPage() {
                   }}
                 >
                   {t('playlists.add')}
-                  <span className="sr-only"> {w.name}</span>
+                  <span className="sr-only">{` ${w.name}`}</span>
                 </Button>
               </li>
             ))}
@@ -388,14 +418,25 @@ export function PlaylistEditorPage() {
 
       {canEdit && (
         <>
-          <Button
-            variant="danger"
-            onClick={() => {
-              setDeleting(true);
-            }}
-          >
-            {t('playlists.deletePlaylist')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              loading={duplicate.isPending}
+              onClick={() => {
+                duplicate.mutate(playlist.name);
+              }}
+            >
+              {t('playlists.duplicate')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setDeleting(true);
+              }}
+            >
+              {t('playlists.deletePlaylist')}
+            </Button>
+          </div>
           <ConfirmDialog
             open={deleting}
             message={t('playlists.deleteConfirm', { name: playlist.name })}

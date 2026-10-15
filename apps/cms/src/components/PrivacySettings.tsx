@@ -58,7 +58,7 @@ export function PrivacySettingsButton() {
           {cleared && <Alert variant="success">{t('privacySettings.cleared')}</Alert>}
           <Link
             to="/cookies"
-            className="text-blue-700 underline dark:text-blue-300"
+            className="text-brand-700 underline dark:text-brand-300"
             onClick={() => {
               setOpen(false);
             }}

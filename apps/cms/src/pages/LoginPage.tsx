@@ -106,12 +106,12 @@ export function LoginPage() {
         </div>
       )}
       <div className="mt-6 flex flex-col gap-2">
-        <Link to="/forgot-password" className="text-blue-700 underline dark:text-blue-300">
+        <Link to="/forgot-password" className="text-brand-700 underline dark:text-brand-300">
           {t('login.forgot')}
         </Link>
         <p>
           {t('login.noAccount')}{' '}
-          <Link to="/register" className="text-blue-700 underline dark:text-blue-300">
+          <Link to="/register" className="text-brand-700 underline dark:text-brand-300">
             {t('login.register')}
           </Link>
         </p>

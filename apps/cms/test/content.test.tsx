@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LayoutEditorPage } from '../src/pages/LayoutEditorPage';
+import { LayoutsPage } from '../src/pages/LayoutsPage';
 import { WidgetEditorPage } from '../src/pages/WidgetEditorPage';
 import { readWidgetConfig, widgetDefaults } from '../src/pages/widget-fields';
 import { mockApi, renderRoutes } from './render';
@@ -188,5 +189,64 @@ describe('LayoutEditorPage', () => {
     };
     expect(body.zones[1]).toMatchObject({ h: 120, playlistId: 'p1' });
     expect(body.zones[0]).not.toHaveProperty('id');
+  });
+});
+
+describe('LayoutsPage', () => {
+  const routes = [
+    { path: '/orgs/:orgId/layouts', element: <LayoutsPage /> },
+    { path: '/orgs/:orgId/layouts/:layoutId', element: <p>editor</p> },
+  ];
+  const list = {
+    [`GET /api/v1/orgs/${ORG}/layouts`]: () => ({ status: 200, body: { layouts: [] } }),
+  };
+
+  it('creates a starter kit in the interface language', async () => {
+    const calls = mockApi({
+      ...base,
+      ...list,
+      [`POST /api/v1/orgs/${ORG}/starter-kits/menu`]: () => ({
+        status: 201,
+        body: { layout: { id: 'k1' } },
+      }),
+    });
+    const { router } = renderRoutes(routes, `/orgs/${ORG}/layouts`);
+    const user = userEvent.setup();
+    await screen.findByText('תבנית חדשה', {}, { timeout: 5000 });
+    await user.click(
+      await screen.findByRole('button', { name: 'יצירת ערכה תפריט' }, { timeout: 5000 }),
+    );
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(`/orgs/${ORG}/layouts/k1`);
+    });
+    expect(calls.find((c) => c.key.startsWith('POST'))?.body).toEqual({ locale: 'he' });
+  });
+
+  it('picks a template with accessible radio buttons', async () => {
+    const calls = mockApi({
+      ...base,
+      ...list,
+      [`POST /api/v1/orgs/${ORG}/layouts`]: () => ({ status: 201, body: { layout: { id: 'l9' } } }),
+    });
+    renderRoutes(routes, `/orgs/${ORG}/layouts`);
+    const user = userEvent.setup();
+    const grid = await screen.findByRole('radio', { name: 'רשת 2×2' }, { timeout: 5000 });
+    expect(screen.getByRole('radio', { name: 'ראשי + טקסט רץ' })).toBeChecked();
+    await user.click(grid);
+    expect(grid).toBeChecked();
+    await user.type(screen.getByLabelText(/שם התבנית/), 'רשת');
+    await user.click(screen.getByRole('button', { name: 'תבנית חדשה' }));
+    await waitFor(() => {
+      expect(calls.some((c) => c.key.startsWith('POST'))).toBe(true);
+    });
+    const body = calls.find((c) => c.key.startsWith('POST'))?.body as {
+      zones: { name: string }[];
+    };
+    expect(body.zones.map((z) => z.name)).toEqual([
+      'עליון שמאלי',
+      'עליון ימני',
+      'תחתון שמאלי',
+      'תחתון ימני',
+    ]);
   });
 });

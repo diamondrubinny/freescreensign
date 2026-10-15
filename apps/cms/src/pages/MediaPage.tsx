@@ -209,7 +209,7 @@ export function MediaPage() {
             }}
             onDrop={onDrop}
             className={`flex flex-col items-start gap-2 rounded-lg border-2 border-dashed p-6 ${
-              dragging ? 'border-blue-700 bg-blue-50 dark:bg-blue-950' : 'border-gray-400'
+              dragging ? 'border-brand-700 bg-brand-50 dark:bg-brand-950' : 'border-gray-400'
             }`}
           >
             <label htmlFor={inputId} className="font-medium">
@@ -309,7 +309,7 @@ export function MediaPage() {
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex flex-col overflow-hidden rounded-lg border border-gray-300 dark:border-gray-700"
+              className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
             >
               <div className="flex aspect-video items-center justify-center bg-gray-100 dark:bg-gray-800">
                 {item.thumbnailUrl ? (
@@ -371,7 +371,7 @@ export function MediaPage() {
                       }}
                     >
                       {t('media.preview')}
-                      <span className="sr-only"> {item.name}</span>
+                      <span className="sr-only">{` ${item.name}`}</span>
                     </Button>
                   )}
                   {canEdit && (
@@ -384,7 +384,7 @@ export function MediaPage() {
                         }}
                       >
                         {t('media.rename')}
-                        <span className="sr-only"> {item.name}</span>
+                        <span className="sr-only">{` ${item.name}`}</span>
                       </Button>
                       <Button
                         variant="secondary"
@@ -393,7 +393,7 @@ export function MediaPage() {
                         }}
                       >
                         {t('common.delete')}
-                        <span className="sr-only"> {item.name}</span>
+                        <span className="sr-only">{` ${item.name}`}</span>
                       </Button>
                     </>
                   )}

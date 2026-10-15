@@ -381,7 +381,7 @@ function SessionsSection() {
         {sessions.data?.sessions.map((s) => (
           <li
             key={s.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-gray-300 p-3 dark:border-gray-700"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white shadow-sm p-3 dark:border-gray-800 dark:bg-gray-900"
           >
             <span>
               <span className="block" dir="ltr">

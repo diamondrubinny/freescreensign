@@ -254,7 +254,14 @@ export function mediaRoutes(
 
   app.get('/api/v1/orgs/:orgId/media-usage', viewer, async (request) => {
     const org = requireOrg(request);
+    const { count } = await ctx.db
+      .selectFrom('media')
+      .select((eb) => eb.fn.countAll<string>().as('count'))
+      .where('org_id', '=', org.id)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirstOrThrow();
     return {
+      fileCount: Number(count),
       usedBytes: await usedBytes(org.id),
       quotaBytes: ctx.env.MEDIA_ORG_QUOTA_BYTES || null,
       maxImageBytes: ctx.env.MEDIA_MAX_IMAGE_BYTES,

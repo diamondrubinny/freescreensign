@@ -29,6 +29,10 @@ export const qrWidget = defineWidget<WidgetConfig<'qr'>>({
         }
       })
       .catch(() => undefined);
-    return { destroy: () => { root.remove(); } };
+    return {
+      destroy: () => {
+        root.remove();
+      },
+    };
   },
 });

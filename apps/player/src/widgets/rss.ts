@@ -51,6 +51,10 @@ export const rssWidget = defineWidget<WidgetConfig<'rss'>>({
     void load();
     every(config.itemDurationMs, ctx.signal, show);
     every(REFRESH_MS, ctx.signal, () => void load());
-    return { destroy: () => { root.remove(); } };
+    return {
+      destroy: () => {
+        root.remove();
+      },
+    };
   },
 });

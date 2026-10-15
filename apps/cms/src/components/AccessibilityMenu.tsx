@@ -125,7 +125,7 @@ export function AccessibilityMenu() {
           </ul>
           <button
             type="button"
-            className="mt-3 text-blue-700 underline dark:text-blue-300"
+            className="mt-3 text-brand-700 underline dark:text-brand-300"
             onClick={() => {
               setPrefs(DEFAULT_A11Y);
             }}

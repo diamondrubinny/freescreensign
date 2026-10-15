@@ -11,6 +11,7 @@ import { ConfirmDialog } from '../components/Dialog';
 import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
 import { useFormErrors } from '../lib/use-form-errors';
+import { useDuplicate } from '../lib/use-duplicate';
 import { useOrgRole } from '../lib/use-org-role';
 
 interface Draft {
@@ -88,7 +89,7 @@ function LayoutPreview({ draft }: { draft: Draft }) {
           draft.zones.map((zone, index) => (
             <div
               key={String(index)}
-              className="absolute flex items-center justify-center overflow-hidden border-2 border-dashed border-yellow-300 bg-blue-900/60 p-1 text-center text-xs font-semibold text-white"
+              className="absolute flex items-center justify-center overflow-hidden border-2 border-dashed border-yellow-300 bg-brand-900/60 p-1 text-center text-xs font-semibold text-white"
               style={{
                 left: percent(zone.x, draft.width),
                 top: percent(zone.y, draft.height),
@@ -156,8 +157,9 @@ export function LayoutEditorPage() {
       void navigate(`/orgs/${orgId}/layouts`);
     },
   });
+  const duplicate = useDuplicate(orgId, 'layouts', layoutId);
   const errors = useFormErrors(save.error);
-  const loadErrors = useFormErrors(detail.error ?? remove.error);
+  const loadErrors = useFormErrors(detail.error ?? remove.error ?? duplicate.error);
 
   if (detail.isPending) return <Loading />;
   if (!detail.data)
@@ -185,7 +187,10 @@ export function LayoutEditorPage() {
     <>
       <PageHeading title={`${t('layouts.editorTitle')}: ${layout.name}`} />
       <p className="mb-6">
-        <Link to={`/orgs/${orgId}/layouts`} className="text-blue-700 underline dark:text-blue-300">
+        <Link
+          to={`/orgs/${orgId}/layouts`}
+          className="text-brand-700 underline dark:text-brand-300"
+        >
           {t('layouts.title')}
         </Link>
       </p>
@@ -241,7 +246,7 @@ export function LayoutEditorPage() {
             )}
           </div>
 
-          <fieldset className="flex flex-wrap items-end gap-4 rounded-md border border-gray-300 p-4 dark:border-gray-700">
+          <fieldset className="flex flex-wrap items-end gap-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4 dark:border-gray-800 dark:bg-gray-900">
             <legend className="px-1 font-semibold">{t('layouts.canvas')}</legend>
             <NumberInput
               id="layout-width"
@@ -294,7 +299,7 @@ export function LayoutEditorPage() {
               return (
                 <fieldset
                   key={String(index)}
-                  className="flex flex-wrap items-end gap-4 rounded-md border border-gray-300 p-4 dark:border-gray-700"
+                  className="flex flex-wrap items-end gap-4 rounded-xl border border-gray-200 bg-white shadow-sm p-4 dark:border-gray-800 dark:bg-gray-900"
                 >
                   <legend className="px-1 font-semibold">
                     {t('layouts.zone', { index: index + 1 })}: <span dir="auto">{zone.name}</span>
@@ -419,14 +424,25 @@ export function LayoutEditorPage() {
       {canEdit && (
         <>
           {loadErrors.form && <Alert variant="error">{loadErrors.form}</Alert>}
-          <Button
-            variant="danger"
-            onClick={() => {
-              setDeleting(true);
-            }}
-          >
-            {t('layouts.delete')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              loading={duplicate.isPending}
+              onClick={() => {
+                duplicate.mutate(layout.name);
+              }}
+            >
+              {t('layouts.duplicate')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setDeleting(true);
+              }}
+            >
+              {t('layouts.delete')}
+            </Button>
+          </div>
           <ConfirmDialog
             open={deleting}
             message={t('layouts.deleteConfirm', { name: layout.name })}

@@ -14,7 +14,7 @@ import { takeFragmentToken } from '../lib/fragment-token';
 import { useFormErrors } from '../lib/use-form-errors';
 import { clearInviteToken, peekInviteToken, rememberInviteToken } from '../lib/invite-token';
 
-const linkClass = 'mt-4 inline-block text-blue-700 underline dark:text-blue-300';
+const linkClass = 'mt-4 inline-block text-brand-700 underline dark:text-brand-300';
 
 export function VerifyEmailPage() {
   const { t } = useTranslation();
