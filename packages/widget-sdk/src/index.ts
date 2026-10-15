@@ -20,6 +20,11 @@ export interface WidgetContext {
    * last known data is returned; rejects if none is available.
    */
   fetchData<T>(): Promise<T>;
+  /**
+   * Object URL of an image from the organization's media library, served from the
+   * screen's verified offline cache. Resolves to null when it is not available.
+   */
+  mediaUrl(mediaId: string): Promise<string | null>;
   /** Aborted when the widget is removed. */
   readonly signal: AbortSignal;
   /** True when the screen requests reduced motion: avoid animation. */

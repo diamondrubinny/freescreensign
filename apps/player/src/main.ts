@@ -33,6 +33,7 @@ let player: Player | null = null;
 const widgets = new WidgetRuntime({
   registry: BUILT_IN_WIDGETS,
   fetchData: (widgetId) => widgetData.get(widgetId),
+  mediaUrl: (mediaId) => player?.mediaUrl(mediaId) ?? Promise.resolve(null),
   timezone: () => player?.manifest?.screen.timezone ?? 'Asia/Jerusalem',
   now: () => new Date(),
   reducedMotion: () => reducedMotion?.matches ?? false,

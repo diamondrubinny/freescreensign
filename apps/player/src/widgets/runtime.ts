@@ -4,6 +4,8 @@ import type { WidgetContext, WidgetDefinition, WidgetInstance } from '@rubinny/w
 export interface WidgetRuntimeOptions {
   registry: ReadonlyMap<string, WidgetDefinition<unknown>>;
   fetchData: (widgetId: string) => Promise<unknown>;
+  /** Object URL of a cached media item, or null. */
+  mediaUrl: (mediaId: string) => Promise<string | null>;
   timezone: () => string;
   now: () => Date;
   reducedMotion: () => boolean;
@@ -26,12 +28,13 @@ export class WidgetRuntime {
     } catch {
       return false;
     }
-    const { fetchData, now, timezone, reducedMotion } = this.options;
+    const { fetchData, mediaUrl, now, timezone, reducedMotion } = this.options;
     const ctx: WidgetContext = {
       locale: widget.config.locale === 'en' ? 'en' : 'he',
       timezone: timezone(),
       now,
       fetchData: <T>() => fetchData(widget.id) as Promise<T>,
+      mediaUrl,
       signal,
       reducedMotion: reducedMotion(),
     };

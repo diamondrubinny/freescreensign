@@ -17,6 +17,7 @@ function runtime(
   return new WidgetRuntime({
     registry,
     fetchData: options.fetchData ?? (() => Promise.reject(new Error('offline'))),
+    mediaUrl: (id) => Promise.resolve(id === 'known' ? 'blob:known' : null),
     timezone: () => 'Asia/Jerusalem',
     now: () => NOW,
     reducedMotion: () => options.reducedMotion ?? false,
@@ -176,6 +177,7 @@ describe('built-in widgets', () => {
     const rt = new WidgetRuntime({
       registry: BUILT_IN_WIDGETS,
       fetchData: () => Promise.reject(new Error('none')),
+      mediaUrl: () => Promise.resolve(null),
       timezone: () => 'Asia/Jerusalem',
       now: () => now,
       reducedMotion: () => false,
@@ -204,6 +206,113 @@ describe('built-in widgets', () => {
     expect(ticker.container.querySelector('.w-ticker-viewport .w-ticker-text')).not.toBeNull();
     const text = mount({ id: 'x', type: 'text', config: { title: 'הודעה', text: 'גוף' } });
     expect(text.container.querySelector('h2.w-text-title')?.textContent).toBe('הודעה');
+  });
+
+  it('design: positions elements at canvas size, text as text, images from the cache', async () => {
+    const { container, ok } = mount({
+      id: 'd',
+      type: 'design',
+      config: {
+        width: 1000,
+        height: 500,
+        background: '#102030',
+        elements: [
+          {
+            id: 's',
+            kind: 'shape',
+            shape: 'ellipse',
+            x: 10,
+            y: 20,
+            w: 100,
+            h: 50,
+            fill: '#ff0000',
+          },
+          {
+            id: 't',
+            kind: 'text',
+            x: 200,
+            y: 40,
+            w: 600,
+            h: 100,
+            text: '<b>מבצע</b>',
+            fontSize: 72,
+            rotation: 5,
+          },
+          { id: 'i', kind: 'image', x: 0, y: 300, w: 300, h: 200, mediaId: 'known' },
+        ],
+      },
+    });
+    expect(ok).toBe(false); // "known" is not a uuid: the config is refused as a whole
+    const valid = mount({
+      id: 'd',
+      type: 'design',
+      config: {
+        width: 1000,
+        height: 500,
+        elements: [
+          {
+            id: 's',
+            kind: 'shape',
+            shape: 'ellipse',
+            x: 10,
+            y: 20,
+            w: 100,
+            h: 50,
+            fill: '#ff0000',
+          },
+          {
+            id: 't',
+            kind: 'text',
+            x: 200,
+            y: 40,
+            w: 600,
+            h: 100,
+            text: '<b>מבצע</b>',
+            rotation: 5,
+          },
+        ],
+      },
+    });
+    expect(container.childElementCount).toBe(0);
+    const canvas = valid.container.querySelector<HTMLElement>('.w-design-canvas')!;
+    expect(canvas.style.width).toBe('1000px');
+    const shape = valid.container.querySelector<HTMLElement>('.w-design-shape')!;
+    expect(shape.style.left).toBe('10px');
+    expect(shape.style.borderRadius).toBe('50%');
+    const text = valid.container.querySelector<HTMLElement>('.w-design-text')!;
+    expect(text.textContent).toBe('<b>מבצע</b>');
+    expect(text.querySelector('b')).toBeNull();
+    expect(text.style.transform).toBe('rotate(5deg)');
+    await flush();
+  });
+
+  it('design: loads images through the media cache', async () => {
+    const uuid = '3f8a6b1e-2c4d-4e5f-8a9b-0c1d2e3f4a5b';
+    const rt = new WidgetRuntime({
+      registry: BUILT_IN_WIDGETS,
+      fetchData: () => Promise.reject(new Error('none')),
+      mediaUrl: (id) => Promise.resolve(id === uuid ? 'blob:cached' : null),
+      timezone: () => 'Asia/Jerusalem',
+      now: () => NOW,
+      reducedMotion: () => false,
+    });
+    const { container } = mount(
+      {
+        id: 'd',
+        type: 'design',
+        config: {
+          backgroundMediaId: uuid,
+          elements: [
+            { id: 'i', kind: 'image', x: 0, y: 0, w: 10, h: 10, mediaId: uuid, fit: 'contain' },
+          ],
+        },
+      },
+      rt,
+    );
+    await flush();
+    const images = [...container.querySelectorAll('img')];
+    expect(images.map((img) => img.getAttribute('src'))).toEqual(['blob:cached', 'blob:cached']);
+    expect(images[1]?.style.objectFit).toBe('contain');
   });
 
   it('rejects invalid configuration and unknown types without throwing', () => {

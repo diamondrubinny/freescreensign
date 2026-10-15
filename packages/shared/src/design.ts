@@ -86,3 +86,59 @@ export function designMediaIds(
   for (const element of config.elements) if (element.kind === 'image') ids.add(element.mediaId);
   return [...ids];
 }
+
+/** CSS for one element, shared by the player and the CMS editor so both render alike. */
+export function designElementStyle(element: DesignElement): Record<string, string> {
+  const style: Record<string, string> = {
+    position: 'absolute',
+    left: `${String(element.x)}px`,
+    top: `${String(element.y)}px`,
+    width: `${String(element.w)}px`,
+    height: `${String(element.h)}px`,
+    transform: element.rotation ? `rotate(${String(element.rotation)}deg)` : 'none',
+    opacity: String(element.opacity),
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+  };
+  if (element.kind === 'text') {
+    Object.assign(style, {
+      fontSize: `${String(element.fontSize)}px`,
+      fontWeight: String(element.fontWeight),
+      fontStyle: element.italic ? 'italic' : 'normal',
+      color: element.color,
+      textAlign: element.align,
+      lineHeight: String(element.lineHeight),
+      whiteSpace: 'pre-wrap',
+      overflowWrap: 'anywhere',
+      padding: element.background
+        ? `${String(Math.round(element.fontSize * 0.15))}px ${String(Math.round(element.fontSize * 0.3))}px`
+        : '0',
+      backgroundColor: element.background ?? 'transparent',
+    });
+  } else if (element.kind === 'shape') {
+    Object.assign(style, {
+      backgroundColor: element.fill,
+      borderRadius: element.shape === 'ellipse' ? '50%' : `${String(element.radius)}px`,
+      border:
+        element.stroke && element.strokeWidth > 0
+          ? `${String(element.strokeWidth)}px solid ${element.stroke}`
+          : 'none',
+    });
+  } else {
+    style.borderRadius = `${String(element.radius)}px`;
+  }
+  return style;
+}
+
+/** Scale and offset that fit a design canvas into a box (letterboxed, centered). */
+export function designFit(
+  design: { width: number; height: number },
+  box: { width: number; height: number },
+): { scale: number; left: number; top: number } {
+  const scale = Math.min(box.width / design.width, box.height / design.height) || 0;
+  return {
+    scale,
+    left: (box.width - design.width * scale) / 2,
+    top: (box.height - design.height * scale) / 2,
+  };
+}

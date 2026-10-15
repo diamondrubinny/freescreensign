@@ -62,6 +62,13 @@ export class Player {
     return this.#manifest;
   }
 
+  /** Object URL of a media item of the current manifest (verified cache), or null. */
+  async mediaUrl(mediaId: string): Promise<string | null> {
+    const media = this.#manifest?.media.find((m) => m.id === mediaId);
+    if (!media || !this.#cache) return null;
+    return this.#cache.objectUrl(media);
+  }
+
   async start(): Promise<void> {
     this.#token = this.deps.store.token();
     if (!this.#token) this.#token = await this.#pair();
