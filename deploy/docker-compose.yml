@@ -115,7 +115,7 @@ services:
 
   postgres:
     <<: *hardening
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rubinny}
       POSTGRES_DB: ${POSTGRES_DB:-rubinny}
