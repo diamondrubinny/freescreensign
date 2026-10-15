@@ -1,13 +1,70 @@
 # Rubinny
 
-**Free & open-source digital signage.** Manage screens, media, playlists, layouts and
-schedules from one web dashboard. Self-hosted, offline-first player, Hebrew/RTL and
-accessibility built in. Runs on anything with a modern browser — Raspberry Pi, Windows,
-Linux, Android / Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
+**Free & open-source digital signage.** Design content, build layouts, and run any number of
+screens from one web dashboard — self-hosted, offline-first, with Hebrew/RTL and accessibility
+built in. Runs on anything with a modern browser: Raspberry Pi, Windows, Linux, Android /
+Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-> **Status: early development (Phase 5 of 9 complete: secure media library, playlists, screen pairing, an offline-first web player, layouts with zones and built-in widgets).** Not ready for production yet.
+> **Status: early development** — phase 5 of 9 complete (media, playlists, screens, offline
+> player, layouts, widgets, a free-form designer and a free image library). Not ready for
+> production yet.
+
+![A screen running the "Lobby" kit: main content with a blurred backdrop, a clock with the Hebrew date, and an updates ticker](docs/screenshots/screen-lobby.png)
+
+## Features
+
+### On the screens
+
+- **Offline-first web player** (PWA at `/player/`): pair with a 6-character code, then it keeps
+  playing from a verified (sha256) local cache through network outages and reboots.
+- **Live updates** over WebSocket — changes reach screens in seconds.
+- **Layouts with zones**: each zone plays its own playlist (e.g. video + clock + ticker).
+- **Built-in widgets**: clock with the Hebrew date, text, ticker (RTL-aware), QR code, RSS
+  news, weather (opt-in), web page, countdown, and **free-form designs**.
+- **Media fit** per item: fit, fill, or the whole image over a blurred backdrop.
+
+|                             Menu board kit                              |                                         Countdown                                         |                             Free-form design                             |
+| :---------------------------------------------------------------------: | :---------------------------------------------------------------------------------------: | :----------------------------------------------------------------------: |
+| ![Menu board with four colored zones](docs/screenshots/screen-menu.png) | ![Countdown with days, hours, minutes and seconds](docs/screenshots/screen-countdown.png) | ![A sale slide made in the designer](docs/screenshots/screen-design.png) |
+
+### In the dashboard
+
+- **Free-form designer**: drag, resize and snap text, images and shapes on a canvas; undo/redo,
+  layers, templates, and full keyboard control.
+- **Free image library**: search public-domain (CC0) images and import them in one click —
+  through the server and the same malware scan as uploads.
+- **Ready-made kits**: one click creates a designed screen (lobby, menu board, notice board).
+- **Secure media library**: uploads are quarantined, scanned by ClamAV, re-encoded and stripped
+  of metadata (EXIF/GPS) before use.
+- **Organizations and roles** (owner, admin, editor, viewer), invitations, two-factor
+  authentication, audit log.
+- **Hebrew-first and accessible**: RTL, dark mode, keyboard navigation, accessibility menu;
+  every page is tested with axe-core (WCAG 2.1 AA target).
+
+![The designer: canvas with selection handles, toolbar, properties and layers](docs/screenshots/cms-designer.png)
+
+<details>
+<summary>More screenshots</summary>
+
+| Dashboard                                        | Dark mode                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------ |
+| ![Dashboard](docs/screenshots/cms-dashboard.png) | ![Dashboard in dark mode](docs/screenshots/cms-dashboard-dark.png) |
+
+| Layouts and ready-made kits                       | Widgets                                           |
+| ------------------------------------------------- | ------------------------------------------------- |
+| ![Layouts page](docs/screenshots/cms-layouts.png) | ![Widgets page](docs/screenshots/cms-widgets.png) |
+
+Mobile: <br>![The dashboard on a phone with the menu open](docs/screenshots/cms-mobile.png)
+
+</details>
+
+### Security and privacy by design
+
+Session cookies (`__Host-`, HttpOnly), Argon2id passwords, MFA, strict CSP on every page,
+per-organization isolation (IDOR tests), rate limits, an SSRF-hardened fetcher for RSS,
+weather and stock images, and no analytics or third-party trackers. See [SECURITY.md](SECURITY.md).
 
 ## Quick start (Docker)
 
@@ -28,23 +85,23 @@ To turn any device with a modern browser into a screen, open `https://<your-doma
 in full-screen/kiosk mode and enter the code it shows under **Screens › Add screen**.
 
 Set `RUBINNY_DOMAIN` in `deploy/.env` to a real domain to get an automatic Let's Encrypt
-certificate, and set `HSTS_MAX_AGE=31536000` in production.
+certificate, and set `HSTS_MAX_AGE=31536000` in production. Optional features (weather, the
+free image library) are described in [`deploy/.env.example`](deploy/.env.example).
 
 ## Repository layout
 
-| Path                  | What                                                                                                  | License  |
-| --------------------- | ----------------------------------------------------------------------------------------------------- | -------- |
-| `apps/server`         | API server + media worker (Fastify, PostgreSQL, Valkey/BullMQ, sharp, ffmpeg)                         | AGPL-3.0 |
-| `apps/cms`            | Management dashboard (React, RTL-first, WCAG 2.1 AA target)                                           | AGPL-3.0 |
-| `apps/player`         | Offline-first web player (PWA) served at `/player/`: pairing, verified media cache, WebSocket updates | AGPL-3.0 |
-| `packages/shared`     | Shared schemas: player manifest, layouts, widget settings, pairing codes, roles, Hebrew dates         | MIT      |
-| `packages/widget-sdk` | SDK for community widgets (the built-in widgets use it too)                                           | MIT      |
-| `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV                                     | AGPL-3.0 |
-| `docs/`               | Specification, phase plans                                                                            | —        |
+| Path                  | What                                                                                           | License  |
+| --------------------- | ---------------------------------------------------------------------------------------------- | -------- |
+| `apps/server`         | API server + media worker (Fastify, PostgreSQL, Valkey/BullMQ, sharp, ffmpeg, ClamAV)          | AGPL-3.0 |
+| `apps/cms`            | Management dashboard (React, RTL-first, WCAG 2.1 AA target)                                    | AGPL-3.0 |
+| `apps/player`         | Offline-first web player (PWA): pairing, verified media cache, zones, widgets, WebSocket       | AGPL-3.0 |
+| `packages/shared`     | Shared schemas: player manifest, layouts, widgets, designs, pairing codes, roles, Hebrew dates | MIT      |
+| `packages/widget-sdk` | SDK for community widgets (the built-in widgets use it too)                                    | MIT      |
+| `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV                              | AGPL-3.0 |
+| `docs/`               | Specification, phase plans and results, screenshots                                            | —        |
 
-Built-in widgets: clock with Hebrew date, text, ticker, QR code, RSS, weather (opt-in, see `deploy/.env.example`) and web page.
-
-Coming next: scheduling, operations (proof of play, alerts) and player wrappers for each platform.
+Coming next: scheduling (by time and day), operations (proof of play, alerts) and player
+wrappers for each platform. See the [roadmap](docs/PLAN.md).
 
 ## Development
 
@@ -53,7 +110,8 @@ pnpm install
 pnpm check      # format, lint, typecheck, tests
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for running the server locally and integration tests.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for running the server locally, integration tests and
+the end-to-end/accessibility suite.
 
 ## License
 
