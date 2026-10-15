@@ -119,7 +119,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
         {
           heading: 'עוגיות שבשימוש',
           paragraphs: [
-            '‎__Host-rubinny_session — עוגייה חיונית, מאובטחת (HttpOnly, Secure, SameSite=Lax). היא שומרת על החיבור שלכם, ותוקפה עד 30 יום. אינה משותפת עם צד שלישי ואינה דורשת הסכמה.',
+            '\u200E__Host-rubinny_session — עוגייה חיונית, מאובטחת (HttpOnly, Secure, SameSite=Lax). היא שומרת על החיבור שלכם, ותוקפה עד 30 יום. אינה משותפת עם צד שלישי ואינה דורשת הסכמה.',
           ],
         },
         {
