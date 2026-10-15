@@ -136,6 +136,8 @@ export class Player {
       return Promise.resolve();
     });
     await this.sync();
+    // Report status at once, so the CMS shows the screen online with its resolution.
+    void this.#heartbeat();
     await this.#playLoop();
     socket.stop();
   }

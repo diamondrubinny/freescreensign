@@ -324,6 +324,19 @@ test('a layout shows a clock and a ticker side by side on a screen', async ({ pa
   const ticker = player.locator('.w-ticker');
   await expect(ticker).toHaveAttribute('dir', 'rtl');
   await expect(ticker).toContainText('ברוכים הבאים לבית הספר');
+  // The scrolling text enters the zone right away (regression: RTL text used to stay
+  // off-screen for several seconds per loop).
+  await expect
+    .poll(
+      () =>
+        ticker.evaluate((root) => {
+          const box = root.getBoundingClientRect();
+          const text = root.querySelector('.w-ticker-text')!.getBoundingClientRect();
+          return text.right > box.left && text.left < box.right;
+        }),
+      { timeout: 2_000, intervals: [100] },
+    )
+    .toBe(true);
   const zones = await player.locator('.zone').evaluateAll((elements) =>
     elements.map((el) => {
       const rect = el.getBoundingClientRect();

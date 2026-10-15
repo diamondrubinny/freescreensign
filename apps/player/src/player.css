@@ -167,18 +167,30 @@ body,
 }
 
 .w-ticker {
-  display: flex;
-  align-items: center;
   overflow: hidden;
   white-space: nowrap;
 }
+/* Anchored to the physical left edge in both directions, so the animation offsets
+   (computed in ticker.ts) mean the same thing for RTL and LTR text. */
 .w-ticker-text {
-  display: inline-block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
   font-size: calc(var(--zone-h, 100px) * 0.55);
   line-height: 1;
   will-change: transform;
 }
+.w-ticker-static {
+  display: flex;
+  align-items: center;
+}
 .w-ticker-static .w-ticker-text {
+  position: static;
+  display: block;
+  height: auto;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;

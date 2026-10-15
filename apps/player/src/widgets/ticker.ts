@@ -36,7 +36,8 @@ export const tickerWidget = defineWidget<WidgetConfig<'ticker'>>({
       const pxPerSecond = Math.max(root.clientHeight, 1) * SPEED[config.speed];
       const distance = boxWidth + textWidth;
       if (distance <= 0) return;
-      // The text starts just outside one edge and ends just outside the other.
+      // The text is anchored at the left edge (see player.css); it starts just outside
+      // one edge and ends just outside the other.
       const [from, to] = dir === 'rtl' ? [-textWidth, boxWidth] : [boxWidth, -textWidth];
       animation = track.animate(
         [
