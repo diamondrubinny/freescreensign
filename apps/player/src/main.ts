@@ -1,3 +1,4 @@
+import '@fontsource-variable/heebo';
 import { PlayerApi } from './api';
 import { CacheStorageBlobStore, MediaCache } from './media-cache';
 import { Player } from './player';

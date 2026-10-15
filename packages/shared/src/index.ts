@@ -6,3 +6,4 @@ export * from './pairing.js';
 export * from './roles.js';
 export * from './widgets.js';
 export * from './layouts.js';
+export * from './time.js';

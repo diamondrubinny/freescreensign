@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { z } from 'zod';
+import { MEDIA_FITS } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
@@ -29,6 +30,7 @@ type PlaylistItemDto =
       name: string;
       mediaKind: 'image' | 'video';
       status: string | null;
+      fit: 'contain' | 'cover' | 'blur';
       durationMs: number | null;
       effectiveDurationMs: number;
       thumbnailUrl: string | null;
@@ -60,6 +62,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
         'playlist_items.duration_ms',
         'playlist_items.media_id',
         'playlist_items.widget_id',
+        'playlist_items.fit',
         'media.name as media_name',
         'media.kind',
         'media.status',
@@ -108,6 +111,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
               name: item.media_name ?? '',
               mediaKind: item.kind,
               status: item.status,
+              fit: item.fit,
               durationMs: item.duration_ms,
               effectiveDurationMs:
                 item.duration_ms ??
@@ -218,7 +222,11 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
         items: z
           .array(
             z.union([
-              z.object({ mediaId: z.uuid(), durationMs: duration }),
+              z.object({
+                mediaId: z.uuid(),
+                durationMs: duration,
+                fit: z.enum(MEDIA_FITS).default('contain'),
+              }),
               z.object({ widgetId: z.uuid(), durationMs: duration }),
             ]),
           )
@@ -271,6 +279,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
               position,
               media_id: 'mediaId' in item ? item.mediaId : null,
               widget_id: 'widgetId' in item ? item.widgetId : null,
+              fit: 'mediaId' in item ? item.fit : 'contain',
               duration_ms: item.durationMs,
             })),
           )
@@ -293,6 +302,53 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     });
     return playlistDetail(org.id, playlistId);
   });
+
+  /** Copies a playlist (name and items); the copy is not assigned to any screen. */
+  app.post(
+    '/api/v1/orgs/:orgId/playlists/:playlistId/duplicate',
+    editor,
+    async (request, reply) => {
+      const org = requireOrg(request);
+      const { user } = requireAuth(request);
+      const { playlistId } = parse(playlistParams, request.params);
+      const { name } = parse(z.object({ name: nameSchema }), request.body);
+      await loadPlaylist(org.id, playlistId);
+      const copyId = await ctx.db.transaction().execute(async (trx) => {
+        const copy = await trx
+          .insertInto('playlists')
+          .values({ org_id: org.id, name, created_by: user.id })
+          .returning('id')
+          .executeTakeFirstOrThrow();
+        await trx
+          .insertInto('playlist_items')
+          .columns(['playlist_id', 'position', 'media_id', 'widget_id', 'duration_ms', 'fit'])
+          .expression((eb) =>
+            eb
+              .selectFrom('playlist_items')
+              .select([
+                sql<string>`${copy.id}::uuid`.as('playlist_id'),
+                'position',
+                'media_id',
+                'widget_id',
+                'duration_ms',
+                'fit',
+              ])
+              .where('playlist_id', '=', playlistId),
+          )
+          .execute();
+        return copy.id;
+      });
+      await audit(ctx.db, {
+        action: 'playlist.created',
+        orgId: org.id,
+        actorUserId: user.id,
+        targetType: 'playlist',
+        targetId: copyId,
+        meta: { duplicatedFrom: playlistId },
+      });
+      return reply.status(201).send(await playlistDetail(org.id, copyId));
+    },
+  );
 
   app.delete('/api/v1/orgs/:orgId/playlists/:playlistId', editor, async (request, reply) => {
     const org = requireOrg(request);

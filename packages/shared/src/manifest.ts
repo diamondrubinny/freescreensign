@@ -45,11 +45,17 @@ export const widgetSchema = z.object({
 
 export const TRANSITIONS = ['none', 'fade', 'slide'] as const;
 
+/** How media fills its zone: whole image, cropped to fill, or whole image over a blurred copy. */
+export const MEDIA_FITS = ['contain', 'cover', 'blur'] as const;
+export type MediaFit = (typeof MEDIA_FITS)[number];
+
 export const playlistItemSchema = z.object({
   kind: z.enum(['media', 'widget', 'playlist']),
   ref: id,
   durationMs: positiveInt.max(MAX_DURATION_MS),
   transition: z.enum(TRANSITIONS).default('none'),
+  /** Media only; players that predate it use "contain". */
+  fit: z.enum(MEDIA_FITS).optional(),
 });
 
 export const playlistSchema = z.object({

@@ -170,6 +170,42 @@ describe('built-in widgets', () => {
     }
   });
 
+  it('countdown: days to seconds in the screen time zone, then the done text', async () => {
+    vi.useFakeTimers();
+    let now = new Date('2026-12-14T15:58:58Z'); // 17:58:58 in Jerusalem
+    const rt = new WidgetRuntime({
+      registry: BUILT_IN_WIDGETS,
+      fetchData: () => Promise.reject(new Error('none')),
+      timezone: () => 'Asia/Jerusalem',
+      now: () => now,
+      reducedMotion: () => false,
+    });
+    const { container } = mount(
+      {
+        id: 'c',
+        type: 'countdown',
+        config: { title: 'נר ראשון', target: '2026-12-15T18:00', doneText: 'חג שמח!' },
+      },
+      rt,
+    );
+    const values = () =>
+      [...container.querySelectorAll('.w-countdown-value')].map((n) => n.textContent);
+    expect(values()).toEqual(['1', '00', '01', '02']);
+    expect(container.querySelectorAll('.w-countdown-label')[0]?.textContent).toBe('ימים');
+    now = new Date('2026-12-15T16:00:01Z');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(container.querySelector('.w-countdown-done')?.textContent).toBe('חג שמח!');
+    expect(container.querySelector('.w-countdown-units')).toBeNull();
+  });
+
+  it('ticker label and text title are rendered as text', () => {
+    const ticker = mount({ id: 't', type: 'ticker', config: { text: 'שלום', label: 'עדכונים' } });
+    expect(ticker.container.querySelector('.w-ticker-label')?.textContent).toBe('עדכונים');
+    expect(ticker.container.querySelector('.w-ticker-viewport .w-ticker-text')).not.toBeNull();
+    const text = mount({ id: 'x', type: 'text', config: { title: 'הודעה', text: 'גוף' } });
+    expect(text.container.querySelector('h2.w-text-title')?.textContent).toBe('הודעה');
+  });
+
   it('rejects invalid configuration and unknown types without throwing', () => {
     expect(mount({ id: 'x', type: 'qr', config: { url: 'javascript:alert(1)' } }).ok).toBe(false);
     expect(mount({ id: 'x', type: 'nope', config: {} }).ok).toBe(false);
@@ -266,6 +302,33 @@ describe('DomRenderer', () => {
       signal,
     );
     expect(root.querySelector('[data-zone="ticker"] .layer:last-child')).not.toBe(first);
+  });
+
+  it('fits media: cover, and blur with a backdrop copy', async () => {
+    const { r, root } = renderer();
+    r.mountLayout(layout);
+    const media = { id: 'm', mime: 'image/png' as const, sizeBytes: 1, sha256: 'a'.repeat(64) };
+    const signal = new AbortController().signal;
+    await r.play(
+      'main',
+      { kind: 'media', media, durationMs: 1, transition: 'none', fit: 'blur' },
+      'blob:x',
+      signal,
+    );
+    const layer = root.querySelector<HTMLElement>('[data-zone="main"] .layer')!;
+    expect(layer.dataset.fit).toBe('blur');
+    expect(layer.querySelectorAll('img')).toHaveLength(2);
+    expect(layer.querySelector('img.backdrop')).not.toBeNull();
+    await r.play(
+      'main',
+      { kind: 'media', media, durationMs: 1, transition: 'none', fit: 'cover' },
+      'blob:x',
+      signal,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const last = root.querySelector<HTMLElement>('[data-zone="main"] .layer:last-child')!;
+    expect(last.dataset.fit).toBe('cover');
+    expect(last.querySelector('img.backdrop')).toBeNull();
   });
 
   it('keeps unchanged zones when remounting the same layout', () => {

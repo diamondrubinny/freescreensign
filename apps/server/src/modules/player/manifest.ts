@@ -131,6 +131,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
           'playlist_items.playlist_id',
           'playlist_items.position',
           'playlist_items.duration_ms as item_duration_ms',
+          'playlist_items.fit',
           'media.id as media_id',
           'media.kind',
           'media.mime',
@@ -181,6 +182,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
             ? item.duration_ms
             : DEFAULT_IMAGE_DURATION_MS),
         transition: 'fade',
+        ...(item.fit !== 'contain' ? { fit: item.fit } : {}),
       });
       continue;
     }

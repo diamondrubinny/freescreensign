@@ -1,5 +1,6 @@
 import { clockConfigSchema, formatHebrewDate, type WidgetConfig } from '@rubinny/shared';
 import { defineWidget, el, every } from '@rubinny/widget-sdk';
+import { applyColors } from './theme';
 
 type ClockConfig = WidgetConfig<'clock'>;
 
@@ -35,12 +36,12 @@ export const clockWidget = defineWidget<ClockConfig>({
     const date = el('div', { className: 'w-clock-date', dir: 'auto' });
     const hebrew = el('div', { className: 'w-clock-hebrew', dir: 'rtl', text: '' });
     hebrew.lang = 'he';
-    const root = el(
-      'div',
-      { className: 'w-clock', style: { color: config.textColor, background: config.background } },
-      time,
-    );
+    const root = el('div', { className: 'w-clock w-surface' }, time);
+    applyColors(root, { text: config.textColor, background: config.background });
     root.lang = config.locale;
+    if (config.showDate || config.showHebrewDate) {
+      root.append(el('div', { className: 'w-divider' }));
+    }
     if (config.showDate) root.append(date);
     if (config.showHebrewDate) root.append(hebrew);
     container.append(root);

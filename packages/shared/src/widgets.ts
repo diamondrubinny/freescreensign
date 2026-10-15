@@ -30,6 +30,8 @@ export const clockConfigSchema = z.object({
 });
 
 export const textConfigSchema = z.object({
+  /** Optional heading shown above the text. */
+  title: z.string().trim().max(200).optional(),
   text: z.string().trim().min(1).max(1000),
   align: z.enum(['start', 'center', 'end']).default('center'),
   size: z.enum(['small', 'medium', 'large', 'xlarge']).default('large'),
@@ -38,6 +40,8 @@ export const textConfigSchema = z.object({
 });
 
 export const tickerConfigSchema = z.object({
+  /** Optional fixed badge at the start of the line (e.g. "Updates"). */
+  label: z.string().trim().max(40).optional(),
   text: z.string().trim().min(1).max(500),
   speed: z.enum(['slow', 'normal', 'fast']).default('normal'),
   textColor: color.default('#ffffff'),
@@ -77,6 +81,24 @@ export const webpageConfigSchema = z.object({
   refreshMinutes: z.number().int().min(0).max(1440).default(0),
 });
 
+/** Local date-time without a zone, e.g. 2026-12-14T18:00 (interpreted in `timezone`). */
+const localDateTime = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Expected YYYY-MM-DDTHH:MM');
+
+export const countdownConfigSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  target: localDateTime,
+  /** Defaults to the screen's time zone when omitted. */
+  timezone: z.string().max(64).refine(isValidTimeZone, 'Unknown time zone').optional(),
+  /** Shown once the target time has passed. */
+  doneText: z.string().trim().max(200).optional(),
+  showSeconds: z.boolean().default(true),
+  locale: z.enum(['he', 'en']).default('he'),
+  textColor: color.default('#ffffff'),
+  background: color.default('#312e81'),
+});
+
 export const WIDGET_CONFIG_SCHEMAS = {
   clock: clockConfigSchema,
   text: textConfigSchema,
@@ -85,6 +107,7 @@ export const WIDGET_CONFIG_SCHEMAS = {
   rss: rssConfigSchema,
   weather: weatherConfigSchema,
   webpage: webpageConfigSchema,
+  countdown: countdownConfigSchema,
 } as const;
 
 export type WidgetType = keyof typeof WIDGET_CONFIG_SCHEMAS;

@@ -9,7 +9,7 @@ body,
   background: #000;
   color: #fff;
   cursor: none;
-  font-family: system-ui, 'Segoe UI', 'Noto Sans Hebrew', Arial, sans-serif;
+  font-family: 'Heebo Variable', system-ui, 'Segoe UI', 'Noto Sans Hebrew', Arial, sans-serif;
 }
 
 .stage {
@@ -72,6 +72,22 @@ body,
   height: 100%;
   object-fit: contain;
 }
+.layer[data-fit='cover'] .media,
+.layer[data-fit='cover'] video {
+  object-fit: cover;
+}
+.layer .media {
+  position: relative;
+}
+/* Blurred, zoomed copy behind a "blur"-fitted image (instead of black bars). */
+.layer .backdrop {
+  position: absolute;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  object-fit: cover;
+  filter: blur(36px) brightness(0.65) saturate(1.2);
+}
 
 .message {
   position: absolute;
@@ -99,7 +115,8 @@ body,
   color: #facc15;
 }
 
-/* ---- Widgets (sizes relative to the zone) ---------------------------------- */
+/* ---- Widgets (sizes relative to the zone) ----------------------------------
+   --zone-w / --zone-h are set per zone; --w-bg / --w-fg per widget (theme.ts). */
 .layer.widget {
   display: block;
 }
@@ -108,67 +125,148 @@ body,
   inset: 0;
   box-sizing: border-box;
 }
+.w-surface {
+  overflow: hidden;
+}
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  .w-surface {
+    background-image:
+      radial-gradient(
+        120% 90% at 85% 0%,
+        color-mix(in srgb, var(--w-bg) 70%, white 30%) 0%,
+        transparent 60%
+      ),
+      linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--w-bg) 92%, white 8%),
+        color-mix(in srgb, var(--w-bg) 78%, black 22%)
+      );
+  }
+}
+.w-divider {
+  width: 30%;
+  height: max(2px, calc(var(--zone-h, 200px) * 0.008));
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+}
 
+/* Clock */
 .w-clock {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--zone-h, 200px) * 0.03);
+  gap: calc(var(--zone-h, 200px) * 0.035);
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 .w-clock-time {
-  font-size: min(calc(var(--zone-h, 200px) * 0.36), calc(var(--zone-w, 400px) * 0.2));
+  font-size: min(calc(var(--zone-h, 200px) * 0.34), calc(var(--zone-w, 400px) * 0.22));
   font-weight: 700;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.w-clock-date,
-.w-clock-hebrew {
-  font-size: min(calc(var(--zone-h, 200px) * 0.11), calc(var(--zone-w, 400px) * 0.06));
+.w-clock-date {
+  font-size: min(calc(var(--zone-h, 200px) * 0.085), calc(var(--zone-w, 400px) * 0.06));
+  font-weight: 500;
+  opacity: 0.9;
 }
 .w-clock-hebrew {
-  opacity: 0.85;
+  font-size: min(calc(var(--zone-h, 200px) * 0.075), calc(var(--zone-w, 400px) * 0.055));
+  padding: 0.25em 0.9em;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
 }
 
+/* Text */
 .w-text {
   display: flex;
   align-items: center;
-  padding: calc(var(--zone-h, 200px) * 0.06) calc(var(--zone-w, 400px) * 0.04);
-  overflow: hidden;
+  padding: calc(var(--zone-h, 200px) * 0.08) calc(var(--zone-w, 400px) * 0.05);
+}
+.w-text-content {
+  width: 100%;
+  max-height: 100%;
+}
+.w-text-title {
+  margin: 0 0 0.35em;
+  font-size: calc(var(--zone-h, 200px) * 0.12);
+  font-weight: 800;
+  line-height: 1.15;
+}
+.w-text-title::after {
+  content: '';
+  display: block;
+  width: 2.2em;
+  height: 0.12em;
+  margin-top: 0.25em;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.w-align-center .w-text-title::after {
+  margin-inline: auto;
+}
+.w-align-end .w-text-title::after {
+  margin-inline-start: auto;
 }
 .w-text-body {
   margin: 0;
   width: 100%;
   white-space: pre-line;
   overflow-wrap: anywhere;
-  line-height: 1.3;
+  line-height: 1.35;
+  font-weight: 500;
 }
-.w-align-start .w-text-body {
+.w-align-start {
   text-align: start;
 }
-.w-align-center .w-text-body {
+.w-align-center {
   text-align: center;
 }
-.w-align-end .w-text-body {
+.w-align-end {
   text-align: end;
 }
 .w-size-small {
-  font-size: calc(var(--zone-h, 200px) * 0.1);
+  font-size: calc(var(--zone-h, 200px) * 0.08);
 }
 .w-size-medium {
-  font-size: calc(var(--zone-h, 200px) * 0.16);
+  font-size: calc(var(--zone-h, 200px) * 0.12);
 }
 .w-size-large {
-  font-size: calc(var(--zone-h, 200px) * 0.24);
+  font-size: calc(var(--zone-h, 200px) * 0.2);
 }
 .w-size-xlarge {
   font-size: calc(var(--zone-h, 200px) * 0.36);
+  font-weight: 800;
 }
 
+/* Ticker */
 .w-ticker {
-  overflow: hidden;
+  display: flex;
+  align-items: stretch;
   white-space: nowrap;
+}
+.w-ticker-label {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-inline: calc(var(--zone-h, 100px) * 0.35);
+  font-size: calc(var(--zone-h, 100px) * 0.38);
+  font-weight: 800;
+  background: var(--w-fg, #fff);
+  color: var(--w-bg, #000);
+}
+.w-ticker-viewport {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+@supports (mask-image: linear-gradient(black, transparent)) {
+  .w-ticker-viewport {
+    mask-image: linear-gradient(90deg, transparent, black 3%, black 97%, transparent);
+  }
 }
 /* Anchored to the physical left edge in both directions, so the animation offsets
    (computed in ticker.ts) mean the same thing for RTL and LTR text. */
@@ -179,11 +277,12 @@ body,
   height: 100%;
   display: inline-flex;
   align-items: center;
-  font-size: calc(var(--zone-h, 100px) * 0.55);
+  font-size: calc(var(--zone-h, 100px) * 0.5);
+  font-weight: 600;
   line-height: 1;
   will-change: transform;
 }
-.w-ticker-static {
+.w-ticker-static .w-ticker-viewport {
   display: flex;
   align-items: center;
 }
@@ -194,83 +293,170 @@ body,
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-inline: calc(var(--zone-h, 100px) * 0.2);
+  padding-inline: calc(var(--zone-h, 100px) * 0.3);
 }
 
+/* QR */
 .w-qr {
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--zone-h, 200px) * 0.03);
+  gap: calc(var(--zone-h, 200px) * 0.04);
+}
+.w-qr-frame {
+  padding: calc(var(--zone-h, 200px) * 0.03);
+  border-radius: calc(var(--zone-h, 200px) * 0.05);
+  box-shadow: 0 0.6em 2em rgb(0 0 0 / 0.35);
+  line-height: 0;
 }
 .w-qr-code {
-  width: min(calc(var(--zone-h, 200px) * 0.78), calc(var(--zone-w, 200px) * 0.9));
+  width: min(calc(var(--zone-h, 200px) * 0.62), calc(var(--zone-w, 200px) * 0.78));
   height: auto;
   aspect-ratio: 1;
 }
 .w-qr figcaption {
-  font-size: calc(var(--zone-h, 200px) * 0.08);
+  max-width: 90%;
+  font-size: min(calc(var(--zone-h, 200px) * 0.075), calc(var(--zone-w, 200px) * 0.08));
+  font-weight: 700;
   text-align: center;
 }
 
+/* RSS */
 .w-rss {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: calc(var(--zone-h, 200px) * 0.04);
-  padding: calc(var(--zone-h, 200px) * 0.06) calc(var(--zone-w, 400px) * 0.04);
-  overflow: hidden;
+  padding: calc(var(--zone-h, 200px) * 0.08) calc(var(--zone-w, 400px) * 0.05);
 }
 .w-rss-source {
-  font-size: calc(var(--zone-h, 200px) * 0.09);
-  opacity: 0.75;
+  align-self: flex-start;
+  padding: 0.2em 0.8em;
+  border-radius: 999px;
+  font-size: calc(var(--zone-h, 200px) * 0.06);
+  font-weight: 700;
+  background: rgb(255 255 255 / 0.16);
+}
+.w-rss-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
 }
 .w-rss-title {
   margin: 0;
-  font-size: calc(var(--zone-h, 200px) * 0.2);
-  font-weight: 600;
+  font-size: calc(var(--zone-h, 200px) * 0.16);
+  font-weight: 700;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
+.w-rss-dots {
+  display: flex;
+  gap: calc(var(--zone-h, 200px) * 0.02);
+}
+.w-rss-dots span {
+  width: calc(var(--zone-h, 200px) * 0.025);
+  height: calc(var(--zone-h, 200px) * 0.025);
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.3;
+}
+.w-rss-dots span.active {
+  width: calc(var(--zone-h, 200px) * 0.07);
+  opacity: 0.9;
+}
 
+/* Weather */
 .w-weather {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: calc(var(--zone-h, 300px) * 0.03);
-  padding: calc(var(--zone-h, 300px) * 0.05) calc(var(--zone-w, 400px) * 0.05);
-  font-size: calc(var(--zone-h, 300px) * 0.07);
+  gap: calc(var(--zone-h, 300px) * 0.04);
+  padding: calc(var(--zone-h, 300px) * 0.06) calc(var(--zone-w, 400px) * 0.06);
+  font-size: min(calc(var(--zone-h, 300px) * 0.065), calc(var(--zone-w, 400px) * 0.05));
 }
 .w-weather-place {
-  font-size: 1.4em;
-  font-weight: 600;
+  font-size: 1.3em;
+  font-weight: 700;
+}
+.w-weather-desc {
+  opacity: 0.85;
 }
 .w-weather-now {
   display: flex;
   align-items: center;
-  gap: 0.3em;
-  font-size: 3em;
+  gap: 0.25em;
+  font-size: 3.2em;
+  font-weight: 800;
   line-height: 1;
 }
 .w-weather-days {
   display: flex;
-  gap: 1em;
+  gap: 0.6em;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .w-weather-days li {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0.15em;
+  padding: 0.5em 0.3em;
+  border-radius: 0.6em;
+  background: rgb(255 255 255 / 0.12);
 }
 .w-weather-credit {
-  font-size: 0.55em;
+  font-size: 0.5em;
   opacity: 0.7;
 }
 
+/* Countdown */
+.w-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--zone-h, 200px) * 0.06);
+  padding: calc(var(--zone-h, 200px) * 0.06);
+  text-align: center;
+}
+.w-countdown-title {
+  font-size: min(calc(var(--zone-h, 200px) * 0.11), calc(var(--zone-w, 400px) * 0.06));
+  font-weight: 700;
+}
+.w-countdown-units {
+  display: flex;
+  gap: min(calc(var(--zone-h, 200px) * 0.05), calc(var(--zone-w, 400px) * 0.025));
+}
+.w-countdown-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.6em;
+  padding: 0.35em 0.4em 0.3em;
+  border-radius: 0.35em;
+  font-size: min(calc(var(--zone-h, 200px) * 0.12), calc(var(--zone-w, 400px) * 0.045));
+  background: rgb(255 255 255 / 0.12);
+}
+.w-countdown-value {
+  font-size: 2.3em;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.w-countdown-label {
+  margin-top: 0.3em;
+  opacity: 0.8;
+}
+.w-countdown-done {
+  font-size: min(calc(var(--zone-h, 200px) * 0.16), calc(var(--zone-w, 400px) * 0.07));
+  font-weight: 800;
+}
+
+/* Web page */
 .w-webpage {
   width: 100%;
   height: 100%;

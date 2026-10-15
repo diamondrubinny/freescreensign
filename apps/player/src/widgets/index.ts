@@ -1,5 +1,6 @@
 import type { WidgetDefinition } from '@rubinny/widget-sdk';
 import { clockWidget } from './clock';
+import { countdownWidget } from './countdown';
 import { qrWidget } from './qr';
 import { rssWidget } from './rss';
 import { textWidget } from './text';
@@ -18,6 +19,7 @@ export const BUILT_IN_WIDGETS: ReadonlyMap<string, WidgetDefinition<unknown>> = 
       rssWidget,
       weatherWidget,
       webpageWidget,
+      countdownWidget,
     ] as WidgetDefinition<unknown>[]
   ).map((widget) => [widget.type, widget]),
 );

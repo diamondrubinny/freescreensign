@@ -202,6 +202,11 @@ export class DomRenderer implements Renderer {
     const lifetime = new AbortController();
     const element = document.createElement('div');
     element.className = `layer${item.transition === 'none' ? '' : ' fade'}`;
+    if (item.kind === 'media')
+      element.dataset.fit =
+        item.media.mime.startsWith('video/') && item.fit === 'blur'
+          ? 'contain'
+          : (item.fit ?? 'contain');
     const layer: Layer = { element, key, lifetime };
     let done: Promise<void>;
 
@@ -242,7 +247,16 @@ export class DomRenderer implements Renderer {
       const img = document.createElement('img');
       img.alt = '';
       img.decoding = 'async';
+      img.className = 'media';
       if (url) img.src = url;
+      // "blur": the whole image over a blurred, zoomed copy instead of black bars.
+      if (item.fit === 'blur' && url) {
+        const backdrop = document.createElement('img');
+        backdrop.alt = '';
+        backdrop.className = 'backdrop';
+        backdrop.src = url;
+        element.append(backdrop);
+      }
       element.append(img);
       // decode() is missing on some older TV browsers.
       if (typeof img.decode === 'function') await img.decode().catch(() => undefined);

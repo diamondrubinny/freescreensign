@@ -1,5 +1,6 @@
 import { weatherConfigSchema, type WeatherData, type WidgetConfig } from '@rubinny/shared';
 import { defineWidget, el, every } from '@rubinny/widget-sdk';
+import { applyColors } from './theme';
 
 const REFRESH_MS = 15 * 60 * 1000;
 
@@ -28,10 +29,10 @@ export const weatherWidget = defineWidget<WidgetConfig<'weather'>>({
     const locale = config.locale === 'he' ? 'he-IL' : 'en-US';
     const unit = config.units === 'imperial' ? '°F' : '°C';
     const root = el('div', {
-      className: 'w-weather',
+      className: 'w-weather w-surface',
       dir: config.locale === 'he' ? 'rtl' : 'ltr',
-      style: { color: config.textColor, background: config.background },
     });
+    applyColors(root, { text: config.textColor, background: config.background });
     root.lang = config.locale;
     container.append(root);
 

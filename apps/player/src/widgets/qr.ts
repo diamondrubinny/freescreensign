@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
 import { qrConfigSchema, type WidgetConfig } from '@rubinny/shared';
 import { defineWidget, el } from '@rubinny/widget-sdk';
+import { applyColors } from './theme';
 
 /** QR code generated on the screen itself (no external service). */
 export const qrWidget = defineWidget<WidgetConfig<'qr'>>({
@@ -9,20 +10,16 @@ export const qrWidget = defineWidget<WidgetConfig<'qr'>>({
   render(container, config, ctx) {
     const image = el('img', { className: 'w-qr-code' });
     image.alt = config.label ?? config.url;
-    const root = el(
-      'figure',
-      { className: 'w-qr', style: { background: config.background } },
-      image,
-    );
-    if (config.label) {
-      root.append(
-        el('figcaption', { text: config.label, dir: 'auto', style: { color: config.foreground } }),
-      );
-    }
+    const frame = el('div', { className: 'w-qr-frame' }, image);
+    frame.style.background = config.background;
+    const root = el('figure', { className: 'w-qr w-surface' }, frame);
+    // The zone around the code uses a darker shade of the code's colors.
+    applyColors(root, { text: '#ffffff', background: config.foreground });
+    if (config.label) root.append(el('figcaption', { text: config.label, dir: 'auto' }));
     container.append(root);
     void QRCode.toString(config.url, {
       type: 'svg',
-      margin: 2,
+      margin: 1,
       errorCorrectionLevel: 'M',
       color: { dark: config.foreground, light: config.background },
     })
@@ -32,10 +29,6 @@ export const qrWidget = defineWidget<WidgetConfig<'qr'>>({
         }
       })
       .catch(() => undefined);
-    return {
-      destroy: () => {
-        root.remove();
-      },
-    };
+    return { destroy: () => { root.remove(); } };
   },
 });

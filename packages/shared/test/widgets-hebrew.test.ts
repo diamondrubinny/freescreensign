@@ -69,6 +69,15 @@ describe('parseWidgetConfig', () => {
   });
 
   it('lists all built-in types', () => {
-    expect(WIDGET_TYPES).toEqual(['clock', 'text', 'ticker', 'qr', 'rss', 'weather', 'webpage']);
+    expect(WIDGET_TYPES).toEqual([
+      'clock',
+      'text',
+      'ticker',
+      'qr',
+      'rss',
+      'weather',
+      'webpage',
+      'countdown',
+    ]);
   });
 });

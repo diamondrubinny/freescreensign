@@ -141,6 +141,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'rss',
       'weather',
       'webpage',
+      'countdown',
     ]);
 
     const clock = await createWidget('clock', {});
@@ -415,5 +416,101 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
         items: [{ kind: 'widget', widgetType: 'text', name: 'text', effectiveDurationMs: 5000 }],
       },
     });
+  });
+
+  it('duplicates playlists, layouts and widgets within the organization only', async () => {
+    const clock = await createWidget('clock', { format: '12h' });
+    const playlistId = await createPlaylist('Original', [{ widgetId: clock.id, durationMs: 7000 }]);
+    const { layout } = (
+      await editor.post(api('/layouts'), {
+        name: 'Lobby',
+        width: 1920,
+        height: 1080,
+        zones: [{ name: 'main', x: 0, y: 0, w: 1920, h: 1080, playlistId }],
+      })
+    ).json<{ layout: { id: string } }>();
+
+    const pl = await editor.post(api(`/playlists/${playlistId}/duplicate`), { name: 'Copy' });
+    expect(pl.statusCode).toBe(201);
+    expect(pl.json()).toMatchObject({
+      playlist: { name: 'Copy', screens: [], items: [{ widgetId: clock.id, durationMs: 7000 }] },
+    });
+    const lay = await editor.post(api(`/layouts/${layout.id}/duplicate`), { name: 'Lobby 2' });
+    expect(lay.json()).toMatchObject({
+      layout: { name: 'Lobby 2', zones: [{ name: 'main', playlistId }] },
+    });
+    const wid = await editor.post(api(`/widgets/${clock.id}/duplicate`), { name: 'Clock 2' });
+    expect(wid.json()).toMatchObject({ widget: { type: 'clock', config: { format: '12h' } } });
+
+    // Viewers cannot duplicate; other organizations cannot reach the source.
+    expect(
+      (await viewer.post(api(`/widgets/${clock.id}/duplicate`), { name: 'x' })).statusCode,
+    ).toBe(403);
+    expect(
+      (await outsider.post(api(`/playlists/${playlistId}/duplicate`, otherOrgId), { name: 'x' }))
+        .statusCode,
+    ).toBe(404);
+  });
+
+  it('creates every starter kit as a valid, ready-to-show layout', async () => {
+    const { kits } = (await viewer.get(api('/starter-kits'))).json<{ kits: { id: string }[] }>();
+    expect(kits.map((k) => k.id)).toEqual(['lobby', 'menu', 'info']);
+    const { deviceToken, screenId } = await pair();
+    for (const [index, kit] of kits.entries()) {
+      const res = await editor.post(api(`/starter-kits/${kit.id}`), {
+        locale: index % 2 ? 'en' : 'he',
+      });
+      expect(res.statusCode, res.body).toBe(201);
+      const { layout } = res.json<{ layout: { id: string } }>();
+      await editor.patch(api(`/screens/${screenId}`), { layoutId: layout.id });
+      const manifest = await playerGet('/player/v1/manifest', deviceToken);
+      expect(parseManifest(manifest.json()).success).toBe(true);
+      expect(manifest.json<ManifestV1>().layouts[0]!.id).toBe(layout.id);
+    }
+    const detail = (await viewer.get(api('/layouts'))).json<{
+      layouts: { name: string; zoneCount: number }[];
+    }>();
+    expect(detail.layouts.map((l) => [l.name, l.zoneCount]).sort()).toEqual([
+      ['Menu board', 4],
+      ['לובי', 3],
+      ['לוח מודעות', 3],
+    ]);
+    expect((await viewer.post(api('/starter-kits/lobby'), {})).statusCode).toBe(403);
+    expect((await editor.post(api('/starter-kits/nope'), {})).statusCode).toBe(400);
+  });
+
+  it('stores how media fills its zone and sends it to players', async () => {
+    const media = await h.db
+      .insertInto('media')
+      .values({
+        org_id: orgId,
+        name: 'poster',
+        original_filename: 'p.png',
+        kind: 'image',
+        mime: 'image/png',
+        size_bytes: 10,
+        sha256: 'a'.repeat(64),
+        status: 'ready',
+        storage_key: 'k',
+      })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    const playlistId = await createPlaylist('Posters', [
+      { mediaId: media.id, durationMs: null, fit: 'blur' },
+      { mediaId: media.id, durationMs: null },
+    ]);
+    const detail = (await viewer.get(api(`/playlists/${playlistId}`))).json<{
+      playlist: { items: { fit: string }[] };
+    }>();
+    expect(detail.playlist.items.map((i) => i.fit)).toEqual(['blur', 'contain']);
+    const bad = await editor.put(api(`/playlists/${playlistId}/items`), {
+      items: [{ mediaId: media.id, durationMs: null, fit: 'stretch' }],
+    });
+    expect(bad.statusCode).toBe(400);
+
+    const { deviceToken, screenId } = await pair();
+    await editor.patch(api(`/screens/${screenId}`), { playlistId });
+    const manifest = (await playerGet('/player/v1/manifest', deviceToken)).json<ManifestV1>();
+    expect(manifest.playlists[0]!.items.map((i) => i.fit)).toEqual(['blur', undefined]);
   });
 });

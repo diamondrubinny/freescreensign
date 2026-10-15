@@ -271,6 +271,59 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
     return layoutDetail(org.id, layoutId);
   });
 
+  /** Copies a layout with its zones; the copy is not assigned to any screen. */
+  app.post('/api/v1/orgs/:orgId/layouts/:layoutId/duplicate', editor, async (request, reply) => {
+    const org = requireOrg(request);
+    const { user } = requireAuth(request);
+    const { layoutId } = parse(layoutParams, request.params);
+    const { name } = parse(z.object({ name: layoutInputSchema.shape.name }), request.body);
+    const source = await loadLayout(org.id, layoutId);
+    const copyId = await ctx.db.transaction().execute(async (trx) => {
+      const copy = await trx
+        .insertInto('layouts')
+        .values({
+          org_id: org.id,
+          name,
+          width: source.width,
+          height: source.height,
+          background: source.background,
+          created_by: user.id,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      await trx
+        .insertInto('layout_zones')
+        .columns(['layout_id', 'position', 'name', 'x', 'y', 'w', 'h', 'z', 'playlist_id'])
+        .expression((eb) =>
+          eb
+            .selectFrom('layout_zones')
+            .select([
+              sql<string>`${copy.id}::uuid`.as('layout_id'),
+              'position',
+              'name',
+              'x',
+              'y',
+              'w',
+              'h',
+              'z',
+              'playlist_id',
+            ])
+            .where('layout_id', '=', layoutId),
+        )
+        .execute();
+      return copy.id;
+    });
+    await audit(ctx.db, {
+      action: 'layout.created',
+      orgId: org.id,
+      actorUserId: user.id,
+      targetType: 'layout',
+      targetId: copyId,
+      meta: { duplicatedFrom: layoutId },
+    });
+    return reply.status(201).send(await layoutDetail(org.id, copyId));
+  });
+
   app.delete('/api/v1/orgs/:orgId/layouts/:layoutId', editor, async (request, reply) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);

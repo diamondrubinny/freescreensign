@@ -8,9 +8,16 @@ import type {
 import { activeLayoutId } from './schedule';
 
 type Transition = 'none' | 'fade' | 'slide';
+type Fit = 'contain' | 'cover' | 'blur';
 
 export type PlayableItem =
-  | { kind: 'media'; media: ManifestMedia; durationMs: number; transition: Transition }
+  | {
+      kind: 'media';
+      media: ManifestMedia;
+      durationMs: number;
+      transition: Transition;
+      fit?: Fit;
+    }
   | { kind: 'widget'; widget: ManifestWidget; durationMs: number; transition: Transition };
 
 const MAX_DEPTH = 8;
@@ -32,7 +39,15 @@ export function flattenPlaylist(manifest: ManifestV1, playlistId: string | null)
         walk(item.ref, depth + 1);
       } else if (item.kind === 'media') {
         const m = media.get(item.ref);
-        if (m) out.push({ kind: 'media', media: m, durationMs, transition });
+        if (m) {
+          out.push({
+            kind: 'media',
+            media: m,
+            durationMs,
+            transition,
+            ...(item.fit ? { fit: item.fit } : {}),
+          });
+        }
       } else {
         const w = widgets.get(item.ref);
         if (w) out.push({ kind: 'widget', widget: w, durationMs, transition });
@@ -52,6 +67,6 @@ export function activeLayout(manifest: ManifestV1, now: Date): ManifestLayout | 
 /** Identity of what an item displays: equal keys need no re-render. */
 export function itemKey(item: PlayableItem): string {
   return item.kind === 'media'
-    ? `media:${item.media.id}:${item.media.sha256}`
+    ? `media:${item.media.id}:${item.media.sha256}:${item.fit ?? 'contain'}`
     : `widget:${item.widget.id}:${JSON.stringify(item.widget.config)}`;
 }

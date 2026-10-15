@@ -143,6 +143,7 @@ export interface PlaylistItemsTable {
   media_id: string | null;
   widget_id: string | null;
   duration_ms: number | null;
+  fit: Generated<'contain' | 'cover' | 'blur'>;
 }
 
 export interface WidgetsTable {

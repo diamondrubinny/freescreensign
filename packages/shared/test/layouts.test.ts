@@ -34,3 +34,32 @@ describe('layout templates', () => {
     });
   });
 });
+
+describe('zoned time', () => {
+  it('converts wall-clock time in a zone, across DST', async () => {
+    const { zonedDateTime, splitDuration } = await import('../src/index.js');
+    // Israel: UTC+3 in summer, UTC+2 in winter.
+    expect(zonedDateTime('2026-07-01T12:00', 'Asia/Jerusalem').toISOString()).toBe(
+      '2026-07-01T09:00:00.000Z',
+    );
+    expect(zonedDateTime('2026-12-14T18:00', 'Asia/Jerusalem').toISOString()).toBe(
+      '2026-12-14T16:00:00.000Z',
+    );
+    expect(zonedDateTime('2026-11-01T12:00', 'America/New_York').toISOString()).toBe(
+      '2026-11-01T17:00:00.000Z',
+    );
+    expect(splitDuration(90_061_000)).toEqual({ days: 1, hours: 1, minutes: 1, seconds: 1 });
+    expect(splitDuration(-5)).toEqual({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  });
+
+  it('validates countdown widgets', async () => {
+    const { parseWidgetConfig } = await import('../src/index.js');
+    expect(
+      parseWidgetConfig('countdown', { title: 'חנוכה', target: '2026-12-04T17:00' }),
+    ).toMatchObject({
+      success: true,
+      config: { showSeconds: true, locale: 'he' },
+    });
+    expect(parseWidgetConfig('countdown', { title: 'x', target: 'tomorrow' }).success).toBe(false);
+  });
+});

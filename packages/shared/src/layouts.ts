@@ -58,7 +58,15 @@ export const layoutInputSchema = z
 
 export type LayoutInput = z.infer<typeof layoutInputSchema>;
 
-export const LAYOUT_TEMPLATE_IDS = ['fullscreen', 'main-ticker', 'two-columns', 'l-bar'] as const;
+export const LAYOUT_TEMPLATE_IDS = [
+  'fullscreen',
+  'main-ticker',
+  'header-main-footer',
+  'two-columns',
+  'l-bar',
+  'grid-2x2',
+  'three-rows',
+] as const;
 export type LayoutTemplateId = (typeof LAYOUT_TEMPLATE_IDS)[number];
 
 /** Zone geometry in percent of the canvas; zone names are stable keys for translation. */
@@ -80,7 +88,28 @@ const TEMPLATES: Record<
     { name: 'side', x: 75, y: 0, w: 25, h: 85 },
     { name: 'bottom', x: 0, y: 85, w: 100, h: 15 },
   ],
+  'header-main-footer': [
+    { name: 'header', x: 0, y: 0, w: 100, h: 14 },
+    { name: 'main', x: 0, y: 14, w: 100, h: 74 },
+    { name: 'footer', x: 0, y: 88, w: 100, h: 12 },
+  ],
+  'grid-2x2': [
+    { name: 'topLeft', x: 0, y: 0, w: 50, h: 50 },
+    { name: 'topRight', x: 50, y: 0, w: 50, h: 50 },
+    { name: 'bottomLeft', x: 0, y: 50, w: 50, h: 50 },
+    { name: 'bottomRight', x: 50, y: 50, w: 50, h: 50 },
+  ],
+  'three-rows': [
+    { name: 'top', x: 0, y: 0, w: 100, h: 30 },
+    { name: 'middle', x: 0, y: 30, w: 100, h: 50 },
+    { name: 'bottom', x: 0, y: 80, w: 100, h: 20 },
+  ],
 };
+
+/** Template geometry in percent (for drawing thumbnails). */
+export function templatePreview(template: LayoutTemplateId) {
+  return TEMPLATES[template];
+}
 
 /** Builds a template's zones for a canvas size. Edges snap so zones tile exactly. */
 export function templateZones(

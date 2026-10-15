@@ -83,6 +83,17 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     return row;
   }
 
+  async function assertWidgetQuota(orgId: string) {
+    const { count } = await ctx.db
+      .selectFrom('widgets')
+      .select((eb) => eb.fn.countAll<string>().as('count'))
+      .where('org_id', '=', orgId)
+      .executeTakeFirstOrThrow();
+    if (Number(count) >= MAX_WIDGETS_PER_ORG) {
+      throw new HttpError(409, 'QUOTA_EXCEEDED', 'Too many widgets in this organization');
+    }
+  }
+
   async function usageOf(widgetId: string): Promise<number> {
     return (await widgetPlaylists(ctx, widgetId)).length;
   }
@@ -122,14 +133,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
       request.body,
     );
     const config = validateWidgetConfig(ctx, body.type, body.config);
-    const { count } = await ctx.db
-      .selectFrom('widgets')
-      .select((eb) => eb.fn.countAll<string>().as('count'))
-      .where('org_id', '=', org.id)
-      .executeTakeFirstOrThrow();
-    if (Number(count) >= MAX_WIDGETS_PER_ORG) {
-      throw new HttpError(409, 'QUOTA_EXCEEDED', 'Too many widgets in this organization');
-    }
+    await assertWidgetQuota(org.id);
     const widget = await ctx.db
       .insertInto('widgets')
       .values({
@@ -196,6 +200,35 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
       meta: { fields: Object.keys(body) },
     });
     return { widget: widgetDto(widget, playlists.length) };
+  });
+
+  app.post('/api/v1/orgs/:orgId/widgets/:widgetId/duplicate', editor, async (request, reply) => {
+    const org = requireOrg(request);
+    const { user } = requireAuth(request);
+    const { widgetId } = parse(widgetParams, request.params);
+    const { name } = parse(z.object({ name: nameSchema }), request.body);
+    const source = await loadWidget(org.id, widgetId);
+    await assertWidgetQuota(org.id);
+    const widget = await ctx.db
+      .insertInto('widgets')
+      .values({
+        org_id: org.id,
+        type: source.type,
+        name,
+        config: JSON.stringify(source.config),
+        created_by: user.id,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    await audit(ctx.db, {
+      action: 'widget.created',
+      orgId: org.id,
+      actorUserId: user.id,
+      targetType: 'widget',
+      targetId: widget.id,
+      meta: { type: widget.type, duplicatedFrom: widgetId },
+    });
+    return reply.status(201).send({ widget: widgetDto(widget, 0) });
   });
 
   app.delete('/api/v1/orgs/:orgId/widgets/:widgetId', editor, async (request, reply) => {
