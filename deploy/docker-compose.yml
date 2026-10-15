@@ -132,7 +132,7 @@ services:
 
   valkey:
     <<: *hardening
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:9-alpine
     # noeviction: queued jobs must never be evicted (required by BullMQ).
     command:
       [
