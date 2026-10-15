@@ -26,6 +26,21 @@ describe('toFormErrors', () => {
     });
   });
 
+  it('maps upload reasons', () => {
+    const type = toFormErrors(
+      t,
+      new ApiError(415, 'UNSUPPORTED_MEDIA_TYPE', 'x', [
+        { path: 'file', reason: 'unsupported_type' },
+      ]),
+    );
+    expect(type.fields.file).toBe(he.validation.unsupported_type);
+    const size = toFormErrors(
+      t,
+      new ApiError(413, 'PAYLOAD_TOO_LARGE', 'x', [{ path: 'file', reason: 'too_large' }]),
+    );
+    expect(size.fields.file).toBe(he.validation.file_too_large);
+  });
+
   it('maps error codes and network failures', () => {
     expect(toFormErrors(t, new ApiError(401, 'INVALID_CREDENTIALS', 'x')).form).toBe(
       he.errors.INVALID_CREDENTIALS,

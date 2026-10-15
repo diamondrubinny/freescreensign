@@ -99,6 +99,61 @@ test('admin actions require MFA; enabling MFA unlocks them', async ({ page }) =>
   await expect(page.getByRole('rowheader', { name: new RegExp(ADMIN.name) })).toBeVisible();
 });
 
+test('admin uploads, previews and deletes media; disguised files are rejected', async ({
+  page,
+}) => {
+  // 1×1 PNG.
+  const pngBytes = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  await signIn(page, ADMIN, true);
+  await page.getByRole('link', { name: 'מדיה' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'ספריית מדיה' })).toBeVisible();
+  await expect(page.getByText('אין עדיין קבצים בספרייה.')).toBeVisible();
+  await expectAccessible(page, 'media (empty)');
+
+  const input = page.getByLabel('בחירת קבצים להעלאה');
+  await input.setInputFiles([
+    { name: 'לוגו בית הספר.png', mimeType: 'image/png', buffer: pngBytes },
+    {
+      name: 'not-really.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('MZ this is not an image'),
+    },
+  ]);
+  const uploadRegion = page.getByRole('region', { name: 'העלאת קבצים' });
+  await expect(uploadRegion.getByRole('listitem').filter({ hasText: 'not-really.png' })).toHaveText(
+    'העלאת not-really.png נכשלה: סוג הקובץ אינו נתמך.',
+  );
+
+  const card = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: 'לוגו בית הספר' }) });
+  await expect(card.getByText('מוכן')).toBeVisible({ timeout: 30_000 });
+  // Decorative thumbnail (alt=""): check it really loaded through auth + CSP.
+  const thumb = card.locator('img');
+  await expect(thumb).toBeVisible();
+  await expect
+    .poll(() => thumb.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
+  await expectAccessible(page, 'media (with items)');
+
+  await card.getByRole('button', { name: /תצוגה מקדימה/ }).click();
+  const preview = page.getByRole('dialog', { name: 'לוגו בית הספר' });
+  await expect(preview.getByRole('img', { name: 'לוגו בית הספר' })).toBeVisible();
+  await expectAccessible(page, 'media preview');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('searchbox', { name: 'חיפוש לפי שם' }).fill('לא קיים');
+  await expect(page.getByText('לא נמצאו קבצים מתאימים.')).toBeVisible();
+  await page.getByRole('searchbox', { name: 'חיפוש לפי שם' }).fill('');
+
+  await card.getByRole('button', { name: /מחיקה/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'מחיקה' }).click();
+  await expect(page.getByText('אין עדיין קבצים בספרייה.')).toBeVisible();
+});
+
 test('admin invites a teacher (mail disabled: link shown to admin)', async ({ page }) => {
   await signIn(page, ADMIN, true);
   await page.getByRole('link', { name: 'חברים' }).click();

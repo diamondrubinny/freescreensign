@@ -2,6 +2,7 @@ import { Kysely, PostgresDialect, sql } from 'kysely';
 import type pg from 'pg';
 import type { Database } from './schema.js';
 import * as m0001 from './migrations/0001_auth_orgs.js';
+import * as m0002 from './migrations/0002_media.js';
 
 export type Db = Kysely<Database>;
 
@@ -24,6 +25,7 @@ export interface Migration {
  */
 export const MIGRATIONS: readonly (readonly [name: string, migration: Migration])[] = [
   ['0001_auth_orgs', m0001],
+  ['0002_media', m0002],
 ];
 
 /**

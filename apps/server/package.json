@@ -12,19 +12,28 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "worker": "tsx watch --env-file-if-exists=.env src/worker/main.ts",
+    "start:worker": "node dist/worker/main.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1152.0",
+    "@aws-sdk/lib-storage": "3.1152.0",
     "@fastify/cookie": "11.1.3",
     "@fastify/helmet": "13.2.0",
+    "@fastify/multipart": "10.1.4",
     "@fastify/rate-limit": "11.2.1",
     "@node-rs/argon2": "2.2.2",
     "@rubinny/shared": "workspace:*",
+    "bullmq": "6.3.15",
     "fastify": "5.12.7",
+    "file-type": "22.2.0",
     "ioredis": "6.0.0",
     "kysely": "0.29.6",
     "nodemailer": "10.1.1",
     "pg": "8.23.1",
+    "pino": "10.4.0",
+    "sharp": "0.35.5",
     "zod": "4.6.7"
   },
   "devDependencies": {

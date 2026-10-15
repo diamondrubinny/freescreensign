@@ -7,6 +7,9 @@ import { loadEnv, type Env } from '../../src/config/env.js';
 import { createDb, migrateToLatest, type Db } from '../../src/db/database.js';
 import { KeyRing } from '../../src/lib/crypto.js';
 import { RedisLimiter } from '../../src/lib/limiter.js';
+import { Storage, storageConfigFromEnv } from '../../src/lib/storage.js';
+import { createMediaQueue } from '../../src/queue.js';
+import { startMediaWorker } from '../../src/worker/worker.js';
 import { MemoryMailer } from '../../src/lib/mail/mailer.js';
 import { hashPassword } from '../../src/lib/password.js';
 import { base32Decode, totp } from '../../src/lib/totp.js';
@@ -22,19 +25,33 @@ export interface Harness {
   env: Env;
   mailer: MemoryMailer;
   redis: Redis;
+  storage?: Storage;
   close(): Promise<void>;
 }
 
-export async function createHarness(envOverrides: Record<string, string> = {}): Promise<Harness> {
+/** Media integration tests also need SeaweedFS/S3 and ClamAV (see CONTRIBUTING.md). */
+export const mediaIntegrationEnabled =
+  integrationEnabled &&
+  process.env.RUBINNY_MEDIA_INTEGRATION === '1' &&
+  Boolean(process.env.S3_ENDPOINT);
+
+export async function createHarness(
+  envOverrides: Record<string, string> = {},
+  options: { media?: boolean } = {},
+): Promise<Harness> {
+  const suffix = randomBytes(6).toString('hex');
   const env = loadEnv({
     ...process.env,
     NODE_ENV: 'test',
     PUBLIC_URL,
     ENCRYPTION_KEY: randomBytes(32).toString('base64'),
     MAIL_TRANSPORT: 'console',
+    // Shared test buckets: objects are already namespaced by (unique) organization id.
+    S3_BUCKET_QUARANTINE: 'rubinny-test-quarantine',
+    S3_BUCKET_MEDIA: 'rubinny-test-media',
     ...envOverrides,
   });
-  const schema = `test_${randomBytes(6).toString('hex')}`;
+  const schema = `test_${suffix}`;
   const admin = new pg.Pool({ connectionString: env.DATABASE_URL, max: 1 });
   await admin.query(`CREATE SCHEMA ${schema}`);
   const pool = new pg.Pool({
@@ -47,6 +64,24 @@ export async function createHarness(envOverrides: Record<string, string> = {}): 
 
   const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 2 });
   const mailer = new MemoryMailer();
+
+  const storageConfig = options.media ? storageConfigFromEnv(env) : null;
+  const storage = storageConfig ? new Storage(storageConfig) : undefined;
+  if (storage) await storage.ensureBuckets();
+  const queuePrefix = `bull-${schema}`;
+  const queue = storage ? createMediaQueue(env.REDIS_URL, queuePrefix) : undefined;
+  /* eslint-disable no-console -- opt-in worker logs while debugging tests */
+  const silent = process.env.TEST_WORKER_LOGS
+    ? { info: console.info, warn: console.warn, error: console.error }
+    : { info: () => undefined, warn: () => undefined, error: () => undefined };
+  /* eslint-enable no-console */
+  const worker = storage
+    ? startMediaWorker(
+        { db, storage, clamav: { host: env.CLAMAV_HOST, port: env.CLAMAV_PORT }, log: silent },
+        { redisUrl: env.REDIS_URL, concurrency: 2, prefix: queuePrefix },
+      )
+    : undefined;
+
   const app = await buildApp({
     env,
     logger: false,
@@ -55,6 +90,7 @@ export async function createHarness(envOverrides: Record<string, string> = {}): 
       keys: new KeyRing(env.ENCRYPTION_KEY),
       mailer,
       limiter: new RedisLimiter(redis, `rubinny:test:${schema}:`),
+      ...(storage && queue ? { media: { storage, queue } } : {}),
     },
   });
 
@@ -64,8 +100,13 @@ export async function createHarness(envOverrides: Record<string, string> = {}): 
     env,
     mailer,
     redis,
+    ...(storage ? { storage } : {}),
     async close() {
       await app.close();
+      await worker?.close();
+      await queue?.close();
+      const bullKeys = await redis.keys(`${queuePrefix}:*`);
+      if (bullKeys.length > 0) await redis.del(...bullKeys);
       const keys = await redis.keys(`rubinny:test:${schema}:*`);
       if (keys.length > 0) await redis.del(...keys);
       await redis.quit();
@@ -103,6 +144,34 @@ export class Client {
     const session = res.cookies.find((c) => c.name === 'rubinny_session');
     if (session) this.cookie = session.value ? `rubinny_session=${session.value}` : undefined;
     return res;
+  }
+
+  /** multipart/form-data upload with a single "file" field. */
+  async upload(
+    url: string,
+    filename: string,
+    data: Buffer,
+    contentType = 'application/octet-stream',
+  ) {
+    const boundary = `----rubinny${randomBytes(8).toString('hex')}`;
+    const payload = Buffer.concat([
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`,
+      ),
+      data,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    return this.app.inject({
+      method: 'POST',
+      url,
+      remoteAddress: this.remoteAddress,
+      headers: {
+        ...(this.cookie ? { cookie: this.cookie } : {}),
+        'content-type': `multipart/form-data; boundary=${boundary}`,
+        'content-length': String(payload.length),
+      },
+      payload,
+    });
   }
 
   get = (url: string) => this.request('GET', url);

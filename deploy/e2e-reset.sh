@@ -4,4 +4,4 @@
 set -eu
 cd "$(dirname "$0")"
 docker compose down -v
-docker compose up -d --wait server web
+docker compose up -d --no-build --wait

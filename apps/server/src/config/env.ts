@@ -59,6 +59,40 @@ export const envSchema = z
     AUDIT_RETENTION_DAYS: z.coerce.number().int().min(30).default(365),
     MIGRATE_ON_START: booleanString.default(true),
 
+    // --- Object storage (S3-compatible). Media features are disabled when unset.
+    S3_ENDPOINT: z.url({ protocol: /^https?$/ }).optional(),
+    S3_REGION: z.string().min(1).default('us-east-1'),
+    S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+    S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    S3_FORCE_PATH_STYLE: booleanString.default(true),
+    S3_BUCKET_QUARANTINE: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9.-]{2,62}$/)
+      .default('rubinny-quarantine'),
+    S3_BUCKET_MEDIA: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9.-]{2,62}$/)
+      .default('rubinny-media'),
+
+    // --- Malware scanning (clamd over TCP).
+    CLAMAV_HOST: z.string().min(1).default('clamav'),
+    CLAMAV_PORT: z.coerce.number().int().min(1).max(65535).default(3310),
+
+    // --- Media limits.
+    MEDIA_MAX_IMAGE_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1024)
+      .default(25 * 1024 * 1024),
+    MEDIA_MAX_VIDEO_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1024)
+      .default(512 * 1024 * 1024),
+    /** Total bytes per organization; 0 means unlimited. */
+    MEDIA_ORG_QUOTA_BYTES: z.coerce.number().int().min(0).default(0),
+    WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
+
     MAIL_TRANSPORT: z.enum(['smtp', 'console', 'disabled']).default('disabled'),
     SMTP_URL: z.url({ protocol: /^smtps?$/ }).optional(),
     MAIL_FROM: z.string().min(3).optional(),
@@ -105,6 +139,13 @@ export const envSchema = z
         code: 'custom',
         path: ['MAIL_TRANSPORT'],
         message: 'must be enabled when REGISTRATION_MODE=open and email verification is required',
+      });
+    }
+    if (env.S3_ENDPOINT && (!env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['S3_ACCESS_KEY_ID'],
+        message: 'and S3_SECRET_ACCESS_KEY are required when S3_ENDPOINT is set',
       });
     }
     if (env.SESSION_ABSOLUTE_DAYS < env.SESSION_TTL_DAYS) {

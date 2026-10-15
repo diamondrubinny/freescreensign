@@ -3,6 +3,7 @@ import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 import type { Redis } from 'ioredis';
 import type { Env } from './config/env.js';
 import type { AppContext } from './context.js';
@@ -15,6 +16,7 @@ import { authRoutes } from './modules/auth/routes.js';
 import { registerAuth } from './modules/auth/guards.js';
 import { meRoutes } from './modules/me/routes.js';
 import { orgRoutes } from './modules/orgs/routes.js';
+import { mediaRoutes } from './modules/media/routes.js';
 import { setupRoutes } from './modules/setup/routes.js';
 
 export interface BuildAppOptions {
@@ -105,6 +107,14 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     authRoutes(app, ctx);
     meRoutes(app, ctx);
     orgRoutes(app, ctx);
+    if (ctx.media) {
+      await app.register(multipart, {
+        // Per-request limits are tightened in the upload handler.
+        limits: { files: 1, fields: 0, parts: 1, headerPairs: 50 },
+        throwFileSizeLimit: false,
+      });
+      mediaRoutes(app, ctx, ctx.media);
+    }
   }
 
   return app;

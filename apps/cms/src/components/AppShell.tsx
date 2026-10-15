@@ -86,6 +86,13 @@ export function AppShell({ session }: { session: SessionInfo }) {
                 {t('nav.dashboard')}
               </NavLink>
             </li>
+            {currentOrg && (
+              <li>
+                <NavLink to={`/orgs/${currentOrg.orgId}/media`} className={navClass}>
+                  {t('media.nav')}
+                </NavLink>
+              </li>
+            )}
             {currentOrg && isAdmin && (
               <>
                 <li>

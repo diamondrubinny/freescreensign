@@ -7,7 +7,10 @@ import { KeyRing } from './lib/crypto.js';
 import { postgresCheck, redisCheck } from './lib/health-checks.js';
 import { RedisLimiter } from './lib/limiter.js';
 import { createMailer } from './lib/mail/mailer.js';
-import { runMaintenance } from './lib/maintenance.js';
+import { cleanupStaleUploads, runMaintenance } from './lib/maintenance.js';
+import { Storage, storageConfigFromEnv } from './lib/storage.js';
+import { pingClamav } from './lib/clamav.js';
+import { createMediaQueue } from './queue.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 const MAINTENANCE_INTERVAL_MS = 60 * 60 * 1000;
@@ -24,12 +27,23 @@ async function main() {
 
   const db = createDb(pool);
   const keys = new KeyRing(env.ENCRYPTION_KEY);
+  const storageConfig = storageConfigFromEnv(env);
+  const media = storageConfig
+    ? { storage: new Storage(storageConfig), queue: createMediaQueue(env.REDIS_URL) }
+    : undefined;
 
   const app = await buildApp({
     env,
     redis,
-    checks: [postgresCheck(pool), redisCheck(redis)],
+    checks: [
+      postgresCheck(pool),
+      redisCheck(redis),
+      ...(media
+        ? [{ name: 'clamav', check: () => pingClamav(env.CLAMAV_HOST, env.CLAMAV_PORT) }]
+        : []),
+    ],
     services: {
+      ...(media ? { media } : {}),
       db,
       keys,
       limiter: new RedisLimiter(redis),
@@ -71,6 +85,11 @@ async function main() {
     void shutdown('unhandledRejection');
   });
 
+  if (media) {
+    await media.storage.ensureBuckets();
+    app.addHook('onClose', () => media.queue.close());
+  }
+
   if (env.MIGRATE_ON_START) {
     const applied = await migrateToLatest(db);
     if (applied.length > 0) app.log.info({ migrations: applied }, 'database migrations applied');
@@ -79,6 +98,7 @@ async function main() {
   const maintenance = async () => {
     try {
       const result = await runMaintenance(db, env.AUDIT_RETENTION_DAYS);
+      if (media) await cleanupStaleUploads(db, media.queue);
       app.log.info({ removed: result }, 'maintenance completed');
     } catch (err) {
       app.log.error({ err }, 'maintenance failed');

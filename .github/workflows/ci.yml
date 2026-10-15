@@ -42,14 +42,38 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install ffmpeg (media processing tests)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Start object storage and ClamAV (media integration tests)
+        run: |
+          docker run -d --name ci-s3 -p 8333:8333 \
+            -e S3_ACCESS_KEY_ID=cikey -e S3_SECRET_ACCESS_KEY=ci-only-secret-0123456789 \
+            -v "$PWD/deploy/seaweedfs/entrypoint.sh:/rubinny/entrypoint.sh:ro" \
+            --entrypoint /bin/sh chrislusf/seaweedfs:4.48 /rubinny/entrypoint.sh
+          docker run -d --name ci-clamav -p 3310:3310 \
+            -e CLAMD_CONF_StreamMaxLength=1024M clamav/clamav:stable
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
+      - name: Wait for ClamAV signatures
+        run: |
+          for i in $(seq 1 60); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' ci-clamav)" = healthy ] && exit 0
+            sleep 5
+          done
+          docker logs ci-clamav | tail -20
+          exit 1
       - run: pnpm test
         env:
           RUBINNY_INTEGRATION: '1'
+          RUBINNY_MEDIA_INTEGRATION: '1'
           DATABASE_URL: postgres://rubinny:ci-only-password@localhost:5432/rubinny
           REDIS_URL: redis://localhost:6379
+          S3_ENDPOINT: http://localhost:8333
+          S3_ACCESS_KEY_ID: cikey
+          S3_SECRET_ACCESS_KEY: ci-only-secret-0123456789
+          CLAMAV_HOST: localhost
+          CLAMAV_PORT: '3310'
       - run: pnpm build
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level high
@@ -67,8 +91,16 @@ jobs:
         with:
           context: .
           file: apps/server/Dockerfile
+          target: server
           push: false
           tags: rubinny/server:ci
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/server/Dockerfile
+          target: worker
+          push: false
+          tags: rubinny/worker:ci
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -102,7 +134,8 @@ jobs:
         run: |
           ./generate-env.sh
           sed -i 's/^HSTS_MAX_AGE=.*/HSTS_MAX_AGE=0/' .env
-          docker compose up -d --build --wait server web
+          # All services, including the media worker and ClamAV (signature download can take minutes).
+          docker compose up -d --build --wait --wait-timeout 900
       - name: Run Playwright
         run: |
           export E2E_SETUP_TOKEN="$(grep '^SETUP_TOKEN=' deploy/.env | cut -d= -f2)"

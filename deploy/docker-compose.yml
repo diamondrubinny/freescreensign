@@ -57,6 +57,15 @@ services:
       MAIL_TRANSPORT: ${MAIL_TRANSPORT:-disabled}
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
+      <<: &media-env
+        S3_ENDPOINT: http://storage:8333
+        S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}
+        S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}
+        CLAMAV_HOST: clamav
+        CLAMAV_PORT: '3310'
+        MEDIA_MAX_IMAGE_BYTES: ${MEDIA_MAX_IMAGE_BYTES:-26214400}
+        MEDIA_MAX_VIDEO_BYTES: ${MEDIA_MAX_VIDEO_BYTES:-536870912}
+        MEDIA_ORG_QUOTA_BYTES: ${MEDIA_ORG_QUOTA_BYTES:-0}
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -66,7 +75,43 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
+      storage:
+        condition: service_healthy
     networks: [edge, backend]
+
+  # Media pipeline: malware scan, type verification, metadata stripping, thumbnails.
+  # Isolated: no internet (backend network only), read-only root, no capabilities.
+  worker:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+      target: worker
+    image: rubinny/worker:local
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PUBLIC_URL: https://${RUBINNY_DOMAIN:-localhost}
+      DATABASE_URL: postgres://${POSTGRES_USER:-rubinny}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-rubinny}
+      REDIS_URL: redis://valkey:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+      SETUP_TOKEN: ${SETUP_TOKEN:?set SETUP_TOKEN in .env}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      TMPDIR: /work
+      <<: *media-env
+    read_only: true
+    tmpfs: [/tmp]
+    volumes:
+      - worker-scratch:/work
+    cap_drop: [ALL]
+    mem_limit: 1536m
+    pids_limit: 256
+    depends_on:
+      server:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+    networks: [backend]
 
   postgres:
     <<: *hardening
@@ -88,7 +133,18 @@ services:
   valkey:
     <<: *hardening
     image: valkey/valkey:8-alpine
-    command: ['valkey-server', '--appendonly', 'yes', '--save', '60', '1000']
+    # noeviction: queued jobs must never be evicted (required by BullMQ).
+    command:
+      [
+        'valkey-server',
+        '--appendonly',
+        'yes',
+        '--save',
+        '60',
+        '1000',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
     volumes:
       - valkey-data:/data
     healthcheck:
@@ -120,6 +176,11 @@ services:
   clamav:
     <<: *hardening
     image: clamav/clamav:stable
+    environment:
+      # Default stream limit is 25 MB; allow scanning videos up to the upload limit.
+      CLAMD_CONF_StreamMaxLength: 1024M
+      CLAMD_CONF_MaxFileSize: 1024M
+      CLAMD_CONF_MaxScanSize: 1024M
     volumes:
       - clamav-data:/var/lib/clamav
     networks: [backend, egress]
@@ -138,3 +199,4 @@ volumes:
   valkey-data: {}
   storage-data: {}
   clamav-data: {}
+  worker-scratch: {}

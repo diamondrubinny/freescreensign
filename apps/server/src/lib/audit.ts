@@ -26,7 +26,11 @@ export type AuditAction =
   | 'member.removed'
   | 'invitation.created'
   | 'invitation.revoked'
-  | 'invitation.accepted';
+  | 'invitation.accepted'
+  | 'media.uploaded'
+  | 'media.blocked'
+  | 'media.renamed'
+  | 'media.deleted';
 
 export interface AuditEvent {
   action: AuditAction;

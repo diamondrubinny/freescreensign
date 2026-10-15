@@ -7,7 +7,7 @@ Linux, Android / Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-> **Status: early development (Phase 2 of 9 complete: accounts, organizations and an accessible Hebrew/English dashboard).** Not ready for production yet.
+> **Status: early development (Phase 3 of 9 complete: accounts, organizations, secure media library (malware scanning, metadata stripping)).** Not ready for production yet.
 
 ## Quick start (Docker)
 
@@ -29,16 +29,15 @@ certificate, and set `HSTS_MAX_AGE=31536000` in production.
 
 ## Repository layout
 
-| Path              | What                                                              | License  |
-| ----------------- | ----------------------------------------------------------------- | -------- |
-| `apps/server`     | API + realtime server (Fastify, PostgreSQL, Valkey)               | AGPL-3.0 |
-| `apps/cms`        | Management dashboard (React, RTL-first, WCAG 2.1 AA target)       | AGPL-3.0 |
-| `packages/shared` | Shared schemas: player manifest, pairing codes, roles, locales    | MIT      |
-| `deploy/`         | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV | AGPL-3.0 |
-| `docs/`           | Specification, phase plans                                        | —        |
+| Path              | What                                                                          | License  |
+| ----------------- | ----------------------------------------------------------------------------- | -------- |
+| `apps/server`     | API server + media worker (Fastify, PostgreSQL, Valkey/BullMQ, sharp, ffmpeg) | AGPL-3.0 |
+| `apps/cms`        | Management dashboard (React, RTL-first, WCAG 2.1 AA target)                   | AGPL-3.0 |
+| `packages/shared` | Shared schemas: player manifest, pairing codes, roles, locales                | MIT      |
+| `deploy/`         | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV             | AGPL-3.0 |
+| `docs/`           | Specification, phase plans                                                    | —        |
 
-Coming next: `apps/player` (PWA player), `apps/worker` (media
-pipeline), `packages/widget-sdk`, and player wrappers for each platform.
+Coming next: `apps/player` (PWA player), `packages/widget-sdk`, and player wrappers for each platform.
 
 ## Development
 

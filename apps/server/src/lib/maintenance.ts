@@ -1,4 +1,5 @@
 import type { Db } from '../db/database.js';
+import type { MediaQueue } from '../queue.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -39,4 +40,25 @@ export async function runMaintenance(
     invitations: Number(invitations.numDeletedRows),
     auditLogs: Number(auditLogs.numDeletedRows),
   };
+}
+
+/**
+ * Uploads interrupted mid-stream stay in "uploading"; after an hour they are
+ * soft-deleted and handed to the worker, which removes any partial objects.
+ */
+export async function cleanupStaleUploads(
+  db: Db,
+  queue: MediaQueue,
+  olderThanMs = 60 * 60 * 1000,
+): Promise<number> {
+  const stale = await db
+    .updateTable('media')
+    .set({ deleted_at: new Date() })
+    .where('status', '=', 'uploading')
+    .where('deleted_at', 'is', null)
+    .where('created_at', '<', new Date(Date.now() - olderThanMs))
+    .returning('id')
+    .execute();
+  for (const { id } of stale) await queue.enqueue({ type: 'delete', mediaId: id });
+  return stale.length;
 }

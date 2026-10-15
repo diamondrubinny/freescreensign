@@ -69,3 +69,22 @@ export interface UserSession {
   lastSeenAt: string;
   expiresAt: string;
 }
+
+export type MediaStatus = 'uploading' | 'queued' | 'processing' | 'ready' | 'blocked' | 'failed';
+
+export interface MediaItem {
+  id: string;
+  name: string;
+  originalFilename: string;
+  kind: 'image' | 'video';
+  mime: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  durationMs: number | null;
+  status: MediaStatus;
+  failureReason: string | null;
+  createdAt: string;
+  fileUrl?: string;
+  thumbnailUrl?: string | null;
+}

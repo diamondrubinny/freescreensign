@@ -54,6 +54,18 @@ cd deploy && ./generate-env.sh && ./e2e-reset.sh && cd ..
 E2E_SETUP_TOKEN=$(grep ^SETUP_TOKEN= deploy/.env | cut -d= -f2) pnpm e2e
 ```
 
+Media integration tests additionally need S3 storage and ClamAV (and `ffmpeg` on the host):
+
+```bash
+docker run -d --name rubinny-s3 -p 8333:8333 -e S3_ACCESS_KEY_ID=devkey -e S3_SECRET_ACCESS_KEY=dev-secret-0123456789 \
+  -v "$PWD/deploy/seaweedfs/entrypoint.sh:/rubinny/entrypoint.sh:ro" --entrypoint /bin/sh \
+  chrislusf/seaweedfs:4.48 /rubinny/entrypoint.sh
+docker run -d --name rubinny-clamav -p 3310:3310 -e CLAMD_CONF_StreamMaxLength=1024M clamav/clamav:stable
+RUBINNY_INTEGRATION=1 RUBINNY_MEDIA_INTEGRATION=1 S3_ENDPOINT=http://localhost:8333 \
+  S3_ACCESS_KEY_ID=devkey S3_SECRET_ACCESS_KEY=dev-secret-0123456789 CLAMAV_HOST=localhost \
+  DATABASE_URL=postgres://rubinny:dev@localhost:5432/rubinny REDIS_URL=redis://localhost:6379 pnpm test
+```
+
 Integration tests run against real services. Each test gets its own PostgreSQL
 schema, so they run in parallel without interfering:
 

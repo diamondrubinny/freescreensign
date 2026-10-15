@@ -103,6 +103,30 @@ export interface AuditLogsTable {
   created_at: Generated<Date>;
 }
 
+export interface MediaTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  original_filename: string;
+  kind: 'image' | 'video';
+  mime: string;
+  /** bigint: returned as string by pg. */
+  size_bytes: ColumnType<string, number | string | undefined, number | string>;
+  sha256: string | null;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  status: 'uploading' | 'queued' | 'processing' | 'ready' | 'blocked' | 'failed';
+  failure_reason: string | null;
+  quarantine_key: string | null;
+  storage_key: string | null;
+  thumbnail_key: string | null;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+  deleted_at: NullableTimestamp;
+}
+
 export interface Database {
   users: UsersTable;
   recovery_codes: RecoveryCodesTable;
@@ -112,9 +136,12 @@ export interface Database {
   memberships: MembershipsTable;
   invitations: InvitationsTable;
   audit_logs: AuditLogsTable;
+  media: MediaTable;
 }
 
 export type User = Selectable<UsersTable>;
 export type NewUser = Insertable<UsersTable>;
 export type Organization = Selectable<OrganizationsTable>;
 export type Membership = Selectable<MembershipsTable>;
+
+export type Media = Selectable<MediaTable>;

@@ -32,9 +32,12 @@ cat > "$CONFIG_DIR/s3.json" <<JSON
 JSON
 chown -R seaweed:seaweed "$CONFIG_DIR"
 
+# -volume.max: explicit slot count. The automatic value (free disk / volume size)
+# is too small on modest disks; slots cost nothing until data is written.
 exec /entrypoint.sh server \
   -dir=/data \
   -ip.bind=0.0.0.0 \
   -s3 \
   -s3.config="$CONFIG_DIR/s3.json" \
-  -master.volumeSizeLimitMB=1024
+  -master.volumeSizeLimitMB=1024 \
+  -volume.max=100
