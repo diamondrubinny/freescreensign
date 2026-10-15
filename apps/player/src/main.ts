@@ -4,6 +4,9 @@ import { Player } from './player';
 import { DomRenderer } from './renderer';
 import { PlayerSocket } from './socket';
 import { store } from './store';
+import { WidgetDataClient } from './widget-data';
+import { BUILT_IN_WIDGETS } from './widgets';
+import { WidgetRuntime } from './widgets/runtime';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('missing #app');
@@ -21,10 +24,22 @@ if ('storage' in navigator && typeof navigator.storage.persist === 'function') {
 
 const api = new PlayerApi();
 const wsUrl = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/player/v1/ws`;
+const widgetData = new WidgetDataClient(api, () => store.token(), store);
+const reducedMotion =
+  typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
 
-const player = new Player({
+let player: Player | null = null;
+const widgets = new WidgetRuntime({
+  registry: BUILT_IN_WIDGETS,
+  fetchData: (widgetId) => widgetData.get(widgetId),
+  timezone: () => player?.manifest?.screen.timezone ?? 'Asia/Jerusalem',
+  now: () => new Date(),
+  reducedMotion: () => reducedMotion?.matches ?? false,
+});
+
+player = new Player({
   api,
-  renderer: new DomRenderer(root),
+  renderer: new DomRenderer(root, widgets),
   store,
   createCache: (token) => new MediaCache(new CacheStorageBlobStore(), (id) => api.media(token, id)),
   createSocket: (token, onEvent, onRevoked) => new PlayerSocket(wsUrl, token, onEvent, onRevoked),
@@ -37,6 +52,9 @@ const player = new Player({
     `${String(Math.round(screen.width * devicePixelRatio))}x${String(Math.round(screen.height * devicePixelRatio))}`,
   host: location.host,
   version: __PLAYER_VERSION__,
+  onManifest: (manifest) => {
+    store.pruneWidgetData(manifest.widgets.map((widget) => widget.id));
+  },
 });
 
 void player.start();

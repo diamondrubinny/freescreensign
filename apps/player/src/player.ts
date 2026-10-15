@@ -1,16 +1,15 @@
 import type { ManifestV1 } from '@rubinny/shared';
 import { PairingExpiredError, UnauthorizedError, type PlayerApi } from './api';
 import type { MediaCache } from './media-cache';
-import type { Renderer } from './renderer';
-import { activeLayoutId } from './schedule';
-import { flattenPlaylist, mainZonePlaylist } from './sequence';
+import { wait, type Renderer } from './renderer';
+import { activeLayout, flattenPlaylist, type PlayableItem } from './sequence';
 import type { ServerEvent } from './socket';
 import type { store as defaultStore } from './store';
 
 export interface PlayerDeps {
   api: PlayerApi;
   renderer: Renderer;
-  store: typeof defaultStore;
+  store: Pick<typeof defaultStore, 'token' | 'setToken' | 'manifest' | 'setManifest' | 'clear'>;
   createCache: (token: string) => MediaCache;
   createSocket: (
     token: string,
@@ -23,12 +22,16 @@ export interface PlayerDeps {
   resolution: () => string;
   host: string;
   version: string;
+  /** Called after a new manifest is accepted (e.g. to prune widget data). */
+  onManifest?: (manifest: ManifestV1) => void;
 }
 
 export const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 export const HEARTBEAT_INTERVAL_MS = 30_000;
 export const PAIR_POLL_MS = 3000;
 const EMPTY_RETRY_MS = 10_000;
+/** How often the schedule is re-evaluated (layout switches by time of day). */
+export const SCHEDULE_CHECK_MS = 30_000;
 
 const PAIRING_LINES = (host: string) => [
   `כדי להוסיף את המסך: היכנסו ל-Rubinny (${host}) › מסכים › הוספת מסך, והזינו את הקוד.`,
@@ -128,6 +131,10 @@ export class Player {
     socket.start();
     void this.#loop(SYNC_INTERVAL_MS, () => this.sync());
     void this.#loop(HEARTBEAT_INTERVAL_MS, () => this.#heartbeat());
+    void this.#loop(SCHEDULE_CHECK_MS, () => {
+      this.#checkSchedule();
+      return Promise.resolve();
+    });
     await this.sync();
     await this.#playLoop();
     socket.stop();
@@ -160,9 +167,8 @@ export class Player {
       if (failed.length > 0 && this.#manifest) return; // keep playing the old content; retry later
       this.#manifest = fresh;
       this.deps.store.setManifest(fresh);
-      this.#changed = true;
-      this.#abort.abort(); // switch at once (images); videos finish their current frame
-      this.#abort = new AbortController();
+      this.deps.onManifest?.(fresh);
+      this.#restart();
     } catch (error) {
       if (error instanceof UnauthorizedError) {
         await this.#unpair();
@@ -170,6 +176,22 @@ export class Player {
       }
       this.offline = true; // keep playing from cache
     }
+  }
+
+  /** Interrupts all zones so the play loop picks up new content at once. */
+  #restart() {
+    this.#changed = true;
+    this.#abort.abort();
+    this.#abort = new AbortController();
+  }
+
+  #layoutId: string | null = null;
+
+  #checkSchedule() {
+    const manifest = this.#manifest;
+    if (!manifest) return;
+    const layout = activeLayout(manifest, this.deps.now());
+    if ((layout?.id ?? null) !== this.#layoutId) this.#restart();
   }
 
   async #heartbeat() {
@@ -196,20 +218,20 @@ export class Player {
   async #playLoop() {
     while (!this.#isStopped()) {
       const manifest = this.#manifest;
-      const items = manifest
-        ? flattenPlaylist(
-            manifest,
-            mainZonePlaylist(manifest, activeLayoutId(manifest, this.deps.now())),
-          )
-        : [];
+      const layout = manifest ? activeLayout(manifest, this.deps.now()) : null;
+      const zones = (layout?.zones ?? []).map((zone) => ({
+        id: zone.id,
+        items: manifest ? flattenPlaylist(manifest, zone.playlistId) : [],
+      }));
+      this.#layoutId = layout?.id ?? null;
       if (manifest) this.deps.renderer.setOrientation(manifest.screen.orientation);
-      if (!manifest || items.length === 0) {
+      if (!manifest || !layout || zones.every((zone) => zone.items.length === 0)) {
         if (manifest) {
           this.deps.renderer.showMessage({
             title: 'אין תוכן להצגה · Nothing to show',
             lines: [
-              'שייכו פלייליסט למסך זה ב-Rubinny.',
-              'Assign a playlist to this screen in Rubinny.',
+              'שייכו פלייליסט או תבנית למסך זה ב-Rubinny.',
+              'Assign a playlist or layout to this screen in Rubinny.',
             ],
           });
         }
@@ -217,16 +239,33 @@ export class Player {
         continue;
       }
       this.#changed = false;
+      const signal = this.#abort.signal;
+      this.deps.renderer.mountLayout(layout);
+      // Every zone plays its own playlist until the content or the schedule changes.
+      await Promise.all(zones.map((zone) => this.#runZone(zone.id, zone.items, signal)));
+    }
+  }
+
+  async #runZone(zoneId: string, items: PlayableItem[], signal: AbortSignal) {
+    const active = () => !signal.aborted && !this.#isStopped() && !this.#hasChanged();
+    if (items.length === 0) {
+      await wait(2 ** 31 - 1, signal); // an empty zone shows the background until a change
+      return;
+    }
+    while (active()) {
       let played = 0;
       for (const item of items) {
-        if (this.#isStopped() || this.#hasChanged()) break;
-        const url = await this.#cache?.objectUrl(item.media);
-        if (!url) continue; // not cached (yet): skip
-        await this.deps.renderer.play(item, url, this.#abort.signal);
+        if (!active()) return;
+        let url: string | null = null;
+        if (item.kind === 'media') {
+          url = (await this.#cache?.objectUrl(item.media)) ?? null;
+          if (!url) continue; // not cached (yet): skip
+        }
+        await this.deps.renderer.play(zoneId, item, url, signal);
         played++;
       }
       // Nothing playable (e.g. all downloads failed): avoid a busy loop.
-      if (played === 0 && !this.#hasChanged()) await this.deps.sleep(EMPTY_RETRY_MS);
+      if (played === 0) await wait(EMPTY_RETRY_MS, signal);
     }
   }
 }

@@ -84,6 +84,20 @@ export class PlayerApi {
     return res.blob();
   }
 
+  /** Server-prepared data of an RSS/weather widget. */
+  async widgetData(token: string, widgetId: string): Promise<unknown> {
+    const res = await this.fetcher(`${this.base}/widgets/${encodeURIComponent(widgetId)}/data`, {
+      headers: { authorization: `Bearer ${token}` },
+      credentials: 'omit',
+      cache: 'no-store',
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(`widget data ${widgetId} failed: ${String(res.status)}`);
+    const body = (await res.json()) as { data?: unknown };
+    if (body.data === undefined) throw new Error('widget data missing');
+    return body.data;
+  }
+
   async heartbeat(
     token: string,
     body: { manifestVersion: string | null; playerVersion: string; resolution: string },

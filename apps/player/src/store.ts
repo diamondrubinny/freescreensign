@@ -6,6 +6,7 @@ import { parseManifest, type ManifestV1 } from '@rubinny/shared';
  */
 const TOKEN_KEY = 'rubinny.player.token';
 const MANIFEST_KEY = 'rubinny.player.manifest';
+const WIDGET_DATA_PREFIX = 'rubinny.player.widget-data.';
 
 function read(key: string): string | null {
   try {
@@ -42,8 +43,36 @@ export const store = {
   setManifest: (manifest: ManifestV1 | null) => {
     write(MANIFEST_KEY, manifest ? JSON.stringify(manifest) : null);
   },
+  /** Last known server data of a widget (RSS, weather), for offline playback. */
+  widgetData(widgetId: string): unknown {
+    const raw = read(WIDGET_DATA_PREFIX + widgetId);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as unknown;
+    } catch {
+      return null;
+    }
+  },
+  setWidgetData: (widgetId: string, data: unknown) => {
+    write(WIDGET_DATA_PREFIX + widgetId, JSON.stringify(data));
+  },
+  /** Removes stored data of widgets no longer in the manifest. */
+  pruneWidgetData(keep: readonly string[]) {
+    const wanted = new Set(keep.map((id) => WIDGET_DATA_PREFIX + id));
+    try {
+      const stale: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(WIDGET_DATA_PREFIX) && !wanted.has(key)) stale.push(key);
+      }
+      for (const key of stale) localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  },
   clear() {
     write(TOKEN_KEY, null);
     write(MANIFEST_KEY, null);
+    this.pruneWidgetData([]);
   },
 };

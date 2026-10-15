@@ -117,7 +117,16 @@ importers:
       '@rubinny/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@rubinny/widget-sdk':
+        specifier: workspace:*
+        version: link:../../packages/widget-sdk
+      qrcode:
+        specifier: 1.5.4
+        version: 1.5.4
     devDependencies:
+      '@types/qrcode':
+        specifier: 1.5.6
+        version: 1.5.6
       jsdom:
         specifier: 29.1.1
         version: 29.1.1

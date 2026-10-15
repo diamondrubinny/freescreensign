@@ -53,8 +53,10 @@ export const countdown = defineWidget<CountdownConfig>({
 4. **Clean up** every timer/listener: use `every()` / `ctx.signal`, and implement `destroy()`.
 5. **Accessibility & motion:** respect `ctx.reducedMotion`; use `dir="auto"` for user text;
    keep contrast high (≥ 4.5:1) and avoid flashing (no more than 3 flashes per second).
-6. **Scale with the zone:** the container is a CSS size container — size text with
-   container query units (`cqh`, `cqw`), not pixels.
+6. **Scale with the zone:** the player sets `--zone-w` and `--zone-h` (the zone size
+   in pixels) on the container, e.g. `font-size: calc(var(--zone-h) * 0.3)`. This works
+   on older TV browsers too. On modern browsers the container is also a CSS size
+   container, so container query units (`cqh`, `cqw`) work as well.
 7. **Privacy:** do not collect or send personal data; no analytics or third-party scripts.
 
 ## Contributing a widget

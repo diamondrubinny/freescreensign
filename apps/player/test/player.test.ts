@@ -9,6 +9,7 @@ import type { ServerEvent } from '../src/socket';
 import { manifest, sha256Hex } from './fixtures';
 
 const bytes = new Uint8Array([7, 7, 7]);
+const idOf = (item: PlayableItem) => (item.kind === 'media' ? item.media.id : item.widget.id);
 
 async function realManifest(version = 'v1'): Promise<ManifestV1> {
   const sha = await sha256Hex(bytes);
@@ -44,6 +45,7 @@ function setup(options: {
   download?: () => Promise<Blob>;
 }) {
   const played: PlayableItem[] = [];
+  const zonesPlayed: string[] = [];
   const messages: { title: string; code?: string }[] = [];
   let emit: (e: ServerEvent) => void = () => undefined;
   const ref: { player?: Player } = {};
@@ -51,8 +53,10 @@ function setup(options: {
     setOrientation: vi.fn(),
     showMessage: (m) => messages.push(m),
     clear: vi.fn(),
-    play: (item) => {
+    mountLayout: vi.fn(),
+    play: (zoneId, item) => {
       played.push(item);
+      zonesPlayed.push(zoneId);
       if (played.length >= (options.stopAfterPlays ?? 3)) ref.player?.stop();
       // Each item takes a real (short) tick, like a timer-driven display.
       return new Promise((resolve) => setTimeout(resolve, 1));
@@ -86,6 +90,7 @@ function setup(options: {
   return {
     player,
     played,
+    zonesPlayed,
     messages,
     reload,
     emit: (e: ServerEvent) => {
@@ -116,7 +121,7 @@ describe('Player', () => {
     await player.start();
     expect(messages[0]).toMatchObject({ code: 'K7Q-29M' });
     expect(store.token()).toBe('device-token');
-    expect(played.map((p) => p.media.id)).toEqual(['m1', 'm2', 'm1']);
+    expect(played.map(idOf)).toEqual(['m1', 'm2', 'm1']);
     expect(store.manifest()?.version).toBe('v1');
   });
 
@@ -159,7 +164,7 @@ describe('Player', () => {
     });
     await player.start();
     expect(player.offline).toBe(true);
-    expect(played.map((p) => p.media.id)).toEqual(['m1', 'm2', 'm1']);
+    expect(played.map(idOf)).toEqual(['m1', 'm2', 'm1']);
     expect(download).not.toHaveBeenCalled();
   });
 
@@ -191,7 +196,37 @@ describe('Player', () => {
     await vi.waitUntil(() => ctx.played.length >= 2);
     ctx.emit({ type: 'manifest.changed' });
     await run;
-    expect(ctx.played.at(-1)?.media.id).toBe('m2');
+    expect(idOf(ctx.played.at(-1)!)).toBe('m2');
     expect(ctx.player.manifest?.version).toBe('v2');
+  });
+
+  it('plays every zone of a layout independently, including widgets', async () => {
+    const m = await realManifest();
+    m.widgets = [{ id: 'w-ticker', type: 'ticker', config: { text: 'שלום' } }];
+    m.playlists.push({
+      id: 'p-ticker',
+      items: [{ kind: 'widget', ref: 'w-ticker', durationMs: 60_000, transition: 'none' }],
+    });
+    m.layouts = [
+      {
+        id: 'lobby',
+        width: 1920,
+        height: 1080,
+        zones: [
+          { id: 'main', x: 0, y: 0, w: 1920, h: 950, z: 0, playlistId: 'p1' },
+          { id: 'ticker', x: 0, y: 950, w: 1920, h: 130, z: 1, playlistId: 'p-ticker' },
+          { id: 'empty', x: 0, y: 0, w: 10, h: 10, z: 2, playlistId: null },
+        ],
+      },
+    ];
+    m.schedule.defaultLayoutId = 'lobby';
+    const ctx = setup({
+      store: memoryStore({ token: 't' }),
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat: vi.fn() },
+      stopAfterPlays: 4,
+    });
+    await ctx.player.start();
+    expect(new Set(ctx.zonesPlayed)).toEqual(new Set(['main', 'ticker']));
+    expect(ctx.played.filter((p) => p.kind === 'widget').map(idOf)).toContain('w-ticker');
   });
 });

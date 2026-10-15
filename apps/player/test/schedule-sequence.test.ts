@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { activeLayoutId, entryActive, localTime } from '../src/schedule';
-import { flattenPlaylist, mainZonePlaylist } from '../src/sequence';
+import { flattenPlaylist, activeLayout } from '../src/sequence';
 import { manifest } from './fixtures';
 
 describe('localTime', () => {
@@ -80,7 +80,7 @@ describe('activeLayoutId', () => {
 });
 
 describe('flattenPlaylist', () => {
-  it('expands nested playlists and skips widgets and missing media', () => {
+  it('expands nested playlists, widgets, and skips missing references', () => {
     const m = manifest({
       widgets: [{ id: 'w1', type: 'clock', config: {} }],
       playlists: [
@@ -90,6 +90,7 @@ describe('flattenPlaylist', () => {
             { kind: 'media', ref: 'm1', durationMs: 1000, transition: 'none' },
             { kind: 'playlist', ref: 'inner', durationMs: 1, transition: 'none' },
             { kind: 'widget', ref: 'w1', durationMs: 1000, transition: 'none' },
+            { kind: 'widget', ref: 'gone', durationMs: 1000, transition: 'none' },
           ],
         },
         {
@@ -98,29 +99,25 @@ describe('flattenPlaylist', () => {
         },
       ],
     });
-    expect(flattenPlaylist(m, 'outer').map((i) => [i.media.id, i.durationMs])).toEqual([
+    expect(
+      flattenPlaylist(m, 'outer').map((i) => [
+        i.kind === 'media' ? i.media.id : i.widget.id,
+        i.durationMs,
+      ]),
+    ).toEqual([
       ['m1', 1000],
       ['m2', 2000],
+      ['w1', 1000],
     ]);
     expect(flattenPlaylist(m, null)).toEqual([]);
     expect(flattenPlaylist(m, 'missing')).toEqual([]);
   });
 
-  it('uses the largest zone as the main zone', () => {
-    const m = manifest({
-      layouts: [
-        {
-          id: 'l',
-          width: 100,
-          height: 100,
-          zones: [
-            { id: 'ticker', x: 0, y: 90, w: 100, h: 10, z: 1, playlistId: 'small' },
-            { id: 'main', x: 0, y: 0, w: 100, h: 90, z: 0, playlistId: 'p1' },
-          ],
-        },
-      ],
-    });
-    expect(mainZonePlaylist(m, 'l')).toBe('p1');
-    expect(mainZonePlaylist(m, 'nope')).toBeNull();
+  it('resolves the active layout from the schedule', () => {
+    const m = manifest();
+    expect(activeLayout(m, new Date())?.id).toBe('default');
+    expect(
+      activeLayout({ ...m, schedule: { defaultLayoutId: null, entries: [] } }, new Date()),
+    ).toBeNull();
   });
 });

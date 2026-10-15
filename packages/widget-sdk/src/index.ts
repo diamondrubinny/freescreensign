@@ -36,7 +36,10 @@ export interface WidgetDefinition<Config> {
   readonly type: string;
   /** Validates untrusted configuration; must throw on invalid input. */
   parseConfig(config: unknown): Config;
-  /** Renders into `container` (which fills the zone and is a CSS size container). */
+  /**
+   * Renders into `container`, which fills the zone. The player sets the CSS variables
+   * `--zone-w` and `--zone-h` (zone size in px) on it; size text relative to them.
+   */
   render(container: HTMLElement, config: Config, ctx: WidgetContext): WidgetInstance;
 }
 

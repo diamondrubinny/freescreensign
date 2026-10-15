@@ -39,6 +39,19 @@ body,
   transform: rotate(180deg);
 }
 
+/* Layout canvas: scaled to fit the screen (letterboxed); sizes are set by the renderer. */
+.canvas {
+  position: absolute;
+  overflow: hidden;
+}
+
+/* --zone-w / --zone-h (px) are set by the renderer so widgets scale on any browser. */
+.zone {
+  position: absolute;
+  overflow: hidden;
+  container-type: size;
+}
+
 .layer {
   position: absolute;
   inset: 0;
@@ -84,6 +97,173 @@ body,
   letter-spacing: 0.08em;
   font-family: ui-monospace, 'DejaVu Sans Mono', monospace;
   color: #facc15;
+}
+
+/* ---- Widgets (sizes relative to the zone) ---------------------------------- */
+.layer.widget {
+  display: block;
+}
+.layer.widget > * {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+}
+
+.w-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--zone-h, 200px) * 0.03);
+  text-align: center;
+  line-height: 1.15;
+}
+.w-clock-time {
+  font-size: min(calc(var(--zone-h, 200px) * 0.36), calc(var(--zone-w, 400px) * 0.2));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.w-clock-date,
+.w-clock-hebrew {
+  font-size: min(calc(var(--zone-h, 200px) * 0.11), calc(var(--zone-w, 400px) * 0.06));
+}
+.w-clock-hebrew {
+  opacity: 0.85;
+}
+
+.w-text {
+  display: flex;
+  align-items: center;
+  padding: calc(var(--zone-h, 200px) * 0.06) calc(var(--zone-w, 400px) * 0.04);
+  overflow: hidden;
+}
+.w-text-body {
+  margin: 0;
+  width: 100%;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+.w-align-start .w-text-body {
+  text-align: start;
+}
+.w-align-center .w-text-body {
+  text-align: center;
+}
+.w-align-end .w-text-body {
+  text-align: end;
+}
+.w-size-small {
+  font-size: calc(var(--zone-h, 200px) * 0.1);
+}
+.w-size-medium {
+  font-size: calc(var(--zone-h, 200px) * 0.16);
+}
+.w-size-large {
+  font-size: calc(var(--zone-h, 200px) * 0.24);
+}
+.w-size-xlarge {
+  font-size: calc(var(--zone-h, 200px) * 0.36);
+}
+
+.w-ticker {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.w-ticker-text {
+  display: inline-block;
+  font-size: calc(var(--zone-h, 100px) * 0.55);
+  line-height: 1;
+  will-change: transform;
+}
+.w-ticker-static .w-ticker-text {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-inline: calc(var(--zone-h, 100px) * 0.2);
+}
+
+.w-qr {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--zone-h, 200px) * 0.03);
+}
+.w-qr-code {
+  width: min(calc(var(--zone-h, 200px) * 0.78), calc(var(--zone-w, 200px) * 0.9));
+  height: auto;
+  aspect-ratio: 1;
+}
+.w-qr figcaption {
+  font-size: calc(var(--zone-h, 200px) * 0.08);
+  text-align: center;
+}
+
+.w-rss {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--zone-h, 200px) * 0.04);
+  padding: calc(var(--zone-h, 200px) * 0.06) calc(var(--zone-w, 400px) * 0.04);
+  overflow: hidden;
+}
+.w-rss-source {
+  font-size: calc(var(--zone-h, 200px) * 0.09);
+  opacity: 0.75;
+}
+.w-rss-title {
+  margin: 0;
+  font-size: calc(var(--zone-h, 200px) * 0.2);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.w-weather {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: calc(var(--zone-h, 300px) * 0.03);
+  padding: calc(var(--zone-h, 300px) * 0.05) calc(var(--zone-w, 400px) * 0.05);
+  font-size: calc(var(--zone-h, 300px) * 0.07);
+}
+.w-weather-place {
+  font-size: 1.4em;
+  font-weight: 600;
+}
+.w-weather-now {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 3em;
+  line-height: 1;
+}
+.w-weather-days {
+  display: flex;
+  gap: 1em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.w-weather-days li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.w-weather-credit {
+  font-size: 0.55em;
+  opacity: 0.7;
+}
+
+.w-webpage {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {
