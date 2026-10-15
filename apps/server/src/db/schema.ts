@@ -194,6 +194,7 @@ export interface ScreensTable {
   token_hash: string;
   playlist_id: string | null;
   layout_id: Generated<string | null>;
+  schedule_id: Generated<string | null>;
   orientation: Generated<ScreenOrientation>;
   timezone: Generated<string>;
   last_seen_at: NullableTimestamp;
@@ -203,6 +204,31 @@ export interface ScreensTable {
   created_by: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
+}
+
+export interface SchedulesTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface ScheduleEntriesTable {
+  id: Generated<string>;
+  schedule_id: string;
+  position: number;
+  name: string;
+  layout_id: string | null;
+  playlist_id: string | null;
+  /** PostgreSQL `date`: select it as `date_from::text` (YYYY-MM-DD); pg would build a local Date. */
+  date_from: string | null;
+  date_to: string | null;
+  days_of_week: Generated<number[]>;
+  time_from: string | null;
+  time_to: string | null;
+  enabled: Generated<boolean>;
 }
 
 export interface PairingCodesTable {
@@ -231,6 +257,8 @@ export interface Database {
   widgets: WidgetsTable;
   layouts: LayoutsTable;
   layout_zones: LayoutZonesTable;
+  schedules: SchedulesTable;
+  schedule_entries: ScheduleEntriesTable;
 }
 
 export type User = Selectable<UsersTable>;
@@ -244,3 +272,5 @@ export type Playlist = Selectable<PlaylistsTable>;
 export type Widget = Selectable<WidgetsTable>;
 export type Layout = Selectable<LayoutsTable>;
 export type LayoutZone = Selectable<LayoutZonesTable>;
+export type Schedule = Selectable<SchedulesTable>;
+export type ScheduleEntry = Selectable<ScheduleEntriesTable>;

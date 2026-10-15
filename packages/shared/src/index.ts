@@ -8,3 +8,4 @@ export * from './widgets.js';
 export * from './layouts.js';
 export * from './time.js';
 export * from './design.js';
+export * from './schedule.js';

@@ -43,7 +43,10 @@ export type AuditAction =
   | 'widget.deleted'
   | 'layout.created'
   | 'layout.updated'
-  | 'layout.deleted';
+  | 'layout.deleted'
+  | 'schedule.created'
+  | 'schedule.updated'
+  | 'schedule.deleted';
 
 export interface AuditEvent {
   action: AuditAction;

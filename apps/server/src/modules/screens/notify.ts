@@ -7,47 +7,103 @@ async function publishAll(ctx: AppContext, screenIds: Iterable<string>): Promise
   );
 }
 
+/** Tells these screens to refetch their manifest. */
+export async function notifyScreens(ctx: AppContext, screenIds: Iterable<string>): Promise<void> {
+  await publishAll(ctx, screenIds);
+}
+
 /**
- * Tells every screen playing one of these playlists (directly, or through a
- * layout zone) to refetch its manifest.
+ * Screens playing one of these playlists: directly, through a layout zone, or through
+ * a schedule entry (the playlist itself, or a layout containing it).
  */
-export async function notifyPlaylistScreens(
+export async function screensForPlaylists(
   ctx: AppContext,
   playlistIds: readonly string[],
-): Promise<void> {
-  if (playlistIds.length === 0) return;
+): Promise<string[]> {
+  if (playlistIds.length === 0) return [];
   const ids = [...playlistIds];
-  const screens = await ctx.db
+  const rows = await ctx.db
+    .selectFrom('screens')
+    .select('id')
+    .where((eb) => {
+      const layoutsWith = eb
+        .selectFrom('layout_zones')
+        .select('layout_id')
+        .where('playlist_id', 'in', ids);
+      return eb.or([
+        eb('playlist_id', 'in', ids),
+        eb('layout_id', 'in', layoutsWith),
+        eb(
+          'schedule_id',
+          'in',
+          eb
+            .selectFrom('schedule_entries')
+            .select('schedule_id')
+            .where((inner) =>
+              inner.or([
+                inner('schedule_entries.playlist_id', 'in', ids),
+                inner(
+                  'schedule_entries.layout_id',
+                  'in',
+                  inner
+                    .selectFrom('layout_zones')
+                    .select('layout_id')
+                    .where('playlist_id', 'in', ids),
+                ),
+              ]),
+            ),
+        ),
+      ]);
+    })
+    .execute();
+  return rows.map((row) => row.id);
+}
+
+/** Screens showing one of these layouts, by default or through a schedule entry. */
+export async function screensForLayouts(
+  ctx: AppContext,
+  layoutIds: readonly string[],
+): Promise<string[]> {
+  if (layoutIds.length === 0) return [];
+  const ids = [...layoutIds];
+  const rows = await ctx.db
     .selectFrom('screens')
     .select('id')
     .where((eb) =>
       eb.or([
-        eb('playlist_id', 'in', ids),
+        eb('layout_id', 'in', ids),
         eb(
-          'layout_id',
+          'schedule_id',
           'in',
-          eb.selectFrom('layout_zones').select('layout_id').where('playlist_id', 'in', ids),
+          eb.selectFrom('schedule_entries').select('schedule_id').where('layout_id', 'in', ids),
         ),
       ]),
     )
     .execute();
-  await publishAll(
-    ctx,
-    screens.map((s) => s.id),
-  );
+  return rows.map((row) => row.id);
 }
 
-/** Screens showing a layout. */
-export async function notifyLayoutScreens(ctx: AppContext, layoutId: string): Promise<void> {
-  const screens = await ctx.db
+/** Screens using a schedule. */
+export async function screensForSchedule(ctx: AppContext, scheduleId: string): Promise<string[]> {
+  const rows = await ctx.db
     .selectFrom('screens')
     .select('id')
-    .where('layout_id', '=', layoutId)
+    .where('schedule_id', '=', scheduleId)
     .execute();
-  await publishAll(
-    ctx,
-    screens.map((s) => s.id),
-  );
+  return rows.map((row) => row.id);
+}
+
+/** Tells every screen playing one of these playlists to refetch its manifest. */
+export async function notifyPlaylistScreens(
+  ctx: AppContext,
+  playlistIds: readonly string[],
+): Promise<void> {
+  await publishAll(ctx, await screensForPlaylists(ctx, playlistIds));
+}
+
+/** Screens showing a layout (by default or through a schedule). */
+export async function notifyLayoutScreens(ctx: AppContext, layoutId: string): Promise<void> {
+  await publishAll(ctx, await screensForLayouts(ctx, [layoutId]));
 }
 
 async function playlistsContaining(

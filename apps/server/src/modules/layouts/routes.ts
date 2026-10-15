@@ -8,7 +8,7 @@ import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
-import { notifyLayoutScreens } from '../screens/notify.js';
+import { notifyLayoutScreens, notifyScreens, screensForLayouts } from '../screens/notify.js';
 
 const layoutParams = z.object({ orgId: z.uuid(), layoutId: z.uuid() });
 const notFound = () => new HttpError(404, 'NOT_FOUND', 'Resource not found');
@@ -344,18 +344,15 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
     const { user } = requireAuth(request);
     const { layoutId } = parse(layoutParams, request.params);
     await loadLayout(org.id, layoutId);
-    const affected = await ctx.db
-      .selectFrom('screens')
-      .select('id')
-      .where('layout_id', '=', layoutId)
-      .execute();
+    // Collected first: schedule entries showing this layout are deleted with it.
+    const affected = await screensForLayouts(ctx, [layoutId]);
     await ctx.db
       .deleteFrom('layouts')
       .where('id', '=', layoutId)
       .where('org_id', '=', org.id)
       .execute();
     // Screens fall back to their playlist (layout_id is set to null by the database).
-    await Promise.all(affected.map((s) => ctx.events.publish(s.id, { type: 'manifest.changed' })));
+    await notifyScreens(ctx, affected);
     await audit(ctx.db, {
       action: 'layout.deleted',
       orgId: org.id,

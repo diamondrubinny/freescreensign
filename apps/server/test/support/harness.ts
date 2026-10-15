@@ -27,6 +27,7 @@ export interface Harness {
   env: Env;
   mailer: MemoryMailer;
   redis: Redis;
+  events: RedisScreenEvents;
   storage?: Storage;
   close(): Promise<void>;
 }
@@ -108,6 +109,7 @@ export async function createHarness(
     env,
     mailer,
     redis,
+    events,
     ...(storage ? { storage } : {}),
     async close() {
       await app.close();

@@ -423,6 +423,68 @@ test('the free-form designer: drag, images, and the result on a screen', async (
   await device.close();
 });
 
+test('a schedule switches what a screen shows, live', async ({ page, browser }) => {
+  await signIn(page, ADMIN, true);
+  await mainNav(page).getByRole('link', { name: 'תזמון', exact: true }).click();
+  await expectAccessible(page, 'schedules');
+  await page.getByLabel('שם הלוח').fill('אירועים');
+  await page.getByRole('button', { name: 'לוח זמנים חדש' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: /עריכת לוח זמנים: אירועים/ }),
+  ).toBeVisible();
+
+  // One entry, active all day every day: the announcements playlist in full screen.
+  await page.getByRole('button', { name: 'הוספת שורה' }).click();
+  const entry = page.getByRole('group', { name: /^שורה 1:/ });
+  await entry.getByLabel('שם השורה').fill('הודעה מיוחדת');
+  await entry.getByLabel('מה להציג').selectOption({ label: 'פס הודעות' });
+  await entry.getByRole('checkbox', { name: 'כל היום' }).check();
+  const timeline = page.getByRole('region', { name: 'מה יוצג השבוע' });
+  await expect(timeline.getByText('עכשיו מוצג: הודעה מיוחדת')).toBeVisible();
+  await expectAccessible(page, 'schedule editor');
+  await page.getByRole('button', { name: 'שמירת הלוח' }).click();
+  await expect(page.getByText('הלוח נשמר. המסכים מתעדכנים.')).toBeVisible();
+
+  // A screen with a layout by default, and the schedule on top.
+  const device = await browser.newContext({ ignoreHTTPSErrors: true });
+  const player = await device.newPage();
+  await player.goto('/player/');
+  const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
+  await mainNav(page).getByRole('link', { name: 'מסכים', exact: true }).click();
+  const addForm = page.getByRole('form', { name: 'הוספת מסך' });
+  await addForm.getByLabel('קוד חיבור').fill(code ?? '');
+  await addForm.getByLabel('שם מלא').fill('מסך אירועים');
+  await addForm.getByRole('button', { name: 'הוספת מסך' }).click();
+  await expect(page.getByText('המסך חובר בהצלחה.')).toBeVisible();
+  await page.getByRole('button', { name: 'עריכה מסך אירועים' }).click();
+  const dialog = page.getByRole('dialog', { name: 'עריכת מסך' });
+  await dialog.getByLabel('תבנית תצוגה').selectOption({ label: 'לובי ראשי' });
+  await dialog.getByLabel('לוח זמנים').selectOption({ label: 'אירועים' });
+  await dialog.getByRole('button', { name: 'שמירה' }).click();
+  await expect(page.getByRole('row', { name: /מסך אירועים/ })).toContainText('תזמון: אירועים');
+
+  // The scheduled playlist fills the screen instead of the layout.
+  await expect(player.locator('.w-ticker')).toContainText('ברוכים הבאים לבית הספר', {
+    timeout: 20_000,
+  });
+  await expect(player.locator('.zone')).toHaveCount(1);
+  await expect(player.locator('.w-clock-time')).toHaveCount(0);
+
+  // Disabling the entry brings the layout back, without touching the screen.
+  await mainNav(page).getByRole('link', { name: 'תזמון', exact: true }).click();
+  await page.getByRole('link', { name: 'עריכה אירועים' }).click();
+  await page
+    .getByRole('group', { name: /^שורה 1:/ })
+    .getByRole('checkbox', { name: 'פעילה' })
+    .uncheck();
+  await expect(timeline.getByText('עכשיו מוצג: התוכן הרגיל של המסך')).toBeVisible();
+  await page.getByRole('button', { name: 'שמירת הלוח' }).click();
+  await expect(page.getByText('הלוח נשמר. המסכים מתעדכנים.')).toBeVisible();
+  await expect(player.locator('.w-clock-time')).toHaveText(/^\d{2}:\d{2}$/, { timeout: 20_000 });
+  await expect(player.locator('.zone')).toHaveCount(2);
+  await device.close();
+});
+
 test('admin invites a teacher (mail disabled: link shown to admin)', async ({ page }) => {
   await signIn(page, ADMIN, true);
   await mainNav(page).getByRole('link', { name: 'חברים', exact: true }).click();

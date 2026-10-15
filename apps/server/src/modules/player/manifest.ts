@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { sql } from 'kysely';
 import {
   designMediaIds,
   manifestV1Schema,
@@ -38,40 +39,46 @@ const CANVAS = {
 
 type ManifestLayoutInput = ManifestV1['layouts'][number];
 
+interface ScheduleRow {
+  id: string;
+  layout_id: string | null;
+  playlist_id: string | null;
+  date_from: string | null;
+  date_to: string | null;
+  days_of_week: number[];
+  time_from: string | null;
+  time_to: string | null;
+}
+
 /** Settings the manifest depends on beyond the database. */
 export type ManifestEnv = Pick<Env, 'PUBLIC_URL' | 'WEATHER_API_URL'>;
 
 /**
- * Builds the player manifest for a screen. A screen either shows a layout (zones,
- * each playing its own playlist) or, in simple mode, one implicit full-screen
- * layout playing the screen's playlist. Only ready, non-deleted media and valid,
- * enabled widgets are included.
+ * Builds the player manifest for a screen. By default a screen shows a layout (zones,
+ * each playing its own playlist) or, in simple mode, one implicit full-screen layout
+ * playing the screen's playlist. Its schedule adds entries that switch to other layouts
+ * or playlists at set times; the player evaluates them on the screen's wall clock.
+ * Only ready, non-deleted media and valid, enabled widgets are included.
  */
 export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): Promise<ManifestV1> {
   const canvas = CANVAS[screen.orientation];
-  let layout: ManifestLayoutInput = {
-    id: 'default',
+  /** One full-screen zone playing a playlist (simple mode, and playlist schedule entries). */
+  const fullScreen = (id: string, playlistId: string | null): ManifestLayoutInput => ({
+    id,
     width: canvas.width,
     height: canvas.height,
     background: '#000000',
-    zones: [
-      {
-        id: 'main',
-        x: 0,
-        y: 0,
-        w: canvas.width,
-        h: canvas.height,
-        z: 0,
-        playlistId: screen.playlist_id,
-      },
-    ],
-  };
+    zones: [{ id: 'main', x: 0, y: 0, w: canvas.width, h: canvas.height, z: 0, playlistId }],
+  });
 
-  if (screen.layout_id) {
+  const layoutCache = new Map<string, ManifestLayoutInput | null>();
+  /** A layout of the screen's organization with at least one zone, else null. */
+  const loadLayout = async (layoutId: string): Promise<ManifestLayoutInput | null> => {
+    if (layoutCache.has(layoutId)) return layoutCache.get(layoutId) ?? null;
     const row = await db
       .selectFrom('layouts')
       .selectAll()
-      .where('id', '=', screen.layout_id)
+      .where('id', '=', layoutId)
       .where('org_id', '=', screen.org_id)
       .executeTakeFirst();
     const zones = row
@@ -82,27 +89,72 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
           .orderBy('position')
           .execute()
       : [];
-    if (row && zones.length > 0) {
-      layout = {
-        id: row.id,
-        width: row.width,
-        height: row.height,
-        background: row.background,
-        zones: zones.map((zone) => ({
-          id: zone.id,
-          x: zone.x,
-          y: zone.y,
-          w: zone.w,
-          h: zone.h,
-          z: zone.z,
-          playlistId: zone.playlist_id,
-        })),
-      };
+    const layout =
+      row && zones.length > 0
+        ? {
+            id: row.id,
+            width: row.width,
+            height: row.height,
+            background: row.background,
+            zones: zones.map((zone) => ({
+              id: zone.id,
+              x: zone.x,
+              y: zone.y,
+              w: zone.w,
+              h: zone.h,
+              z: zone.z,
+              playlistId: zone.playlist_id,
+            })),
+          }
+        : null;
+    layoutCache.set(layoutId, layout);
+    return layout;
+  };
+
+  const defaultLayout =
+    (screen.layout_id ? await loadLayout(screen.layout_id) : null) ??
+    fullScreen('default', screen.playlist_id);
+
+  // Schedule entries, top first. Only enabled entries of the screen's own organization.
+  const scheduled: { entry: ScheduleRow; layout: ManifestLayoutInput }[] = [];
+  if (screen.schedule_id) {
+    const rows = await db
+      .selectFrom('schedule_entries')
+      .innerJoin('schedules', 'schedules.id', 'schedule_entries.schedule_id')
+      .select([
+        'schedule_entries.id',
+        'schedule_entries.layout_id',
+        'schedule_entries.playlist_id',
+        sql<string | null>`schedule_entries.date_from::text`.as('date_from'),
+        sql<string | null>`schedule_entries.date_to::text`.as('date_to'),
+        'schedule_entries.days_of_week',
+        'schedule_entries.time_from',
+        'schedule_entries.time_to',
+      ])
+      .where('schedules.id', '=', screen.schedule_id)
+      .where('schedules.org_id', '=', screen.org_id)
+      .where('schedule_entries.enabled', '=', true)
+      .orderBy('schedule_entries.position')
+      .execute();
+    for (const entry of rows) {
+      const layout = entry.layout_id
+        ? await loadLayout(entry.layout_id)
+        : entry.playlist_id
+          ? fullScreen(`playlist-${entry.playlist_id}`, entry.playlist_id)
+          : null;
+      if (layout) scheduled.push({ entry, layout });
     }
   }
 
+  const layoutsById = new Map<string, ManifestLayoutInput>([[defaultLayout.id, defaultLayout]]);
+  for (const { layout } of scheduled) layoutsById.set(layout.id, layout);
+
   const playlistIds = [
-    ...new Set(layout.zones.flatMap((zone) => (zone.playlistId ? [zone.playlistId] : []))),
+    ...new Set(
+      [...layoutsById.values()].flatMap((layout) =>
+        layout.zones.flatMap((zone) => (zone.playlistId ? [zone.playlistId] : [])),
+      ),
+    ),
   ];
   // Playlists of other organizations are never followed, even if referenced.
   const ownPlaylists = playlistIds.length
@@ -244,12 +296,27 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
   }
 
   // Zones pointing to playlists of another organization play nothing.
-  layout = {
+  const layouts = [...layoutsById.values()].map((layout) => ({
     ...layout,
     zones: layout.zones.map((zone) =>
       zone.playlistId && !ownPlaylists.has(zone.playlistId) ? { ...zone, playlistId: null } : zone,
     ),
-  };
+  }));
+  // A playlist entry whose playlist is not the organization's would only show black.
+  const entries = scheduled
+    .filter(({ entry }) => !entry.playlist_id || ownPlaylists.has(entry.playlist_id))
+    .map(({ entry, layout }, index, all) => ({
+      id: entry.id,
+      layoutId: layout.id,
+      // Position is the priority: the first entry wins.
+      priority: all.length - index,
+      ...(entry.date_from ? { dateFrom: entry.date_from } : {}),
+      ...(entry.date_to ? { dateTo: entry.date_to } : {}),
+      ...(entry.days_of_week.length > 0 ? { daysOfWeek: entry.days_of_week } : {}),
+      ...(entry.time_from && entry.time_to
+        ? { timeFrom: entry.time_from, timeTo: entry.time_to }
+        : {}),
+    }));
 
   const body = {
     schemaVersion: 1 as const,
@@ -262,8 +329,8 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
     media: [...media.values()],
     widgets: [...widgets.values()],
     playlists: [...playlists.values()],
-    layouts: [layout],
-    schedule: { defaultLayoutId: layout.id, entries: [] },
+    layouts,
+    schedule: { defaultLayoutId: defaultLayout.id, entries },
   };
 
   // The version identifies the content only (not the generation time).

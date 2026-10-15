@@ -5,7 +5,13 @@ import { useParams } from 'react-router';
 import { hasRole } from '@rubinny/shared';
 import { del, get, patch, post } from '../api/client';
 import { useSession } from '../api/session';
-import type { LayoutSummary, Orientation, PlaylistSummary, ScreenItem } from '../api/types';
+import type {
+  LayoutSummary,
+  Orientation,
+  PlaylistSummary,
+  ScheduleSummary,
+  ScreenItem,
+} from '../api/types';
 import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { ConfirmDialog, Dialog } from '../components/Dialog';
@@ -91,6 +97,10 @@ export function ScreensPage() {
     queryKey: ['layouts', orgId],
     queryFn: () => get<{ layouts: LayoutSummary[] }>(`/api/v1/orgs/${orgId}/layouts`),
   });
+  const schedules = useQuery({
+    queryKey: ['schedules', orgId],
+    queryFn: () => get<{ schedules: ScheduleSummary[] }>(`/api/v1/orgs/${orgId}/schedules`),
+  });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['screens', orgId] });
 
   const add = useMutation({
@@ -108,6 +118,7 @@ export function ScreensPage() {
       name: string;
       playlistId: string | null;
       layoutId: string | null;
+      scheduleId: string | null;
       orientation: Orientation;
     }) => patch(`/api/v1/orgs/${orgId}/screens/${id}`, body),
     onSuccess: async () => {
@@ -240,6 +251,11 @@ export function ScreensPage() {
                     {screen.layoutName
                       ? t('screens.layoutContent', { name: screen.layoutName })
                       : (screen.playlistName ?? t('screens.noPlaylist'))}
+                    {screen.scheduleName && (
+                      <span className="block text-sm text-gray-700 dark:text-gray-300">
+                        {t('screens.scheduleContent', { name: screen.scheduleName })}
+                      </span>
+                    )}
                   </td>
                   <td dir="ltr">{screen.resolution ?? '—'}</td>
                   {canEdit && (
@@ -308,6 +324,7 @@ export function ScreensPage() {
                 name: value(data, 'name'),
                 playlistId: value(data, 'playlistId') || null,
                 layoutId: value(data, 'layoutId') || null,
+                scheduleId: value(data, 'scheduleId') || null,
                 orientation: value(data, 'orientation') as Orientation,
               });
             }}
@@ -335,6 +352,15 @@ export function ScreensPage() {
               emptyLabel={t('screens.noPlaylist')}
               options={playlists.data?.playlists ?? []}
               defaultValue={editing.playlistId}
+            />
+            <ContentSelect
+              id="edit-screen-schedule"
+              name="scheduleId"
+              label={t('screens.schedule')}
+              emptyLabel={t('screens.noSchedule')}
+              hint={t('screens.scheduleHint')}
+              options={schedules.data?.schedules ?? []}
+              defaultValue={editing.scheduleId}
             />
             <div className="flex flex-col gap-1">
               <label htmlFor="edit-screen-orientation" className="font-medium">

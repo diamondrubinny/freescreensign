@@ -7,8 +7,8 @@ describe('localTime', () => {
   it('uses the screen time zone', () => {
     // 2026-10-15 is a Thursday. 21:30 UTC = 00:30 Friday in Jerusalem (UTC+3).
     const now = new Date('2026-10-15T21:30:00Z');
-    expect(localTime(now, 'UTC')).toEqual({ day: 4, minutes: 21 * 60 + 30 });
-    expect(localTime(now, 'Asia/Jerusalem')).toEqual({ day: 5, minutes: 30 });
+    expect(localTime(now, 'UTC')).toEqual({ date: '2026-10-15', day: 4, minutes: 21 * 60 + 30 });
+    expect(localTime(now, 'Asia/Jerusalem')).toEqual({ date: '2026-10-16', day: 5, minutes: 30 });
   });
 
   it('falls back to the device clock for unknown zones', () => {
@@ -38,6 +38,16 @@ describe('entryActive', () => {
     const entry = { ...base, startsAt: '2026-10-01T00:00:00Z', endsAt: '2026-10-31T00:00:00Z' };
     expect(entryActive(entry, at('2026-10-15T00:00:00Z'), 'UTC')).toBe(true);
     expect(entryActive(entry, at('2026-11-01T00:00:00Z'), 'UTC')).toBe(false);
+  });
+
+  it('checks local dates on the screen clock', () => {
+    const entry = { ...base, dateFrom: '2026-10-16', dateTo: '2026-10-17' };
+    // Thursday 21:30 UTC is already Friday 16 Oct in Jerusalem, still Thursday in UTC.
+    expect(entryActive(entry, at('2026-10-15T21:30:00Z'), 'Asia/Jerusalem')).toBe(true);
+    expect(entryActive(entry, at('2026-10-15T21:30:00Z'), 'UTC')).toBe(false);
+    // 17 Oct is inclusive; 18 Oct is not.
+    expect(entryActive(entry, at('2026-10-17T20:00:00Z'), 'Asia/Jerusalem')).toBe(true);
+    expect(entryActive(entry, at('2026-10-17T21:30:00Z'), 'Asia/Jerusalem')).toBe(false);
   });
 });
 
@@ -76,6 +86,17 @@ describe('activeLayoutId', () => {
     expect(activeLayoutId(m, new Date('2026-10-15T07:00:00Z'))).toBe('morning');
     expect(activeLayoutId(m, new Date('2026-10-15T09:30:00Z'))).toBe('promo');
     expect(activeLayoutId(m, new Date('2026-10-15T15:00:00Z'))).toBe('default');
+  });
+
+  it('lets the earlier entry win a priority tie', () => {
+    const m = manifest();
+    m.screen.timezone = 'UTC';
+    m.layouts.push({ ...m.layouts[0]!, id: 'second' }, { ...m.layouts[0]!, id: 'third' });
+    m.schedule.entries = [
+      { id: 'a', layoutId: 'second', priority: 3 },
+      { id: 'b', layoutId: 'third', priority: 3 },
+    ];
+    expect(activeLayoutId(m, new Date())).toBe('second');
   });
 });
 

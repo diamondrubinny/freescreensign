@@ -70,6 +70,14 @@ export const routes: RouteObject[] = [
             ...lazyPage(() => import('./pages/LayoutEditorPage'), 'LayoutEditorPage'),
           },
           {
+            path: 'orgs/:orgId/schedules',
+            ...lazyPage(() => import('./pages/SchedulesPage'), 'SchedulesPage'),
+          },
+          {
+            path: 'orgs/:orgId/schedules/:scheduleId',
+            ...lazyPage(() => import('./pages/ScheduleEditorPage'), 'ScheduleEditorPage'),
+          },
+          {
             path: 'orgs/:orgId/widgets',
             ...lazyPage(() => import('./pages/WidgetsPage'), 'WidgetsPage'),
           },

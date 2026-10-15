@@ -3,10 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { post } from '../api/client';
 
-type Kind = 'playlists' | 'layouts' | 'widgets';
-const RESULT_KEY = { playlists: 'playlist', layouts: 'layout', widgets: 'widget' } as const;
+type Kind = 'playlists' | 'layouts' | 'widgets' | 'schedules';
+const RESULT_KEY = {
+  playlists: 'playlist',
+  layouts: 'layout',
+  widgets: 'widget',
+  schedules: 'schedule',
+} as const;
 
-/** Duplicates a playlist, layout or widget and opens the copy. */
+/** Duplicates a playlist, layout, widget or schedule and opens the copy. */
 export function useDuplicate(orgId: string, kind: Kind, id: string) {
   const { t } = useTranslation();
   const navigate = useNavigate();

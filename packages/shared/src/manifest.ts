@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { localDateSchema, localTime, ruleActiveAt } from './schedule.js';
 
 /**
  * Player manifest, schema version 1.
@@ -91,6 +92,9 @@ export const scheduleEntrySchema = z
     priority: z.number().int().min(0).max(1000),
     startsAt: z.iso.datetime({ offset: true }).optional(),
     endsAt: z.iso.datetime({ offset: true }).optional(),
+    /** Inclusive local dates (YYYY-MM-DD) on the screen's wall clock. */
+    dateFrom: localDateSchema.optional(),
+    dateTo: localDateSchema.optional(),
     /** 0 = Sunday … 6 = Saturday. Empty or missing means every day. */
     daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     timeFrom: timeOfDay.optional(),
@@ -99,6 +103,10 @@ export const scheduleEntrySchema = z
   .refine((e) => !e.startsAt || !e.endsAt || Date.parse(e.startsAt) < Date.parse(e.endsAt), {
     message: 'startsAt must be before endsAt',
     path: ['endsAt'],
+  })
+  .refine((e) => !e.dateFrom || !e.dateTo || e.dateFrom <= e.dateTo, {
+    message: 'dateFrom must not be after dateTo',
+    path: ['dateTo'],
   })
   .refine((e) => (e.timeFrom === undefined) === (e.timeTo === undefined), {
     message: 'timeFrom and timeTo must be provided together',
@@ -242,4 +250,32 @@ export function parseManifest(input: unknown): ManifestParseResult {
       message: issue.message,
     })),
   };
+}
+
+/** Whether a schedule entry applies at `now` on a screen in `timeZone`. */
+export function scheduleEntryActive(
+  entry: ManifestScheduleEntry,
+  now: Date,
+  timeZone: string,
+): boolean {
+  if (entry.startsAt && now < new Date(entry.startsAt)) return false;
+  if (entry.endsAt && now >= new Date(entry.endsAt)) return false;
+  return ruleActiveAt(entry, localTime(now, timeZone));
+}
+
+/**
+ * The layout to show now: the highest-priority active entry (earlier entries win ties),
+ * else the default layout.
+ */
+export function activeLayoutId(manifest: ManifestV1, now: Date): string | null {
+  let best: ManifestScheduleEntry | undefined;
+  for (const entry of manifest.schedule.entries) {
+    if (
+      (!best || entry.priority > best.priority) &&
+      scheduleEntryActive(entry, now, manifest.screen.timezone)
+    ) {
+      best = entry;
+    }
+  }
+  return best?.layoutId ?? manifest.schedule.defaultLayoutId;
 }

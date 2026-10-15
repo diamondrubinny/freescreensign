@@ -7,6 +7,7 @@ import * as m0003 from './migrations/0003_screens_playlists.js';
 import * as m0004 from './migrations/0004_layouts_widgets.js';
 import * as m0005 from './migrations/0005_item_fit.js';
 import * as m0006 from './migrations/0006_media_source.js';
+import * as m0007 from './migrations/0007_schedules.js';
 
 export type Db = Kysely<Database>;
 
@@ -34,6 +35,7 @@ export const MIGRATIONS: readonly (readonly [name: string, migration: Migration]
   ['0004_layouts_widgets', m0004],
   ['0005_item_fit', m0005],
   ['0006_media_source', m0006],
+  ['0007_schedules', m0007],
 ];
 
 /**

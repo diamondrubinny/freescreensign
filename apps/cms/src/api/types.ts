@@ -101,7 +101,11 @@ export interface ScreenItem {
   /** When set, the layout replaces the playlist. */
   layoutId: string | null;
   layoutName: string | null;
+  /** When set, the schedule switches content at set times. */
+  scheduleId: string | null;
+  scheduleName: string | null;
   orientation: Orientation;
+  timezone: string;
   online: boolean;
   lastSeenAt: string | null;
   playerVersion: string | null;
@@ -199,4 +203,39 @@ export interface LayoutDetail {
   updatedAt: string;
   screens: { id: string; name: string }[];
   zones: LayoutZone[];
+}
+
+export interface ScheduleSummary {
+  id: string;
+  name: string;
+  entryCount: number;
+  screenCount: number;
+  updatedAt: string;
+}
+
+/** One schedule entry as the API accepts it (position in the list = priority). */
+export interface ScheduleEntryInput {
+  name: string;
+  layoutId: string | null;
+  playlistId: string | null;
+  dateFrom: string | null;
+  dateTo: string | null;
+  daysOfWeek: number[];
+  timeFrom: string | null;
+  timeTo: string | null;
+  enabled: boolean;
+}
+
+export interface ScheduleEntry extends ScheduleEntryInput {
+  id: string;
+  layoutName: string | null;
+  playlistName: string | null;
+}
+
+export interface ScheduleDetail {
+  id: string;
+  name: string;
+  updatedAt: string;
+  screens: { id: string; name: string; timezone: string }[];
+  entries: ScheduleEntry[];
 }

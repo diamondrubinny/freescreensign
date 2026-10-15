@@ -477,7 +477,7 @@ rubinny/
 | **3 — Media**               | Streaming upload, Quarantine, ClamAV, Thumbnails, ספריית מדיה ב-CMS                                                                             | ✅                                 |
 | **4 — Player Core**         | Pairing, Manifest spec, Offline cache, ניגון תמונה/וידאו מסך מלא, Heartbeat, WS                                                                 | ✅ נקודת "Demo" ראשונה             |
 | **5 — Content**             | Playlists, Layouts+Zones Designer, Widgets מובנים + Widget SDK                                                                                  | ✅                                 |
-| **6 — Scheduling**          | מנוע תזמון (RRULE, עדיפויות, אזורי זמן), תצוגת Timeline                                                                                         |                                    |
+| **6 — Scheduling**          | מנוע תזמון (ימים, שעות, תאריכים, עדיפויות, אזורי זמן), תצוגת Timeline                                                                           | ✅ RRULE מלא וחגים — Roadmap       |
 | **7 — Ops**                 | Proof-of-Play, Uptime, צילום מסך, Reload מרחוק, התראות Offline במייל                                                                            |                                    |
 | **8 — Wrappers**            | Raspberry Pi kiosk image, Electron, Android                                                                                                     |                                    |
 | **9 — Hardening & Release** | PenTest פנימי, בדיקות נגישות, טיוטות משפטיות, תיעוד, v0.1.0                                                                                     | Checklist פרודקשן                  |
@@ -499,4 +499,11 @@ rubinny/
 
 ## 17. הצעד הבא המומלץ
 
-**שלב 6 — Scheduling:** מנוע תזמון (חזרות לפי RRULE, עדיפויות, אזורי זמן, חגים) שבוחר Layout או פלייליסט לפי זמן, ותצוגת Timeline נגישה ב-CMS. הנגן כבר מבצע את התזמון מתוך ה-Manifest (`schedule.entries`), כך שהעבודה היא בעיקר בשרת וב-CMS. תוכנית מפורטת תיכתב ב-`docs/phases/06-scheduling.md` לפני תחילת הפיתוח.
+**שלב 7 — Ops:**
+
+- Proof-of-Play: דיווח מה הוצג ומתי.
+- מצב מסך ו-Uptime.
+- צילום מסך מרחוק.
+- התראות במייל על מסך מנותק.
+
+תוכנית מפורטת תיכתב ב-`docs/phases/07-ops.md` לפני תחילת הפיתוח.

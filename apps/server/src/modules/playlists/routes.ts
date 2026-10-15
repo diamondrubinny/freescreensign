@@ -9,7 +9,7 @@ import { parse } from '../../lib/validation.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
 import { DEFAULT_IMAGE_DURATION_MS, defaultWidgetDurationMs } from '../player/manifest.js';
-import { notifyPlaylistScreens } from '../screens/notify.js';
+import { notifyPlaylistScreens, notifyScreens, screensForPlaylists } from '../screens/notify.js';
 
 const playlistParams = z.object({ orgId: z.uuid(), playlistId: z.uuid() });
 const notFound = () => new HttpError(404, 'NOT_FOUND', 'Resource not found');
@@ -355,17 +355,14 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     const { user } = requireAuth(request);
     const { playlistId } = parse(playlistParams, request.params);
     await loadPlaylist(org.id, playlistId);
-    const affected = await ctx.db
-      .selectFrom('screens')
-      .select('id')
-      .where('playlist_id', '=', playlistId)
-      .execute();
+    // Collected first: zones, items and schedule entries referencing it change or go away.
+    const affected = await screensForPlaylists(ctx, [playlistId]);
     await ctx.db
       .deleteFrom('playlists')
       .where('id', '=', playlistId)
       .where('org_id', '=', org.id)
       .execute();
-    await Promise.all(affected.map((s) => ctx.events.publish(s.id, { type: 'manifest.changed' })));
+    await notifyScreens(ctx, affected);
     await audit(ctx.db, {
       action: 'playlist.deleted',
       orgId: org.id,
