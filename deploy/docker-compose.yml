@@ -121,14 +121,14 @@ services:
 
   postgres:
     <<: *hardening
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rubinny}
       POSTGRES_DB: ${POSTGRES_DB:-rubinny}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 5s
@@ -138,7 +138,7 @@ services:
 
   valkey:
     <<: *hardening
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:9-alpine
     # noeviction: queued jobs must never be evicted (required by BullMQ).
     command:
       [

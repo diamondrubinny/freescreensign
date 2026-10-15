@@ -3,6 +3,7 @@ import { pino } from 'pino';
 import { ConfigError, loadEnv } from '../config/env.js';
 import { createDb, migrateToLatest } from '../db/database.js';
 import { Storage, storageConfigFromEnv } from '../lib/storage.js';
+import { startHeartbeat } from './heartbeat.js';
 import { startMediaWorker } from './worker.js';
 
 /** Media worker process: scans and processes uploads from the queue. */
@@ -25,12 +26,18 @@ async function main() {
     { db, storage, clamav: { host: env.CLAMAV_HOST, port: env.CLAMAV_PORT }, log },
     { redisUrl: env.REDIS_URL, concurrency: env.WORKER_CONCURRENCY },
   );
+  const stopHeartbeat = await startHeartbeat(() => worker.isRunning(), {
+    onError: (err) => {
+      log.warn({ err }, 'worker heartbeat write failed');
+    },
+  });
   log.info({ concurrency: env.WORKER_CONCURRENCY }, 'media worker started');
 
   const shutdown = async (signal: string) => {
     log.info({ signal }, 'worker shutting down');
     const timer = setTimeout(() => process.exit(1), 30_000);
     timer.unref();
+    await stopHeartbeat();
     await worker.close();
     await pool.end();
     process.exit(0);

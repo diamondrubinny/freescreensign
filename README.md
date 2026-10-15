@@ -88,6 +88,9 @@ Set `RUBINNY_DOMAIN` in `deploy/.env` to a real domain to get an automatic Let's
 certificate, and set `HSTS_MAX_AGE=31536000` in production. Optional features (weather, the
 free image library) are described in [`deploy/.env.example`](deploy/.env.example).
 
+**Upgrading an existing installation** (including the move to PostgreSQL 18): see
+[docs/UPGRADING.md](docs/UPGRADING.md).
+
 ## Repository layout
 
 | Path                  | What                                                                                           | License  |

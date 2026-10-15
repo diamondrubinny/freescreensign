@@ -108,6 +108,8 @@ curl -k https://localhost/health  # {"status":"ok"}
 
 פיצ'רים אופציונליים, כמו מזג אוויר ומאגר התמונות, מתוארים ב-[`deploy/.env.example`](deploy/.env.example).
 
+**שדרוג התקנה קיימת** (כולל המעבר ל-PostgreSQL 18): ראו [docs/UPGRADING.md](docs/UPGRADING.md).
+
 ## מסמכים
 
 - [אפיון ו-Roadmap](docs/PLAN.md)

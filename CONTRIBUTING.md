@@ -33,8 +33,8 @@ pnpm check               # format, lint, typecheck, unit tests
 Running the server locally needs PostgreSQL and Valkey/Redis:
 
 ```bash
-docker run -d --name rubinny-pg -e POSTGRES_PASSWORD=dev -e POSTGRES_USER=rubinny -p 5432:5432 postgres:17-alpine
-docker run -d --name rubinny-valkey -p 6379:6379 valkey/valkey:8-alpine
+docker run -d --name rubinny-pg -e POSTGRES_PASSWORD=dev -e POSTGRES_USER=rubinny -p 5432:5432 postgres:18-alpine
+docker run -d --name rubinny-valkey -p 6379:6379 valkey/valkey:9-alpine
 cp apps/server/.env.example apps/server/.env
 # set ENCRYPTION_KEY in apps/server/.env:  openssl rand -base64 32
 pnpm --filter @rubinny/server dev        # migrations run automatically on start

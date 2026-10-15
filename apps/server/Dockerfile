@@ -37,7 +37,9 @@ USER root
 # /work is the scratch volume (TMPDIR); a new named volume inherits this ownership.
 RUN apk add --no-cache ffmpeg && install -d -o node -g node -m 700 /work
 USER node
-HEALTHCHECK NONE
+# Healthy while the worker keeps writing its heartbeat file (see src/worker/heartbeat.ts).
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+  CMD ["node", "dist/worker/healthcheck.js"]
 CMD ["node", "dist/worker/main.js"]
 
 # Default target: the API server.

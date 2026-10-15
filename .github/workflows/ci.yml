@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: rubinny
           POSTGRES_PASSWORD: ci-only-password
@@ -28,7 +28,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U rubinny" --health-interval 5s --health-timeout 3s --health-retries 20
       valkey:
-        image: valkey/valkey:8-alpine
+        image: valkey/valkey:9-alpine
         ports: ['6379:6379']
         options: >-
           --health-cmd "valkey-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
