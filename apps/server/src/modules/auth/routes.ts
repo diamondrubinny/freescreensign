@@ -47,6 +47,7 @@ export async function listMemberships(ctx: AppContext, userId: string) {
       'organizations.id',
       'organizations.name',
       'organizations.require_admin_mfa',
+      'organizations.require_approval',
       'memberships.role',
     ])
     .where('memberships.user_id', '=', userId)
@@ -58,6 +59,7 @@ export async function listMemberships(ctx: AppContext, userId: string) {
     name: row.name,
     role: row.role,
     requireAdminMfa: row.require_admin_mfa,
+    requireApproval: row.require_approval,
   }));
 }
 

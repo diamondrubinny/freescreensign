@@ -169,7 +169,7 @@ export function MediaPage() {
   return (
     <>
       <PageHeading title={t('media.title')} />
-      {listErrors.form && <Alert variant="error">{listErrors.form}</Alert>}
+      {listErrors.form && <Alert variant={listErrors.variant}>{listErrors.form}</Alert>}
 
       {usage.data && (
         <div className="mb-6 flex flex-wrap items-center gap-3">

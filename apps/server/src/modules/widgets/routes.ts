@@ -14,6 +14,7 @@ import type { Widget } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
+import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
 import { notifyPlaylistScreens, widgetPlaylists } from '../screens/notify.js';
@@ -109,6 +110,8 @@ export function isOwnOrigin(ctx: AppContext, url: string): boolean {
 export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
+  // Changes to what screens show wait for an admin when the organization requires it.
+  const gated = { preHandler: [orgGuard(ctx, 'EDITOR'), approvalGate(ctx, 'widget')] };
 
   async function loadWidget(orgId: string, widgetId: string) {
     const row = await ctx.db
@@ -202,7 +205,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     return { widget: widgetDto(widget, await usageOf(widgetId)) };
   });
 
-  app.patch('/api/v1/orgs/:orgId/widgets/:widgetId', editor, async (request) => {
+  app.patch('/api/v1/orgs/:orgId/widgets/:widgetId', gated, async (request) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { widgetId } = parse(widgetParams, request.params);
@@ -271,7 +274,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     return reply.status(201).send({ widget: widgetDto(widget, 0) });
   });
 
-  app.delete('/api/v1/orgs/:orgId/widgets/:widgetId', editor, async (request, reply) => {
+  app.delete('/api/v1/orgs/:orgId/widgets/:widgetId', gated, async (request, reply) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { widgetId } = parse(widgetParams, request.params);

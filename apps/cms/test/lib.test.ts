@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { i18n } from '../src/i18n';
-import { ApiError } from '../src/api/client';
+import { ApiError, ApprovalPendingError } from '../src/api/client';
 import { toFormErrors } from '../src/lib/api-errors';
 import { safeNextPath } from '../src/lib/safe-redirect';
 import { takeFragmentToken } from '../src/lib/fragment-token';
@@ -47,7 +47,13 @@ describe('toFormErrors', () => {
     );
     expect(toFormErrors(t, new ApiError(0, 'NETWORK', 'x')).form).toBe(he.errors.network);
     expect(toFormErrors(t, new Error('boom')).form).toBe(he.errors.INTERNAL_ERROR);
-    expect(toFormErrors(t, null)).toEqual({ form: null, fields: {} });
+    expect(toFormErrors(t, null)).toEqual({ form: null, fields: {}, variant: 'error' });
+    // A change held for approval is information, not a failure.
+    expect(toFormErrors(t, new ApprovalPendingError({ id: 'a' }))).toEqual({
+      form: he.approvals.sent,
+      fields: {},
+      variant: 'info',
+    });
   });
 
   it('adds a support reference only for internal errors', () => {

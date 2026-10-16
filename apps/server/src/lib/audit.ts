@@ -50,7 +50,11 @@ export type AuditAction =
   | 'schedule.updated'
   | 'schedule.deleted'
   | 'alert.started'
-  | 'alert.ended';
+  | 'alert.ended'
+  | 'approval.requested'
+  | 'approval.approved'
+  | 'approval.rejected'
+  | 'approval.withdrawn';
 
 export interface AuditEvent {
   action: AuditAction;

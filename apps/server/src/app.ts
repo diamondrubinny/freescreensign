@@ -34,6 +34,7 @@ import { setupRoutes } from './modules/setup/routes.js';
 import { layoutRoutes } from './modules/layouts/routes.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
 import { alertRoutes } from './modules/alerts/routes.js';
+import { approvalRoutes } from './modules/approvals/routes.js';
 import { startOfflineAlerts } from './modules/ops/alerts.js';
 import { opsRoutes } from './modules/ops/routes.js';
 import { reportRoutes } from './modules/ops/reports.js';
@@ -219,6 +220,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     layoutRoutes(app, ctx);
     scheduleRoutes(app, ctx);
     alertRoutes(app, ctx);
+    approvalRoutes(app, ctx);
     opsRoutes(app, ctx);
     reportRoutes(app, ctx);
     screenshotRoutes(app, ctx);

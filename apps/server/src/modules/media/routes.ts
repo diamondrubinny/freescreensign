@@ -16,6 +16,7 @@ import {
 import { sanitizeFilename } from '../../media/names.js';
 import { sendStoredFile } from '../../media/serve.js';
 import type { MediaQueue } from '../../queue.js';
+import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
 import { notifyMediaScreens } from '../screens/notify.js';
@@ -79,6 +80,8 @@ export function mediaRoutes(
   const { storage, queue } = media;
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
+  // Changes to what screens show wait for an admin when the organization requires it.
+  const gated = { preHandler: [orgGuard(ctx, 'EDITOR'), approvalGate(ctx, 'media')] };
   // Uploads stream for minutes: no request transaction (see orgGuard).
   const uploader = { preHandler: orgGuard(ctx, 'EDITOR', { transaction: false }) };
   const maxUpload = Math.max(ctx.env.MEDIA_MAX_IMAGE_BYTES, ctx.env.MEDIA_MAX_VIDEO_BYTES);
@@ -251,7 +254,7 @@ export function mediaRoutes(
     return { media: mediaDto(row, org.id) };
   });
 
-  app.delete('/api/v1/orgs/:orgId/media/:mediaId', editor, async (request, reply) => {
+  app.delete('/api/v1/orgs/:orgId/media/:mediaId', gated, async (request, reply) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { mediaId } = parse(mediaParams, request.params);

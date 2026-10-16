@@ -42,6 +42,12 @@ export async function runMaintenance(
     .deleteFrom('pairing_codes')
     .where('expires_at', '<', new Date(now.getTime() - DAY_MS))
     .execute();
+  // Decided approval requests are kept 90 days (the decision stays in the audit log).
+  await db
+    .deleteFrom('approval_requests')
+    .where('status', '!=', 'pending')
+    .where('decided_at', '<', new Date(now.getTime() - 90 * DAY_MS))
+    .execute();
   const auditLogs = await db
     .deleteFrom('audit_logs')
     .where('created_at', '<', new Date(now.getTime() - auditRetentionDays * DAY_MS))

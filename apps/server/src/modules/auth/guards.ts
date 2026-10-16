@@ -15,6 +15,8 @@ export interface OrgAccess {
   /** E-mail admins when a screen stays offline for `offlineAlertMinutes`. */
   offlineAlerts: boolean;
   offlineAlertMinutes: number;
+  /** Editors' changes to what screens show wait for an admin's approval. */
+  requireApproval: boolean;
 }
 
 declare module 'fastify' {
@@ -102,6 +104,7 @@ export function orgGuard(
         'organizations.require_admin_mfa',
         'organizations.offline_alerts',
         'organizations.offline_alert_minutes',
+        'organizations.require_approval',
         'memberships.role',
       ])
       .where('memberships.user_id', '=', user.id)
@@ -127,6 +130,7 @@ export function orgGuard(
       requireAdminMfa: row.require_admin_mfa,
       offlineAlerts: row.offline_alerts,
       offlineAlertMinutes: row.offline_alert_minutes,
+      requireApproval: row.require_approval,
     };
     if (options.transaction !== false) {
       await beginTenantTransaction(ctx.db, ctx.rls === true, row.id);

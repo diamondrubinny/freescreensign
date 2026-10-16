@@ -8,6 +8,10 @@ All notable changes to Rubinny. The format follows
 
 ### Added
 
+- Content approval: when an organization turns it on, an editor's change to what screens
+  show is checked in full, then waits for an admin; approving applies it at once (and tells
+  the screens), rejecting keeps a note for the editor. Admins are e-mailed. Emergency alerts
+  never wait. See docs/phases/11b-approvals.md.
 - Sign-in through the organization (SSO, OpenID Connect): Google Workspace, Microsoft Entra
   ID, Keycloak or any OIDC provider, configured with `OIDC_*` in `.env`. Authorization Code
   with PKCE, users matched by the provider's subject or once by a verified e-mail address,

@@ -45,7 +45,9 @@ export function Form({ onSubmit, errors, children, className = '', labelledBy }:
     >
       {(errors.form ?? fieldCount > 0) && (
         <div ref={errorRef} tabIndex={-1} className="outline-none">
-          <Alert variant="error">{errors.form ?? t('validation.summary')}</Alert>
+          <Alert variant={errors.form ? errors.variant : 'error'}>
+            {errors.form ?? t('validation.summary')}
+          </Alert>
         </div>
       )}
       {children}

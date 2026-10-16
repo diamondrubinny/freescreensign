@@ -25,6 +25,8 @@ export interface MembershipSummary {
   name: string;
   role: Role;
   requireAdminMfa: boolean;
+  /** Editors' changes wait for an admin (shows the approvals page). */
+  requireApproval: boolean;
 }
 
 export interface SessionInfo {
@@ -40,6 +42,8 @@ export interface Org {
   name: string;
   role: Role;
   requireAdminMfa: boolean;
+  /** Editors' changes to what screens show wait for an admin. */
+  requireApproval: boolean;
   /** E-mail owners and admins when a screen stays offline. */
   offlineAlerts: boolean;
   offlineAlertMinutes: number;
@@ -172,6 +176,22 @@ export interface WidgetItem {
   /** Number of playlists using the widget. */
   usage: number;
   updatedAt: string;
+}
+
+export interface ApprovalItem {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  summary: {
+    kind: 'playlist' | 'widget' | 'layout' | 'schedule' | 'screen' | 'media';
+    name: string | null;
+    action: 'update' | 'items' | 'delete';
+  };
+  requestedBy: string | null;
+  requestedById: string | null;
+  requestedAt: string;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  note: string | null;
 }
 
 export interface AlertItem {

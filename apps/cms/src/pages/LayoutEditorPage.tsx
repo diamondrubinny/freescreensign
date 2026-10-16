@@ -215,7 +215,9 @@ export function LayoutEditorPage() {
           {t('layouts.editorTitle')}
         </h2>
         {(errors.form ?? Object.keys(errors.fields).length > 0) && (
-          <Alert variant="error">{errors.form ?? t('validation.summary')}</Alert>
+          <Alert variant={errors.form ? errors.variant : 'error'}>
+            {errors.form ?? t('validation.summary')}
+          </Alert>
         )}
         <fieldset disabled={!canEdit} className="flex flex-col gap-6">
           <legend className="sr-only">{t('layouts.editorTitle')}</legend>
@@ -423,7 +425,7 @@ export function LayoutEditorPage() {
 
       {canEdit && (
         <>
-          {loadErrors.form && <Alert variant="error">{loadErrors.form}</Alert>}
+          {loadErrors.form && <Alert variant={loadErrors.variant}>{loadErrors.form}</Alert>}
           <div className="flex flex-wrap gap-2">
             <Button
               variant="secondary"

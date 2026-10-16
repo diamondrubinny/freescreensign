@@ -174,7 +174,9 @@ export function ScheduleEditorPage() {
             {t('schedules.editorTitle')}
           </h2>
           {(errors.form ?? Object.keys(errors.fields).length > 0) && (
-            <Alert variant="error">{errors.form ?? t('validation.summary')}</Alert>
+            <Alert variant={errors.form ? errors.variant : 'error'}>
+              {errors.form ?? t('validation.summary')}
+            </Alert>
           )}
           <fieldset disabled={!canEdit} className="flex flex-col gap-6">
             <legend className="sr-only">{t('schedules.editorTitle')}</legend>
@@ -550,7 +552,7 @@ export function ScheduleEditorPage() {
 
       {canEdit && (
         <div className="mt-10 flex flex-col gap-3">
-          {loadErrors.form && <Alert variant="error">{loadErrors.form}</Alert>}
+          {loadErrors.form && <Alert variant={loadErrors.variant}>{loadErrors.form}</Alert>}
           <div className="flex flex-wrap gap-2">
             <Button
               variant="secondary"

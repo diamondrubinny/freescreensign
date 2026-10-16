@@ -6,6 +6,7 @@ import type { AppContext } from '../../context.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
+import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
 import { DEFAULT_IMAGE_DURATION_MS, defaultWidgetDurationMs } from '../player/manifest.js';
@@ -39,6 +40,8 @@ type PlaylistItemDto =
 export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
+  // Changes to what screens show wait for an admin when the organization requires it.
+  const gated = { preHandler: [orgGuard(ctx, 'EDITOR'), approvalGate(ctx, 'playlist')] };
 
   async function loadPlaylist(orgId: string, playlistId: string) {
     const row = await ctx.db
@@ -189,7 +192,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     return playlistDetail(org.id, playlistId);
   });
 
-  app.patch('/api/v1/orgs/:orgId/playlists/:playlistId', editor, async (request) => {
+  app.patch('/api/v1/orgs/:orgId/playlists/:playlistId', gated, async (request) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { playlistId } = parse(playlistParams, request.params);
@@ -212,7 +215,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   /** Replaces the ordered item list (simple, atomic and easy to make accessible in the UI). */
-  app.put('/api/v1/orgs/:orgId/playlists/:playlistId/items', editor, async (request) => {
+  app.put('/api/v1/orgs/:orgId/playlists/:playlistId/items', gated, async (request) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { playlistId } = parse(playlistParams, request.params);
@@ -350,7 +353,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     },
   );
 
-  app.delete('/api/v1/orgs/:orgId/playlists/:playlistId', editor, async (request, reply) => {
+  app.delete('/api/v1/orgs/:orgId/playlists/:playlistId', gated, async (request, reply) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { playlistId } = parse(playlistParams, request.params);

@@ -449,7 +449,7 @@ export function WidgetEditorPage() {
 
       {widget && canEdit && (
         <>
-          {loadErrors.form && <Alert variant="error">{loadErrors.form}</Alert>}
+          {loadErrors.form && <Alert variant={loadErrors.variant}>{loadErrors.form}</Alert>}
           <div className="flex flex-wrap gap-2">
             <Button
               variant="secondary"

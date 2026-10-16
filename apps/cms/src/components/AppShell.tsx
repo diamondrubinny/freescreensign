@@ -3,6 +3,7 @@ import {
   Blocks,
   CalendarClock,
   ChartColumn,
+  ClipboardCheck,
   Siren,
   Images,
   LayoutDashboard,
@@ -187,6 +188,13 @@ export function AppShell({ session }: { session: SessionInfo }) {
                 <NavItem to={`${org}/widgets`} icon={Blocks} label={t('widgets.nav')} />
                 <NavItem to={`${org}/layouts`} icon={LayoutTemplate} label={t('layouts.nav')} />
                 <NavItem to={`${org}/schedules`} icon={CalendarClock} label={t('schedules.nav')} />
+                {currentOrg.requireApproval && (
+                  <NavItem
+                    to={`${org}/approvals`}
+                    icon={ClipboardCheck}
+                    label={t('approvals.nav')}
+                  />
+                )}
               </NavGroup>
               <NavGroup id={`${navId}-devices`} title={t('nav.groupDevices')}>
                 <NavItem to={`${org}/screens`} icon={Monitor} label={t('screens.nav')} />

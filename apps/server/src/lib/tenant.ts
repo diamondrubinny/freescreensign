@@ -22,6 +22,11 @@ type Trx = ControlledTransaction<Database>;
 interface TenantStore {
   trx: Trx | null;
   afterCommit: (() => Promise<void>)[];
+  /**
+   * Set for a change that waits for approval: the request runs completely (all checks), is
+   * then rolled back, and this records it; its result is the response (202).
+   */
+  dryRun: (() => Promise<object>) | null;
 }
 
 const storage = new AsyncLocalStorage<TenantStore>();
@@ -83,6 +88,16 @@ export async function afterCommit(task: () => Promise<void>): Promise<void> {
   await task();
 }
 
+/**
+ * Makes the current request a dry run (see TenantStore.dryRun). Needs the request's
+ * transaction, so call beginTenantTransaction (with force) first.
+ */
+export function requestDryRun(record: () => Promise<object>): void {
+  const store = storage.getStore();
+  if (!store?.trx) throw new Error('A dry run needs the request transaction');
+  store.dryRun = record;
+}
+
 /** True when the database has the tenant role and this connection may use it. */
 export async function tenantRoleAvailable(db: Db): Promise<boolean> {
   const result = await sql<{ ok: boolean }>`
@@ -93,20 +108,26 @@ export async function tenantRoleAvailable(db: Db): Promise<boolean> {
   return result.rows[0]?.ok === true;
 }
 
-/** Called by orgGuard once membership is verified. No-op when RLS is unavailable. */
+/**
+ * Called by orgGuard once membership is verified: a transaction as the tenant role. Without
+ * RLS it is a no-op, unless `force` (a dry run needs a transaction to roll back).
+ */
 export async function beginTenantTransaction(
   base: Db,
   enabled: boolean,
   orgId: string,
+  force = false,
 ): Promise<void> {
   const store = storage.getStore();
-  if (!enabled || !store || store.trx) return;
+  if ((!enabled && !force) || !store || store.trx) return;
   const trx = await base.startTransaction().execute();
   try {
-    // One round trip: set_config('role', …, true) is SET LOCAL ROLE.
-    await sql`SELECT set_config('role', ${TENANT_ROLE}, true), set_config('app.org_id', ${orgId}, true)`.execute(
-      trx,
-    );
+    if (enabled) {
+      // One round trip: set_config('role', …, true) is SET LOCAL ROLE.
+      await sql`SELECT set_config('role', ${TENANT_ROLE}, true), set_config('app.org_id', ${orgId}, true)`.execute(
+        trx,
+      );
+    }
   } catch (error) {
     await trx.rollback().execute();
     throw error;
@@ -134,11 +155,21 @@ async function finish(store: TenantStore, commit: boolean): Promise<void> {
  */
 export function registerTenantHooks(app: FastifyInstance): void {
   app.addHook('onRequest', (_request, _reply, done) => {
-    storage.run({ trx: null, afterCommit: [] }, done);
+    storage.run({ trx: null, afterCommit: [], dryRun: null }, done);
   });
   app.addHook('onSend', async (_request: FastifyRequest, reply: FastifyReply, payload) => {
     const store = storage.getStore();
-    if (store) await finish(store, reply.statusCode < 400);
+    if (!store) return payload;
+    const record = store.dryRun;
+    if (record && reply.statusCode < 400) {
+      // Everything was checked; nothing of it is kept. The change waits for approval.
+      store.dryRun = null;
+      await finish(store, false);
+      const body = await record();
+      void reply.code(202).header('content-type', 'application/json; charset=utf-8');
+      return JSON.stringify(body);
+    }
+    await finish(store, reply.statusCode < 400);
     return payload;
   });
   // Fastify requires async onRequestAbort hooks to declare exactly one parameter.

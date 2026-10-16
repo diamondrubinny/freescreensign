@@ -28,6 +28,9 @@ Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 - **Built-in widgets**: clock with the Hebrew date, text, ticker (RTL-aware), QR code, RSS
   news, weather (opt-in), web page, countdown, **data tables** (Google Sheets, CSV, JSON:
   menus, price lists and timetables that update on their own) and **free-form designs**.
+- **Sign-in through the organization** (SSO with Google Workspace, Microsoft Entra ID,
+  Keycloak or any OpenID Connect provider) and optional **content approval** before editors'
+  changes reach screens.
 - **Emergency alerts**: evacuation, shelter or lockdown messages over everything on all or
   chosen screens within seconds, until ended or for a set time.
 - **Media fit** per item: fit, fill, or the whole image over a blurred backdrop.

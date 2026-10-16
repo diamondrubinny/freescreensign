@@ -26,6 +26,7 @@ export function OrgSettingsPage() {
       body: Partial<{
         name: string;
         requireAdminMfa: boolean;
+        requireApproval: boolean;
         offlineAlerts: boolean;
         offlineAlertMinutes: number;
       }>,
@@ -51,6 +52,7 @@ export function OrgSettingsPage() {
           save.mutate({
             name: value(data, 'name'),
             ...(isOwner ? { requireAdminMfa: data.get('requireAdminMfa') === 'on' } : {}),
+            requireApproval: data.get('requireApproval') === 'on',
             offlineAlerts: data.get('offlineAlerts') === 'on',
             offlineAlertMinutes: Number(value(data, 'offlineAlertMinutes')),
           });
@@ -77,6 +79,21 @@ export function OrgSettingsPage() {
           </label>
           <p id="mfa-policy-hint" className="text-sm text-gray-700 dark:text-gray-300">
             {t('orgSettings.requireAdminMfaHint')} {!isOwner && t('orgSettings.ownerOnly')}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="flex items-center gap-2 font-medium">
+            <input
+              type="checkbox"
+              name="requireApproval"
+              className="size-4"
+              defaultChecked={org.data.org.requireApproval}
+              aria-describedby="approval-hint"
+            />
+            {t('orgSettings.requireApproval')}
+          </label>
+          <p id="approval-hint" className="text-sm text-gray-700 dark:text-gray-300">
+            {t('orgSettings.requireApprovalHint')}
           </p>
         </div>
         <fieldset className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">

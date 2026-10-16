@@ -7,6 +7,7 @@ import type { Db } from '../../db/database.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
+import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { notifyLayoutScreens, notifyScreens, screensForLayouts } from '../screens/notify.js';
 
@@ -30,6 +31,8 @@ const layoutPatchSchema = z
 export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
+  // Changes to what screens show wait for an admin when the organization requires it.
+  const gated = { preHandler: [orgGuard(ctx, 'EDITOR'), approvalGate(ctx, 'layout')] };
 
   async function loadLayout(orgId: string, layoutId: string) {
     const row = await ctx.db
@@ -232,7 +235,7 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   /** Updates the layout; `zones`, when present, replaces all zones atomically. */
-  app.patch('/api/v1/orgs/:orgId/layouts/:layoutId', editor, async (request) => {
+  app.patch('/api/v1/orgs/:orgId/layouts/:layoutId', gated, async (request) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { layoutId } = parse(layoutParams, request.params);
@@ -339,7 +342,7 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
     return reply.status(201).send(await layoutDetail(org.id, copyId));
   });
 
-  app.delete('/api/v1/orgs/:orgId/layouts/:layoutId', editor, async (request, reply) => {
+  app.delete('/api/v1/orgs/:orgId/layouts/:layoutId', gated, async (request, reply) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { layoutId } = parse(layoutParams, request.params);

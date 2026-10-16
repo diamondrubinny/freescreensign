@@ -7,7 +7,14 @@ export type MailTemplate =
   | { kind: 'invitation'; url: string; orgName: string; inviterName: string }
   | { kind: 'security-notice'; event: 'password-changed' | 'mfa-enabled' | 'mfa-disabled' }
   | { kind: 'screens-offline'; orgName: string; screens: string[]; minutes: number; url: string }
-  | { kind: 'screens-online'; orgName: string; screens: string[]; url: string };
+  | { kind: 'screens-online'; orgName: string; screens: string[]; url: string }
+  | {
+      kind: 'approval-requested';
+      orgName: string;
+      requester: string;
+      item: string;
+      url: string;
+    };
 
 export interface RenderedMail {
   subject: string;
@@ -148,6 +155,24 @@ function copyFor(template: MailTemplate, locale: Locale): Copy {
               `${template.screens.join(', ')} in ${template.orgName} is connected again and showing content.`,
             ],
             action: { label: 'View screens', url: template.url },
+          };
+    case 'approval-requested':
+      return he
+        ? {
+            subject: `שינוי ממתין לאישור: ${oneLine(template.item)}`,
+            lines: [
+              `${template.requester} ביקש/ה לשנות את "${template.item}" בארגון ${template.orgName}.`,
+              'השינוי לא יוצג במסכים עד שמנהל יאשר אותו.',
+            ],
+            action: { label: 'לבקשות שממתינות לאישור', url: template.url },
+          }
+        : {
+            subject: `Change waiting for approval: ${oneLine(template.item)}`,
+            lines: [
+              `${template.requester} asked to change "${template.item}" in ${template.orgName}.`,
+              'Screens will not show it until an admin approves it.',
+            ],
+            action: { label: 'Review pending changes', url: template.url },
           };
     case 'security-notice': {
       const events = {

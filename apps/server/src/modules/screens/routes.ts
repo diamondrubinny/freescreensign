@@ -8,6 +8,7 @@ import { randomToken, sha256Hex } from '../../lib/crypto.js';
 import { HttpError } from '../../lib/http-error.js';
 import { LIMITS } from '../../lib/limiter.js';
 import { parse } from '../../lib/validation.js';
+import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
 import { pairingAad, pairingCodeHash } from '../player/routes.js';
@@ -54,6 +55,8 @@ export function screenDto(
 export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
+  // Changes to what screens show wait for an admin when the organization requires it.
+  const gated = { preHandler: [orgGuard(ctx, 'EDITOR'), approvalGate(ctx, 'screen')] };
   const admin = { preHandler: orgGuard(ctx, 'ADMIN') };
 
   async function assertPlaylistInOrg(orgId: string, playlistId: string | null | undefined) {
@@ -214,7 +217,7 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
     return reply.status(201).send({ screen: screenDto(screen, playlistName, layoutName) });
   });
 
-  app.patch('/api/v1/orgs/:orgId/screens/:screenId', editor, async (request) => {
+  app.patch('/api/v1/orgs/:orgId/screens/:screenId', gated, async (request) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { screenId } = parse(screenParams, request.params);

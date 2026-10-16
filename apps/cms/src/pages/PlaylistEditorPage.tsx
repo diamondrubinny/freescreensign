@@ -163,7 +163,7 @@ export function PlaylistEditorPage() {
         <p className="mb-3 text-sm text-gray-700 dark:text-gray-300">
           {t('playlists.totalDuration', { duration: formatDuration(total) })}
         </p>
-        {saveErrors.form && <Alert variant="error">{saveErrors.form}</Alert>}
+        {saveErrors.form && <Alert variant={saveErrors.variant}>{saveErrors.form}</Alert>}
         {current.length === 0 ? (
           <p>{t('playlists.noItems')}</p>
         ) : (

@@ -12,6 +12,7 @@ import type { Db } from '../../db/database.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
+import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { notifyScreens, screensForSchedule } from '../screens/notify.js';
 
@@ -28,6 +29,8 @@ const schedulePatchSchema = z
 export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
+  // Changes to what screens show wait for an admin when the organization requires it.
+  const gated = { preHandler: [orgGuard(ctx, 'EDITOR'), approvalGate(ctx, 'schedule')] };
 
   async function loadSchedule(orgId: string, scheduleId: string) {
     const row = await ctx.db
@@ -240,7 +243,7 @@ export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   /** Updates the schedule; `entries`, when present, replaces all entries atomically. */
-  app.patch('/api/v1/orgs/:orgId/schedules/:scheduleId', editor, async (request) => {
+  app.patch('/api/v1/orgs/:orgId/schedules/:scheduleId', gated, async (request) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { scheduleId } = parse(scheduleParams, request.params);
@@ -340,7 +343,7 @@ export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
     },
   );
 
-  app.delete('/api/v1/orgs/:orgId/schedules/:scheduleId', editor, async (request, reply) => {
+  app.delete('/api/v1/orgs/:orgId/schedules/:scheduleId', gated, async (request, reply) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { scheduleId } = parse(scheduleParams, request.params);

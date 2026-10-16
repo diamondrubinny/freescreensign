@@ -66,6 +66,7 @@ export interface OrganizationsTable {
   id: Generated<string>;
   name: string;
   require_admin_mfa: Generated<boolean>;
+  require_approval: Generated<boolean>;
   offline_alerts: Generated<boolean>;
   offline_alert_minutes: Generated<number>;
   created_at: Generated<Date>;
@@ -258,6 +259,31 @@ export interface ScreenScreenshotsTable {
   taken_at: Generated<Date>;
 }
 
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+
+export interface ApprovalSummary {
+  kind: string;
+  /** The name of the item when requested. */
+  name: string | null;
+  action: 'update' | 'items' | 'delete';
+}
+
+export interface ApprovalRequestsTable {
+  id: Generated<string>;
+  org_id: string;
+  method: 'PUT' | 'PATCH' | 'DELETE';
+  path: string;
+  /** The request body (JSON), or null for DELETE. */
+  body: ColumnType<unknown, string | null, string | null>;
+  summary: ColumnType<ApprovalSummary, string, string>;
+  status: Generated<ApprovalStatus>;
+  requested_by: string | null;
+  requested_at: Generated<Date>;
+  decided_by: string | null;
+  decided_at: Date | null;
+  note: string | null;
+}
+
 export interface UserIdentitiesTable {
   id: Generated<string>;
   user_id: string;
@@ -330,6 +356,7 @@ export interface Database {
   screen_screenshots: ScreenScreenshotsTable;
   alerts: AlertsTable;
   user_identities: UserIdentitiesTable;
+  approval_requests: ApprovalRequestsTable;
 }
 
 export type User = Selectable<UsersTable>;

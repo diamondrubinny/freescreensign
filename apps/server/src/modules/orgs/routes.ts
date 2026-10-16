@@ -66,6 +66,7 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
         id: org.id,
         name: org.name,
         requireAdminMfa: org.require_admin_mfa,
+        requireApproval: org.require_approval,
         offlineAlerts: org.offline_alerts,
         offlineAlertMinutes: org.offline_alert_minutes,
         role: 'OWNER',
@@ -83,6 +84,7 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
         .object({
           name: nameSchema.optional(),
           requireAdminMfa: z.boolean().optional(),
+          requireApproval: z.boolean().optional(),
           offlineAlerts: z.boolean().optional(),
           offlineAlertMinutes: z.number().int().min(5).max(1440).optional(),
         })
@@ -97,6 +99,7 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.requireAdminMfa !== undefined ? { require_admin_mfa: body.requireAdminMfa } : {}),
+        ...(body.requireApproval !== undefined ? { require_approval: body.requireApproval } : {}),
         ...(body.offlineAlerts !== undefined ? { offline_alerts: body.offlineAlerts } : {}),
         ...(body.offlineAlertMinutes !== undefined
           ? { offline_alert_minutes: body.offlineAlertMinutes }
@@ -117,6 +120,7 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
         id: updated.id,
         name: updated.name,
         requireAdminMfa: updated.require_admin_mfa,
+        requireApproval: updated.require_approval,
         offlineAlerts: updated.offline_alerts,
         offlineAlertMinutes: updated.offline_alert_minutes,
         role: org.role,

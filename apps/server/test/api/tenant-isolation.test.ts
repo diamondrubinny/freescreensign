@@ -93,6 +93,19 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
       { style: 'notice', title: 'A notice', durationMinutes: 60 },
       'alert',
     );
+    ids.approvalId = (
+      await h.db
+        .insertInto('approval_requests')
+        .values({
+          org_id: orgA,
+          method: 'PATCH',
+          path: `/api/v1/orgs/${orgA}/playlists/${ids.playlistId}`,
+          body: JSON.stringify({ name: 'held' }),
+          summary: JSON.stringify({ kind: 'playlist', name: 'A playlist', action: 'update' }),
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow()
+    ).id;
     ids.invitationId = await created(
       '/invitations',
       { email: 'new@example.com', role: 'VIEWER' },
@@ -206,5 +219,11 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
       .where('id', '=', ids.alertId!)
       .executeTakeFirstOrThrow();
     expect(alert.ended_at).toBeNull();
+    const approval = await h.db
+      .selectFrom('approval_requests')
+      .select('status')
+      .where('id', '=', ids.approvalId!)
+      .executeTakeFirstOrThrow();
+    expect(approval.status).toBe('pending');
   });
 });

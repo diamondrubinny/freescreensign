@@ -4,13 +4,24 @@ import type { ApiErrorCode, ApiFieldError } from '@rubinny/shared';
 export class ApiError extends Error {
   constructor(
     readonly status: number,
-    readonly code: ApiErrorCode | 'NETWORK',
+    readonly code: ApiErrorCode | 'NETWORK' | 'APPROVAL_PENDING',
     message: string,
     readonly fields: ApiFieldError[] = [],
     readonly requestId?: string,
   ) {
     super(message);
     this.name = 'ApiError';
+  }
+}
+
+/**
+ * Not a failure: the change was checked and now waits for an admin's approval (HTTP 202).
+ * Thrown so that forms keep their state and show the message instead of moving on.
+ */
+export class ApprovalPendingError extends ApiError {
+  constructor(readonly approval: { id: string }) {
+    super(202, 'APPROVAL_PENDING', 'Waiting for approval');
+    this.name = 'ApprovalPendingError';
   }
 }
 
@@ -42,6 +53,9 @@ export async function api<T>(method: Method, path: string, body?: unknown): Prom
 
   if (response.status === 204) return undefined as T;
   const data: unknown = await response.json().catch(() => null);
+  if (response.status === 202 && data && typeof data === 'object' && 'approval' in data) {
+    throw new ApprovalPendingError((data as { approval: { id: string } }).approval);
+  }
   if (!response.ok) {
     const error = (data as ErrorBody | null)?.error;
     throw new ApiError(
