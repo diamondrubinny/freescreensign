@@ -16,7 +16,7 @@ export interface LegalDoc {
 
 type Docs = Record<'accessibility' | 'privacy' | 'cookies' | 'terms', LegalDoc>;
 
-const UPDATED = '2026-10-15';
+const UPDATED = '2026-10-16';
 
 export const LEGAL: Record<'he' | 'en', Docs> = {
   he: {
@@ -46,14 +46,17 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'ניגודיות צבעים של 4.5:1 לפחות. המידע לא מועבר באמצעות צבע בלבד.',
             'תמיכה בהגדלת טקסט עד 200% ובהעדפת הפחתת תנועה של מערכת ההפעלה.',
             'תפריט התאמות נגישות: גודל טקסט, ניגודיות גבוהה, הדגשת קישורים, גופן קריא ועצירת אנימציות.',
-            'בדיקות אוטומטיות (axe-core) על כל העמודים במסגרת תהליך הפיתוח.',
+            'בדיקות אוטומטיות (axe-core) על כל העמודים, במצב בהיר ובמצב כהה, במסגרת תהליך הפיתוח.',
+            'בדיקות אוטומטיות של שימוש במקלדת בלבד (התחברות, כולל אימות דו-שלבי, ומעבר בין כל העמודים הראשיים), של הצגה ברוחב 320 פיקסלים (שקולה להגדלה של 400%) ללא גלילה אופקית, ושל עצירת תנועה כשמערכת ההפעלה מבקשת הפחתת תנועה.',
           ],
         },
         {
           heading: 'מגבלות ידועות',
           paragraphs: [
             'תוכן שמועלה על ידי משתמשים (תמונות, סרטונים וקבצים) עשוי שלא לכלול חלופות טקסט. האחריות לכך היא של מעלה התוכן.',
-            'רכיבי עריכה גרפיים שיתווספו בעתיד ייבדקו בנפרד.',
+            'עורך העיצוב החופשי ותצוגת לוח הזמנים נבדקו בכלים אוטומטיים ובמקלדת, אך טרם נבדקו בעבודה מלאה עם קוראי מסך.',
+            'התוכן שמוצג על המסכים עצמם (שילוט) מעוצב על ידי המפעיל, והנגישות שלו באחריותו.',
+            'ההצהרה מבוססת על בדיקות אוטומטיות ועל בדיקה עצמית. טרם בוצעה בדיקה של מורשה/ית נגישות.',
           ],
         },
         {
@@ -84,6 +87,8 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'תוכן שאתם מעלים להצגה על מסכים. המטרה: אספקת השירות.',
             'נתוני תפעול של מסכים: זמני חיבור, מה הוצג ומתי (Proof-of-Play), וסטיית שעון המכשיר. המטרה: ניטור, דוחות הצגה והתראות. אין בהם מידע על צופים. הבסיס: אינטרס לגיטימי.',
             'התראות ניתוק (אם הופעלו): בעלי הארגון והמנהלים מקבלים מייל עם שם המסך והזמן. הבסיס: אינטרס לגיטימי.',
+            'צילומי מסך מרחוק: כשעורך/ת מבקש/ת צילום של מסך (רק במסכים שמריצים אפליקציית Rubinny למחשב או ל-Android), נשמרת תמונה של מה שהמסך מציג באותו רגע: התמונה האחרונה בלבד לכל מסך, ללא מטא-דאטה. היא עשויה לכלול כל תוכן שמוצג על המסך. המטרה: תמיכה ובקרה. הבסיס: אינטרס לגיטימי.',
+            'מכשירי מסך: מפתח מכשיר אקראי (נשמר בשרת כ-hash בלבד), סוג הנגן וגרסתו, ורזולוציית המסך. אפליקציות המסך שומרות את כתובת השרת ואת מפתח המכשיר על המכשיר עצמו בלבד. באפליקציית Android הם אינם נכללים בגיבויים ובהעברה בין מכשירים.',
           ],
         },
         {
@@ -93,6 +98,8 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'חיבורים פגי תוקף וקישורים חד-פעמיים נמחקים אוטומטית.',
             'יומן הפעולות נשמר 365 ימים כברירת מחדל.',
             'נתוני זמינות של מסכים נשמרים 90 יום, ודוחות ההצגה 90 יום כברירת מחדל (ניתן להגדרה).',
+            'צילום מסך מרחוק נשמר עד 7 ימים, ורק האחרון לכל מסך.',
+            'גיבויים: המפעיל קובע אם לגבות, היכן ולכמה זמן. כלי הגיבוי של Rubinny מצפין את הגיבוי במפתח של המפעיל. [מדיניות הגיבוי של המפעיל — תמולא על ידי המפעיל]',
           ],
         },
         {
@@ -101,6 +108,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'Rubinny אינה כוללת כלי מדידה, פרסום או מעקב. מיילים נשלחים דרך שרת הדואר שהגדיר המפעיל, אם הוגדר. [רשימת ספקי המפעיל, למשל אחסון ודואר — תמולא על ידי המפעיל]',
             'Widgets: פידי RSS מורדים על ידי השרת, כך שאתר הפיד רואה את כתובת השרת בלבד. אם המפעיל הפעיל מזג אוויר, השרת שולח לשירות מזג האוויר (Open-Meteo או שירות שהגדיר המפעיל) רק את קווי הרוחב והאורך שהוזנו ב-Widget. Widget "דף אינטרנט" נטען ישירות במסך, ולכן האתר המוצג מקבל את כתובת ה-IP של המסך וכפוף למדיניות הפרטיות שלו.',
             'מאגר תמונות חופשי: מילות החיפוש נשלחות מהשרת ל-Openverse (או לשירות שהגדיר המפעיל) כדי למצוא תמונות. הדפדפן שלכם אינו פונה אליו, ולא נשלח מידע מזהה עליכם.',
+            'אפליקציות המסך: הן פונות רק לשרת של המפעיל. רכיבי הדפדפן של המכשיר עשויים לפנות לשירותים של יצרן המכשיר או של Google לפי הגדרות ברירת המחדל שלהם (למשל Safe Browsing ב-WebView של Android, או עדכוני רכיבים ב-Chromium ב-Raspberry Pi). [דורש אימות מול התיעוד הרשמי של כל פלטפורמה]',
           ],
         },
         {
@@ -195,14 +203,17 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'Colour contrast of at least 4.5:1. Information is never conveyed by colour alone.',
             'Text resizing up to 200%, and support for the reduced-motion system preference.',
             'Accessibility options menu: text size, high contrast, link underlines, readable font and stopping animations.',
-            'Automated checks (axe-core) on every page as part of development.',
+            'Automated checks (axe-core) on every page, in light and dark mode, as part of development.',
+            'Automated tests of keyboard-only use (sign-in including two-factor, and moving between all main pages), of display at 320 CSS pixels wide (equivalent to 400% zoom) without horizontal scrolling, and of stopping motion when the operating system asks for reduced motion.',
           ],
         },
         {
           heading: 'Known limitations',
           paragraphs: [
             'User-uploaded content (images, videos, files) may lack text alternatives; the uploader is responsible for it.',
-            'Graphical editors added in future versions will be tested separately.',
+            'The free-form designer and the schedule timeline were tested with automated tools and the keyboard, but not yet in full use with screen readers.',
+            'The content shown on the screens themselves (signage) is designed by the operator, who is responsible for its accessibility.',
+            'This statement is based on automated tests and self-assessment. It has not yet been reviewed by a certified accessibility auditor.',
           ],
         },
         {
@@ -233,6 +244,8 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'Content you upload for display on screens. Purpose: providing the service.',
             'Screen operations data: connection times, what was shown and when (proof of play), and the device clock offset. Purpose: monitoring, play reports and alerts. It contains no data about viewers. Legal basis: legitimate interest.',
             'Offline alerts (when enabled): owners and admins receive an email with the screen name and time. Legal basis: legitimate interest.',
+            'Remote screenshots: when an editor asks for a screenshot of a screen (only screens running the Rubinny desktop or Android app), an image of what the screen shows at that moment is stored: only the latest one per screen, without metadata. It may include anything shown on the screen. Purpose: support and oversight. Legal basis: legitimate interest.',
+            'Screen devices: a random device key (stored on the server only as a hash), the player type and version, and the screen resolution. The screen apps keep the server address and the device key on the device itself only; on Android they are excluded from backups and device transfers.',
           ],
         },
         {
@@ -242,6 +255,8 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'Expired sessions and one-time links are deleted automatically.',
             'The audit log is kept for 365 days by default.',
             'Screen uptime data is kept for 90 days, and play reports for 90 days by default (configurable).',
+            'A remote screenshot is kept for up to 7 days, and only the latest one per screen.',
+            "Backups: the operator decides whether, where and for how long to back up. Rubinny's backup tool encrypts backups with the operator's key. [Operator's backup policy — to be completed by the operator]",
           ],
         },
         {
@@ -250,6 +265,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             "Rubinny contains no analytics, advertising or tracking tools. Emails are sent through the operator's mail server, if one is configured. [Operator's processors, e.g. hosting and email — to be completed by the operator]",
             'Widgets: RSS feeds are downloaded by the server, so the feed site only sees the server\'s address. If the operator enabled weather, the server sends the weather service (Open-Meteo or one the operator configured) only the latitude and longitude entered in the widget. A "web page" widget is loaded directly on the screen, so the displayed site receives the screen\'s IP address and is subject to its own privacy policy.',
             'Free image library: search words are sent from the server to Openverse (or a service the operator configured) to find images. Your browser does not contact it, and no identifying information about you is sent.',
+            "Screen apps: they contact only the operator's server. The device's browser components may contact services of the device maker or Google according to their defaults (for example Safe Browsing in Android's WebView, or component updates in Chromium on Raspberry Pi). [Requires verification against each platform's official documentation]",
           ],
         },
         {

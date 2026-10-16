@@ -110,8 +110,10 @@
 
 /* ---- Data tables ------------------------------------------------------------ */
 @layer components {
+  /* relative: screen-reader-only text inside the table (absolutely positioned) stays inside
+     this scroll container, so a wide table never widens the page (reflow, WCAG 1.4.10). */
   .table-wrap {
-    @apply overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900;
+    @apply relative overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900;
   }
   .data-table {
     @apply w-full border-collapse text-start;

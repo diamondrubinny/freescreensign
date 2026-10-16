@@ -22,6 +22,7 @@ import { PageHeading } from '../components/PageHeading';
 import { StatusPill, linkClass } from '../components/ui';
 import { formatDateTime } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
+import { TableRegion } from '../components/TableRegion';
 
 const ORIENTATIONS: Orientation[] = [
   'landscape',
@@ -203,116 +204,118 @@ export function ScreensPage() {
       {screens.isPending && <Loading />}
       {screens.data?.screens.length === 0 && <p>{t('screens.empty')}</p>}
       {screens.data && screens.data.screens.length > 0 && (
-        <div className="table-wrap">
-          <table className="data-table">
-            <caption className="sr-only">{t('screens.title')}</caption>
-            <thead>
-              <tr>
-                <th scope="col" className="text-start">
-                  {t('fields.name')}
-                </th>
-                <th scope="col" className="text-start">
-                  {t('screens.status')}
-                </th>
-                <th scope="col" className="text-start">
-                  {t('screens.content')}
-                </th>
-                <th scope="col" className="text-start">
-                  {t('screens.resolution')}
-                </th>
-                {canEdit && (
+        <>
+          <TableRegion label={t('screens.title')}>
+            <table className="data-table">
+              <caption className="sr-only">{t('screens.title')}</caption>
+              <thead>
+                <tr>
                   <th scope="col" className="text-start">
-                    {t('members.actions')}
+                    {t('fields.name')}
                   </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {screens.data.screens.map((screen) => (
-                <tr key={screen.id}>
-                  <th scope="row" className="text-start font-semibold" dir="auto">
-                    <Link to={`/orgs/${orgId}/screens/${screen.id}`} className={linkClass}>
-                      {screen.name}
-                    </Link>
-                    {screen.clockOffsetMs !== null &&
-                      Math.abs(screen.clockOffsetMs) > CLOCK_WARNING_MS && (
-                        <span className="mt-1 block">
-                          <StatusPill tone="amber">{t('screens.clockWarning')}</StatusPill>
+                  <th scope="col" className="text-start">
+                    {t('screens.status')}
+                  </th>
+                  <th scope="col" className="text-start">
+                    {t('screens.content')}
+                  </th>
+                  <th scope="col" className="text-start">
+                    {t('screens.resolution')}
+                  </th>
+                  {canEdit && (
+                    <th scope="col" className="text-start">
+                      {t('members.actions')}
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {screens.data.screens.map((screen) => (
+                  <tr key={screen.id}>
+                    <th scope="row" className="text-start font-semibold" dir="auto">
+                      <Link to={`/orgs/${orgId}/screens/${screen.id}`} className={linkClass}>
+                        {screen.name}
+                      </Link>
+                      {screen.clockOffsetMs !== null &&
+                        Math.abs(screen.clockOffsetMs) > CLOCK_WARNING_MS && (
+                          <span className="mt-1 block">
+                            <StatusPill tone="amber">{t('screens.clockWarning')}</StatusPill>
+                          </span>
+                        )}
+                    </th>
+                    <td>
+                      <StatusPill tone={screen.online ? 'green' : 'gray'}>
+                        {screen.online ? t('screens.online') : t('screens.offline')}
+                      </StatusPill>
+                      {!screen.online && (
+                        <span className="block text-sm text-gray-700 dark:text-gray-300">
+                          {screen.lastSeenAt
+                            ? t('screens.lastSeen', {
+                                when: formatDateTime(screen.lastSeenAt, i18n.language),
+                              })
+                            : t('screens.neverSeen')}
                         </span>
                       )}
-                  </th>
-                  <td>
-                    <StatusPill tone={screen.online ? 'green' : 'gray'}>
-                      {screen.online ? t('screens.online') : t('screens.offline')}
-                    </StatusPill>
-                    {!screen.online && (
-                      <span className="block text-sm text-gray-700 dark:text-gray-300">
-                        {screen.lastSeenAt
-                          ? t('screens.lastSeen', {
-                              when: formatDateTime(screen.lastSeenAt, i18n.language),
-                            })
-                          : t('screens.neverSeen')}
-                      </span>
-                    )}
-                  </td>
-                  <td dir="auto">
-                    {screen.layoutName
-                      ? t('screens.layoutContent', { name: screen.layoutName })
-                      : (screen.playlistName ?? t('screens.noPlaylist'))}
-                    {screen.scheduleName && (
-                      <span className="block text-sm text-gray-700 dark:text-gray-300">
-                        {t('screens.scheduleContent', { name: screen.scheduleName })}
-                      </span>
-                    )}
-                  </td>
-                  <td dir="ltr">{screen.resolution ?? '—'}</td>
-                  {canEdit && (
-                    <td>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            update.reset();
-                            setEditing(screen);
-                          }}
-                        >
-                          {t('screens.edit')}
-                          <span className="sr-only">{` ${screen.name}`}</span>
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          loading={reload.isPending && reload.variables === screen.id}
-                          onClick={() => {
-                            reload.mutate(screen.id);
-                          }}
-                        >
-                          {t('screens.reload')}
-                          <span className="sr-only">{` ${screen.name}`}</span>
-                        </Button>
-                        {canRemove && (
+                    </td>
+                    <td dir="auto">
+                      {screen.layoutName
+                        ? t('screens.layoutContent', { name: screen.layoutName })
+                        : (screen.playlistName ?? t('screens.noPlaylist'))}
+                      {screen.scheduleName && (
+                        <span className="block text-sm text-gray-700 dark:text-gray-300">
+                          {t('screens.scheduleContent', { name: screen.scheduleName })}
+                        </span>
+                      )}
+                    </td>
+                    <td dir="ltr">{screen.resolution ?? '—'}</td>
+                    {canEdit && (
+                      <td>
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             variant="secondary"
                             onClick={() => {
-                              setRemoving(screen);
+                              update.reset();
+                              setEditing(screen);
                             }}
                           >
-                            {t('screens.remove')}
+                            {t('screens.edit')}
                             <span className="sr-only">{` ${screen.name}`}</span>
                           </Button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                          <Button
+                            variant="secondary"
+                            loading={reload.isPending && reload.variables === screen.id}
+                            onClick={() => {
+                              reload.mutate(screen.id);
+                            }}
+                          >
+                            {t('screens.reload')}
+                            <span className="sr-only">{` ${screen.name}`}</span>
+                          </Button>
+                          {canRemove && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => {
+                                setRemoving(screen);
+                              }}
+                            >
+                              {t('screens.remove')}
+                              <span className="sr-only">{` ${screen.name}`}</span>
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableRegion>
           {reload.isSuccess && (
             <div className="mt-3">
               <Alert variant="success">{t('screens.reloadSent')}</Alert>
             </div>
           )}
-        </div>
+        </>
       )}
 
       <Dialog

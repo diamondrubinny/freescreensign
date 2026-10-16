@@ -203,7 +203,8 @@ export function AppShell({ session }: { session: SessionInfo }) {
             <NavItem to="/account" icon={UserRound} label={t('nav.account')} />
           </NavGroup>
         </nav>
-        <main id="main" className="min-w-0 flex-1">
+        {/* tabIndex -1: the skip link moves the keyboard focus here, not only the scroll. */}
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 focus:outline-none">
           <Outlet />
         </main>
       </div>

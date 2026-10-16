@@ -14,7 +14,7 @@ services:
     build:
       context: ..
       dockerfile: apps/cms/Dockerfile
-    image: rubinny/web:local
+    image: ${RUBINNY_IMAGES:-rubinny}/web:${RUBINNY_VERSION:-local}
     ports:
       - '80:80'
       - '443:443'
@@ -37,7 +37,7 @@ services:
     build:
       context: ..
       dockerfile: apps/server/Dockerfile
-    image: rubinny/server:local
+    image: ${RUBINNY_IMAGES:-rubinny}/server:${RUBINNY_VERSION:-local}
     environment:
       NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -94,7 +94,7 @@ services:
       context: ..
       dockerfile: apps/server/Dockerfile
       target: worker
-    image: rubinny/worker:local
+    image: ${RUBINNY_IMAGES:-rubinny}/worker:${RUBINNY_VERSION:-local}
     environment:
       NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}

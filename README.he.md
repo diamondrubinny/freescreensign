@@ -127,7 +127,12 @@ curl -k https://localhost/health  # {"status":"ok"}
 
 פיצ'רים אופציונליים, כמו מזג אוויר ומאגר התמונות, מתוארים ב-[`deploy/.env.example`](deploy/.env.example).
 
-**שדרוג התקנה קיימת** (כולל המעבר ל-PostgreSQL 18): ראו [docs/UPGRADING.md](docs/UPGRADING.md).
+**הפעלה בפרודקשן:**
+
+- [צ'קליסט לפני פרודקשן](docs/PRODUCTION-CHECKLIST.md): מה נבדק אוטומטית, מה על המפעיל לעשות, ומה דורש בדיקה מקצועית.
+- [תפעול](docs/OPERATIONS.md): גיבויים מוצפנים ושחזור שנבדק, בריאות המערכת, לוגים והתראות.
+- [שדרוג](docs/UPGRADING.md): כולל המעבר ל-PostgreSQL 18 ואימות החתימה של images.
+- [CHANGELOG](CHANGELOG.md): מה השתנה בכל גרסה.
 
 ## מסמכים
 
@@ -137,10 +142,15 @@ curl -k https://localhost/health  # {"status":"ok"}
 - [שלב 3 — מדיה](docs/phases/03-media.md)
 - [שלב 4 — נגן](docs/phases/04-player.md)
 - [שלב 5 — תבניות ו-Widgets](docs/phases/05-content.md) · [עיצוב ופיצ'רים](docs/phases/05b-design.md) · [עורך חופשי ומאגר תמונות](docs/phases/05c-designer.md)
-- [שלב 6 — תזמון](docs/phases/06-scheduling.md) · [שלב 7 — תפעול](docs/phases/07-ops.md) · [שלב 8 — נגנים לכל מכשיר](docs/phases/08-wrappers.md) · [התקנת נגנים](docs/players.he.md) · [שדרוג התקנה קיימת](docs/UPGRADING.md)
+- [שלב 6 — תזמון](docs/phases/06-scheduling.md) · [שלב 7 — תפעול](docs/phases/07-ops.md) · [שלב 8 — נגנים לכל מכשיר](docs/phases/08-wrappers.md) · [שלב 9 — הקשחה ושחרור](docs/phases/09-release.md) · [התקנת נגנים](docs/players.he.md) · [שדרוג התקנה קיימת](docs/UPGRADING.md)
 - [תרומה לפרויקט](CONTRIBUTING.md) · [אבטחה](SECURITY.md) · [רישוי](LICENSING.md)
 
-**הבא בתור:** הקשחה ושחרור ראשון: בדיקת חדירות פנימית, בדיקות נגישות ידניות, צ'קליסט פרודקשן ו-v0.1.0.
+**עכשיו:** שלב 9, הקשחה ושחרור ראשון (v0.1.0). כבר קיימים:
+
+- **סריקות:** סודות, תלויות ו-images; SBOM; סריקה דינמית.
+- **שרשרת אספקה:** images חתומים.
+- **תפעול:** גיבויים.
+- **בדיקות:** בידוד בין ארגונים ונגישות.
 
 ## רישיון
 

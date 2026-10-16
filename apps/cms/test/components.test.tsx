@@ -7,6 +7,7 @@ import { Button } from '../src/components/Button';
 import { Field } from '../src/components/Field';
 import { LanguageSwitcher } from '../src/components/LanguageSwitcher';
 import { AccessibilityMenu } from '../src/components/AccessibilityMenu';
+import { TableRegion } from '../src/components/TableRegion';
 import { changeLocale } from '../src/i18n';
 
 describe('Field', () => {
@@ -69,5 +70,55 @@ describe('color transitions', () => {
     expect(screen.getByRole('button', { name: 'Save' }).className).not.toMatch(/transition/);
     const shell = readFileSync(resolve(process.cwd(), 'src/components/AppShell.tsx'), 'utf8');
     expect(shell).not.toMatch(/transition-(colors|all)/);
+  });
+});
+
+describe('skip link target', () => {
+  // The skip link (#main) must move the keyboard focus, not only scroll: every main
+  // landmark it targets is focusable by script (tabIndex -1).
+  it('is focusable in every layout', () => {
+    const files = [
+      'src/components/AppShell.tsx',
+      'src/components/PublicShell.tsx',
+      'src/pages/ErrorPage.tsx',
+    ];
+    for (const file of files) {
+      const source = readFileSync(resolve(process.cwd(), file), 'utf8');
+      const main = /<main[^>]*>/s.exec(source)?.[0] ?? '';
+      expect(main, file).toContain('id="main"');
+      expect(main, file).toContain('tabIndex={-1}');
+    }
+  });
+});
+
+describe('table container', () => {
+  // Screen-reader-only text in table cells is absolutely positioned; without a positioned
+  // scroll container it escapes it and widens the whole page on narrow screens (RTL).
+  it('contains its absolutely positioned content', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/styles/app.css'), 'utf8');
+    const rule = /\.table-wrap\s*\{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(rule).toMatch(/\brelative\b/);
+    expect(rule).toMatch(/\boverflow-x-auto\b/);
+  });
+});
+
+describe('TableRegion', () => {
+  it('is a named region that keyboard users can focus and scroll', async () => {
+    render(
+      <TableRegion label="Screens">
+        <table>
+          <tbody>
+            <tr>
+              <td>x</td>
+            </tr>
+          </tbody>
+        </table>
+      </TableRegion>,
+    );
+    const region = screen.getByRole('region', { name: 'Screens' });
+    expect(region).toHaveAttribute('tabindex', '0');
+    expect(region).toHaveClass('table-wrap');
+    await userEvent.tab();
+    expect(region).toHaveFocus();
   });
 });

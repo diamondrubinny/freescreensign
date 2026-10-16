@@ -27,7 +27,8 @@ export function PublicShell() {
         />
         <main
           id="main"
-          className="relative mx-auto my-8 w-[calc(100%-2rem)] max-w-3xl rounded-2xl border border-gray-200 bg-white px-5 py-8 shadow-sm sm:px-10 dark:border-gray-800 dark:bg-gray-900"
+          tabIndex={-1}
+          className="relative focus:outline-none mx-auto my-8 w-[calc(100%-2rem)] max-w-3xl rounded-2xl border border-gray-200 bg-white px-5 py-8 shadow-sm sm:px-10 dark:border-gray-800 dark:bg-gray-900"
         >
           <Outlet />
         </main>

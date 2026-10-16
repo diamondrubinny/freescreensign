@@ -109,8 +109,15 @@ Set `RUBINNY_DOMAIN` in `deploy/.env` to a real domain to get an automatic Let's
 certificate, and set `HSTS_MAX_AGE=31536000` in production. Optional features (weather, the
 free image library) are described in [`deploy/.env.example`](deploy/.env.example).
 
-**Upgrading an existing installation** (including the move to PostgreSQL 18): see
-[docs/UPGRADING.md](docs/UPGRADING.md).
+**Running it in production:**
+
+- [docs/PRODUCTION-CHECKLIST.md](docs/PRODUCTION-CHECKLIST.md): what is tested automatically,
+  what the operator must do, and what needs a professional review.
+- [docs/OPERATIONS.md](docs/OPERATIONS.md): encrypted backups and tested restores, health,
+  logs and alerts.
+- [docs/UPGRADING.md](docs/UPGRADING.md): upgrades, including the move to PostgreSQL 18, and
+  verifying signed release images.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 
 ## Repository layout
 
@@ -126,8 +133,9 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-Coming next: hardening and the first release (internal penetration test, manual accessibility
-testing, production checklist, v0.1.0). See the [roadmap](docs/PLAN.md).
+Now: phase 9, hardening and the first release (v0.1.0): secret, dependency and image scans,
+SBOMs, a dynamic scan, signed images, backups, tenant isolation checks and accessibility tests
+are in place ([plan and results](docs/phases/09-release.md)). See the [roadmap](docs/PLAN.md).
 
 ## Development
 

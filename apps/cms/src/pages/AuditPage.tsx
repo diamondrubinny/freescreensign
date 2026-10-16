@@ -9,6 +9,7 @@ import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
 import { formatDateTime } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
+import { TableRegion } from '../components/TableRegion';
 
 interface Page {
   events: AuditEvent[];
@@ -35,7 +36,7 @@ export function AuditPage() {
       {audit.isPending && <Loading />}
       {audit.isSuccess && events.length === 0 && <p>{t('audit.empty')}</p>}
       {events.length > 0 && (
-        <div className="table-wrap">
+        <TableRegion label={t('audit.title')}>
           <table className="data-table">
             <caption className="sr-only">{t('audit.title')}</caption>
             <thead>
@@ -65,7 +66,7 @@ export function AuditPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableRegion>
       )}
       {audit.hasNextPage && (
         <Button

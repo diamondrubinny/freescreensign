@@ -5,7 +5,7 @@ import { Button } from '../components/Button';
 export function ErrorPage() {
   const { t } = useTranslation();
   return (
-    <main id="main" className="mx-auto max-w-xl p-8">
+    <main id="main" tabIndex={-1} className="mx-auto max-w-xl p-8 focus:outline-none">
       <h1 className="mb-4 text-2xl font-bold">{t('errorPage.title')}</h1>
       <p className="mb-4">{t('errorPage.text')}</p>
       <Button

@@ -13,6 +13,7 @@ import { PageHeading } from '../components/PageHeading';
 import { Card, EmptyState, inputClass } from '../components/ui';
 import { formatDate } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
+import { TableRegion } from '../components/TableRegion';
 
 interface Filters {
   from: string;
@@ -195,7 +196,7 @@ export function ReportsPage() {
               text={t('reports.emptyText')}
             />
           ) : (
-            <div className="table-wrap">
+            <TableRegion label={t('reports.title')}>
               <table className="data-table">
                 <caption className="sr-only">{t('reports.title')}</caption>
                 <thead>
@@ -251,7 +252,7 @@ export function ReportsPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableRegion>
           )}
         </section>
       )}

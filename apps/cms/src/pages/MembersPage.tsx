@@ -15,6 +15,7 @@ import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
 import { formatDate } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
+import { TableRegion } from '../components/TableRegion';
 
 export function MembersPage() {
   const { t, i18n } = useTranslation();
@@ -88,7 +89,7 @@ export function MembersPage() {
       {actionErrors.form && <Alert variant="error">{actionErrors.form}</Alert>}
       {members.isPending && <Loading />}
       {members.data && (
-        <div className="table-wrap mb-10">
+        <TableRegion label={t('members.title')} className="mb-10">
           <table className="data-table">
             <caption className="sr-only">{t('members.title')}</caption>
             <thead>
@@ -172,7 +173,7 @@ export function MembersPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </TableRegion>
       )}
 
       <section aria-labelledby="invite-heading" className="mb-10 max-w-lg">

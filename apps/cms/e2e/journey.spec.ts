@@ -671,3 +671,141 @@ test('security headers are present on the CMS', async ({ request }) => {
   expect(res.headers()['x-content-type-options']).toBe('nosniff');
   expect(res.headers()['cache-control']).toBe('no-cache');
 });
+
+/** Main pages: navigation link and page heading (null: any level-1 heading). */
+const MAIN_PAGES: [string, string | null][] = [
+  ['לוח בקרה', 'לוח בקרה'],
+  ['מדיה', 'ספריית מדיה'],
+  ['פלייליסטים', 'פלייליסטים'],
+  ['Widgets', 'Widgets'],
+  ['תבניות תצוגה', 'תבניות תצוגה'],
+  ['תזמון', 'תזמון'],
+  ['מסכים', 'מסכים'],
+  ['דוחות', 'דוחות הצגה'],
+  ['חברים', 'חברי הארגון'],
+  ['הגדרות ארגון', null],
+  ['יומן פעולות', 'יומן פעולות'],
+  ['החשבון שלי', 'החשבון שלי'],
+];
+
+/** Presses Tab (or Shift+Tab) until `target` has the focus (fails after `max` presses). */
+async function tabTo(
+  page: Page,
+  target: ReturnType<Page['locator']>,
+  key: 'Tab' | 'Shift+Tab' = 'Tab',
+  max = 80,
+) {
+  for (let i = 0; i < max; i++) {
+    await page.keyboard.press(key);
+    if (await target.evaluate((el) => el === document.activeElement).catch(() => false)) return;
+  }
+  throw new Error(`Tab never reached ${target.toString()}`);
+}
+
+/** The focused element shows a clear indicator (WCAG 2.4.7). */
+async function expectVisibleFocus(page: Page) {
+  const style = await page.evaluate(() => {
+    const el = document.activeElement;
+    if (!el) return null;
+    const css = getComputedStyle(el);
+    return {
+      outline: css.outlineStyle,
+      width: parseFloat(css.outlineWidth),
+      shadow: css.boxShadow,
+    };
+  });
+  expect(style).not.toBeNull();
+  const outlined = style!.outline !== 'none' && style!.width >= 2;
+  expect(outlined || style!.shadow !== 'none', JSON.stringify(style)).toBe(true);
+}
+
+/** Opens a main page from the navigation and waits for its heading. */
+async function openMain(page: Page, link: string, heading: string | null) {
+  await mainNav(page).getByRole('link', { name: link, exact: true }).click();
+  await expect(
+    heading
+      ? page.getByRole('heading', { level: 1, name: heading, exact: true })
+      : page.getByRole('heading', { level: 1 }),
+  ).toBeVisible();
+}
+
+// One sign-in for all the accessibility checks: repeated two-factor sign-ins would (rightly)
+// hit the brute-force protection.
+test('accessibility: keyboard only, reflow at 320 px, dark mode, reduced motion', async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+
+  await test.step('keyboard only: sign in with two-factor', async () => {
+    await page.goto('/login');
+    await tabTo(page, page.getByLabel('אימייל'));
+    await expectVisibleFocus(page);
+    await page.keyboard.type(ADMIN.email);
+    await tabTo(page, page.getByLabel('סיסמה', { exact: false }));
+    await page.keyboard.type(ADMIN.password);
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { level: 1, name: 'אימות דו-שלבי' })).toBeVisible();
+    await tabTo(page, page.getByLabel(/קוד אימות/));
+    await page.keyboard.type(await nextCode());
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { level: 1, name: 'לוח בקרה' })).toBeVisible();
+  });
+
+  await test.step('keyboard only: skip link and every main page', async () => {
+    // After a page change the focus is on the main heading (announced by screen readers).
+    await expect(page.getByRole('heading', { level: 1, name: 'לוח בקרה' })).toBeFocused();
+    // The skip link is reachable and moves the focus into the main content.
+    const skip = page.getByRole('link', { name: 'דלג לתוכן הראשי' });
+    await tabTo(page, skip, 'Shift+Tab');
+    await expectVisibleFocus(page);
+    await page.keyboard.press('Enter');
+    expect(await page.evaluate(() => Boolean(document.activeElement?.closest('#main')))).toBe(true);
+    for (const [link, heading] of MAIN_PAGES) {
+      // From the page content, the navigation is behind (it comes first in the page).
+      const target = mainNav(page).getByRole('link', { name: link, exact: true });
+      await tabTo(page, target, 'Shift+Tab');
+      await expectVisibleFocus(page);
+      await page.keyboard.press('Enter');
+      await expect(
+        heading
+          ? page.getByRole('heading', { level: 1, name: heading, exact: true })
+          : page.getByRole('heading', { level: 1 }),
+      ).toBeVisible();
+    }
+  });
+
+  await test.step('dark mode: axe on every main page; reduced motion stops transitions', async () => {
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+    for (const [link, heading] of MAIN_PAGES) {
+      await openMain(page, link, heading);
+      await expectAccessible(page, `${link} (dark)`);
+    }
+    const moving = await page.evaluate(
+      () =>
+        [...document.querySelectorAll('*')].filter((el) => {
+          const css = getComputedStyle(el);
+          const longest = (value: string) =>
+            Math.max(
+              ...value.split(',').map((v) => parseFloat(v) * (v.trim().endsWith('ms') ? 1 : 1000)),
+            );
+          return longest(css.transitionDuration) > 10 || longest(css.animationDuration) > 10;
+        }).length,
+    );
+    expect(moving, 'elements still animating with reduced motion').toBe(0);
+    await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'no-preference' });
+  });
+
+  await test.step('reflow at 320 CSS pixels (400% zoom): no page-level horizontal scrolling', async () => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    for (const [link, heading] of MAIN_PAGES) {
+      // At this width the navigation is behind the menu button.
+      await page.getByRole('button', { name: 'תפריט', exact: true }).click();
+      await openMain(page, link, heading);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      );
+      expect(overflow, `horizontal overflow on ${link}`).toBeLessThanOrEqual(1);
+      await expectAccessible(page, `${link} at 320px`);
+    }
+  });
+});

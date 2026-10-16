@@ -2,6 +2,34 @@
 
 [עברית למטה](#עברית)
 
+## Every upgrade
+
+1. **Back up first:** `./backup.sh --age-recipient <your key>` (see [OPERATIONS.md](OPERATIONS.md)).
+2. **Read the release notes** in [CHANGELOG.md](../CHANGELOG.md) for steps specific to the version.
+3. **Upgrade:**
+   - **Building from source** (the default): update the code (`git pull` or the new release),
+     then `docker compose up -d --build`.
+   - **Running published images:** set `RUBINNY_VERSION` in `.env` to the new version, verify
+     the signatures (below), then `docker compose pull && docker compose up -d`.
+
+Database migrations run automatically when the server starts.
+
+### Verifying published images
+
+Release images on GHCR are signed keylessly with [Sigstore cosign](https://docs.sigstore.dev)
+by the release workflow of this repository. To verify them before running:
+
+```bash
+for image in server worker web; do
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.1.0" \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+    --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@refs/tags/v'
+done
+```
+
+A successful check prints the verified signature. If it fails, do not run the image. Each
+release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
+
 ## PostgreSQL 17 → 18 (Docker Compose deployments)
 
 The Compose stack now uses `postgres:18-alpine` and mounts the database volume at
