@@ -4,6 +4,13 @@ All notable changes to Rubinny. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) (0.x: anything may still change).
 
+## [Unreleased]
+
+### Added
+
+- Credit: "Created by Diamond Rubinny" in the dashboard footer, README, NOTICE, a new
+  AUTHORS.md, and the desktop app's author and package maintainer.
+
 ## [0.1.0] - 2026-10-16
 
 The first release: a complete, self-hosted digital signage system. Not yet reviewed by an
