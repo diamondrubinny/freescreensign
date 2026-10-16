@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   parseWidgetConfig,
   type RssData,
+  type TableData,
   type WeatherData,
   type WidgetConfig,
 } from '@rubinny/shared';
@@ -10,20 +11,27 @@ import { HttpError } from '../../lib/http-error.js';
 import { LIMITS } from '../../lib/limiter.js';
 import { safeFetch } from '../../lib/safe-fetch.js';
 import { parseFeed } from './rss.js';
+import { parseTable, tableSourceUrl } from './table.js';
 import { parseWeather, weatherRequestUrl } from './weather.js';
 
-/** How long fetched data counts as fresh, per widget type. */
-const FRESH_SECONDS = { rss: 10 * 60, weather: 15 * 60 } as const;
+/** How long fetched data counts as fresh, per widget type (tables: their own setting). */
+const FRESH_SECONDS = { rss: 10 * 60, weather: 15 * 60, table: 5 * 60 } as const;
 /** Stale copies are kept this long and served when the source is down. */
 const STALE_SECONDS = 24 * 60 * 60;
 /** After a failure, the source is not retried for this long (protects both sides). */
 const FAILURE_BACKOFF_SECONDS = 60;
 
 export type DataWidgetType = keyof typeof FRESH_SECONDS;
+type WidgetData = RssData | WeatherData | TableData;
+
+function freshSeconds(type: DataWidgetType, config: Record<string, unknown>): number {
+  if (type === 'table') return (config as WidgetConfig<'table'>).refreshMinutes * 60;
+  return FRESH_SECONDS[type];
+}
 
 export interface WidgetDataResult {
   type: DataWidgetType;
-  data: RssData | WeatherData;
+  data: WidgetData;
   fetchedAt: string;
   /** True when the source failed and an older copy is served. */
   stale: boolean;
@@ -31,7 +39,7 @@ export interface WidgetDataResult {
 
 interface CachedEntry {
   fetchedAt: string;
-  data: RssData | WeatherData;
+  data: WidgetData;
 }
 
 export function isDataWidgetType(type: string): type is DataWidgetType {
@@ -54,7 +62,7 @@ async function fetchFresh(
   ctx: AppContext,
   type: DataWidgetType,
   config: Record<string, unknown>,
-): Promise<RssData | WeatherData> {
+): Promise<WidgetData> {
   if (type === 'rss') {
     const rss = config as WidgetConfig<'rss'>;
     const response = await safeFetch(rss.url, {
@@ -62,6 +70,19 @@ async function fetchFresh(
       accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8',
     });
     return parseFeed(response.body.toString('utf8'), rss.maxItems);
+  }
+  if (type === 'table') {
+    const table = config as WidgetConfig<'table'>;
+    const response = await safeFetch(tableSourceUrl(table.url, table.source), {
+      allowPrivate: ctx.env.WIDGET_FETCH_ALLOW_PRIVATE,
+      accept:
+        table.source === 'json'
+          ? 'application/json'
+          : 'text/csv, text/plain;q=0.9, application/octet-stream;q=0.5',
+      // Google Sheets answers its export link with a few redirects.
+      maxRedirects: 5,
+    });
+    return parseTable(response.body.toString('utf8'), table);
   }
   const endpoint = ctx.env.WEATHER_API_URL;
   if (!endpoint) throw new HttpError(404, 'NOT_FOUND', 'Weather is not configured');
@@ -79,12 +100,16 @@ function sourceOf(type: DataWidgetType, config: Record<string, unknown>) {
     const { url, maxItems } = config as WidgetConfig<'rss'>;
     return { url, maxItems };
   }
+  if (type === 'table') {
+    const { source, url, jsonPath, hasHeader, columns, maxRows } = config as WidgetConfig<'table'>;
+    return { source, url, jsonPath, hasHeader, columns, maxRows };
+  }
   const { latitude, longitude, units, days } = config as WidgetConfig<'weather'>;
   return { latitude, longitude, units, days };
 }
 
 /**
- * Returns data for an RSS or weather widget: fresh from the cache, or fetched
+ * Returns data for an RSS, weather or table widget: fresh from the cache, or fetched
  * through the SSRF-safe client, falling back to a stale copy when the source fails.
  */
 export async function getWidgetData(
@@ -101,7 +126,7 @@ export async function getWidgetData(
   const cachedText = await ctx.cache.get(key);
   const cached = cachedText ? (JSON.parse(cachedText) as CachedEntry) : null;
   const age = cached ? (Date.now() - Date.parse(cached.fetchedAt)) / 1000 : Infinity;
-  if (cached && age < FRESH_SECONDS[type]) {
+  if (cached && age < freshSeconds(type, config)) {
     return { type, data: cached.data, fetchedAt: cached.fetchedAt, stale: false };
   }
 
@@ -118,7 +143,7 @@ export async function getWidgetData(
     throw error;
   }
 
-  let data: RssData | WeatherData;
+  let data: WidgetData;
   try {
     data = await fetchFresh(ctx, type, config);
   } catch (error) {

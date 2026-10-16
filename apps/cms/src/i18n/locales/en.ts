@@ -435,7 +435,7 @@ export const en: Messages = {
     title: 'Widgets',
     nav: 'Widgets',
     intro:
-      'Widgets show live content: a clock, a ticker, news, weather, a QR code or a web page. Add them to playlists like media files.',
+      'Widgets show live content: a clock, a ticker, news, weather, a data table, a QR code or a web page. Add them to playlists like media files.',
     create: 'New widget',
     createTitle: 'New widget: {{type}}',
     editTitle: 'Edit widget',
@@ -460,6 +460,11 @@ export const en: Messages = {
     noHeadlines: 'No headlines were found in the feed.',
     weatherNow: 'Now: {{temperature}}',
     rssPrivacy: 'The server downloads the feed. Screens never contact the feed site directly.',
+    tablePrivacy:
+      'The server downloads the data and keeps a copy for up to 24 hours. Screens are public: do not publish personal information that is not meant for everyone.',
+    tableEmpty: 'No rows were found in the source.',
+    tableTruncated: 'The source has more rows. The first {{count}} are shown.',
+    tableCaption: 'Data preview',
     weatherAttribution:
       'Weather data by Open-Meteo.com (CC BY 4.0). The weather service receives only the location (latitude and longitude) from the server.',
     weatherDisabled:
@@ -473,6 +478,7 @@ export const en: Messages = {
       weather: 'Weather',
       webpage: 'Web page',
       countdown: 'Countdown',
+      table: 'Data table',
       design: 'Free design',
     },
     descriptions: {
@@ -484,6 +490,7 @@ export const en: Messages = {
       weather: 'Current weather and a forecast for the coming days.',
       webpage: 'An external web page inside a zone.',
       countdown: 'Count down to an event, a holiday or a sale.',
+      table: 'A menu, price list or timetable from Google Sheets, CSV or JSON. Updates on its own.',
       design: 'A designed slide: text, images and shapes on a canvas, with drag and drop.',
     },
     fields: {
@@ -539,6 +546,22 @@ export const en: Messages = {
       targetHint: "In the screen's time zone unless another is chosen.",
       doneText: 'Message when done (optional)',
       refreshMinutes: 'Reload every (minutes, 0 = never)',
+      source: 'Source type',
+      sourceCsv: 'CSV or Google Sheets',
+      sourceJson: 'JSON',
+      tableUrl: 'Data address',
+      tableUrlHint:
+        'In Google Sheets: "File → Share → Publish to web" and choose CSV, or a link to a sheet shared with "Anyone with the link".',
+      jsonPath: 'Path to the array in the JSON (optional)',
+      jsonPathHint: 'For example data.items. Empty = the whole document.',
+      hasHeader: 'The first row holds the column names',
+      columns: 'Columns to show (optional)',
+      columnsHint: 'Column names separated by commas, in order. Empty = all columns.',
+      rowsPerPage: 'Rows per page',
+      pageSeconds: 'Seconds per page',
+      maxRows: 'Maximum rows',
+      tableRefresh: 'Refresh the data every (minutes)',
+      accent: 'Header row color',
     },
   },
   layouts: {

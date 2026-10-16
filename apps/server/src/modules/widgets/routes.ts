@@ -295,7 +295,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     return reply.status(204).send();
   });
 
-  /** Preview of an RSS/weather widget's data, as the player will receive it. */
+  /** Preview of a data widget's content (RSS, weather, table), as the player will receive it. */
   app.get('/api/v1/orgs/:orgId/widgets/:widgetId/data', viewer, async (request) => {
     const org = requireOrg(request);
     const { widgetId } = parse(widgetParams, request.params);

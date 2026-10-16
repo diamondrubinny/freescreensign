@@ -4,6 +4,7 @@ import { countdownWidget } from './countdown';
 import { designWidget } from './design';
 import { qrWidget } from './qr';
 import { rssWidget } from './rss';
+import { tableWidget } from './table';
 import { textWidget } from './text';
 import { tickerWidget } from './ticker';
 import { weatherWidget } from './weather';
@@ -21,6 +22,7 @@ export const BUILT_IN_WIDGETS: ReadonlyMap<string, WidgetDefinition<unknown>> = 
       weatherWidget,
       webpageWidget,
       countdownWidget,
+      tableWidget,
       designWidget,
     ] as WidgetDefinition<unknown>[]
   ).map((widget) => [widget.type, widget]),

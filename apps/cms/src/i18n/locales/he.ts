@@ -422,7 +422,7 @@ export const he = {
     title: 'Widgets',
     nav: 'Widgets',
     intro:
-      'Widgets מציגים תוכן חי: שעון, טקסט רץ, חדשות, מזג אוויר, קוד QR או דף אינטרנט. מוסיפים אותם לפלייליסטים כמו קבצי מדיה.',
+      'Widgets מציגים תוכן חי: שעון, טקסט רץ, חדשות, מזג אוויר, טבלת נתונים, קוד QR או דף אינטרנט. מוסיפים אותם לפלייליסטים כמו קבצי מדיה.',
     create: 'Widget חדש',
     createTitle: 'Widget חדש: {{type}}',
     editTitle: 'עריכת Widget',
@@ -447,6 +447,11 @@ export const he = {
     noHeadlines: 'לא נמצאו כותרות בפיד.',
     weatherNow: 'עכשיו: {{temperature}}',
     rssPrivacy: 'השרת מוריד את הפיד. המסכים אינם פונים ישירות לאתר הפיד.',
+    tablePrivacy:
+      'השרת מוריד את הנתונים ושומר עותק עד 24 שעות. המסכים מוצגים בפומבי: אל תפרסמו מידע אישי שלא נועד לכולם.',
+    tableEmpty: 'לא נמצאו שורות במקור.',
+    tableTruncated: 'במקור יש יותר שורות. מוצגות {{count}} הראשונות.',
+    tableCaption: 'תצוגה מקדימה של הנתונים',
     weatherAttribution:
       'נתוני מזג האוויר: Open-Meteo.com \u200F(CC BY 4.0). שירות מזג האוויר מקבל מהשרת רק את המיקום (קווי רוחב ואורך).',
     weatherDisabled:
@@ -460,6 +465,7 @@ export const he = {
       weather: 'מזג אוויר',
       webpage: 'דף אינטרנט',
       countdown: 'ספירה לאחור',
+      table: 'טבלת נתונים',
       design: 'עיצוב חופשי',
     },
     descriptions: {
@@ -471,6 +477,7 @@ export const he = {
       weather: 'מזג אוויר נוכחי ותחזית לימים הקרובים.',
       webpage: 'דף אינטרנט חיצוני בתוך אזור.',
       countdown: 'ספירה לאחור לאירוע, לחג או למבצע.',
+      table: 'תפריט, מחירון או לוח זמנים מ-Google Sheets, ‏CSV או JSON. מתעדכן לבד.',
       design: 'שקף מעוצב: טקסט, תמונות וצורות על קנבס, עם גרירה.',
     },
     fields: {
@@ -526,6 +533,22 @@ export const he = {
       targetHint: 'לפי אזור הזמן של המסך, אלא אם נבחר אחר.',
       doneText: 'הודעה בסיום (לא חובה)',
       refreshMinutes: 'טעינה מחדש כל (דקות, 0 = אף פעם)',
+      source: 'סוג המקור',
+      sourceCsv: 'CSV או Google Sheets',
+      sourceJson: 'JSON',
+      tableUrl: 'כתובת הנתונים',
+      tableUrlHint:
+        'ב-Google Sheets: "קובץ ← שיתוף ← פרסום באינטרנט" ובחירת CSV, או קישור לגיליון ששותף ל"כל מי שיש לו את הקישור".',
+      jsonPath: 'נתיב למערך ב-JSON (רשות)',
+      jsonPathHint: 'למשל data.items. ריק = המסמך כולו.',
+      hasHeader: 'השורה הראשונה היא כותרות העמודות',
+      columns: 'עמודות להצגה (רשות)',
+      columnsHint: 'שמות עמודות מופרדים בפסיקים, לפי הסדר. ריק = כל העמודות.',
+      rowsPerPage: 'שורות בכל עמוד',
+      pageSeconds: 'שניות לכל עמוד',
+      maxRows: 'מספר שורות מרבי',
+      tableRefresh: 'רענון הנתונים כל (דקות)',
+      accent: 'צבע שורת הכותרות',
     },
   },
   layouts: {

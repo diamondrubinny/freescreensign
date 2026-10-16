@@ -7,6 +7,7 @@ import {
   Puzzle,
   QrCode,
   Rss,
+  Table2,
   TextCursorInput,
   Type,
   type LucideIcon,
@@ -25,6 +26,7 @@ export const WIDGET_ICONS: Record<
   weather: { icon: CloudSun, tone: 'sky' },
   webpage: { icon: Globe, tone: 'green' },
   countdown: { icon: CalendarClock, tone: 'amber' },
+  table: { icon: Table2, tone: 'green' },
   design: { icon: Palette, tone: 'rose' },
 };
 

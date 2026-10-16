@@ -26,7 +26,8 @@ Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
   send **real remote screenshots** to the dashboard.
 - **Layouts with zones**: each zone plays its own playlist (e.g. video + clock + ticker).
 - **Built-in widgets**: clock with the Hebrew date, text, ticker (RTL-aware), QR code, RSS
-  news, weather (opt-in), web page, countdown, and **free-form designs**.
+  news, weather (opt-in), web page, countdown, **data tables** (Google Sheets, CSV, JSON:
+  menus, price lists and timetables that update on their own) and **free-form designs**.
 - **Media fit** per item: fit, fill, or the whole image over a blurred backdrop.
 
 |                             Menu board kit                              |                                         Countdown                                         |                             Free-form design                             |

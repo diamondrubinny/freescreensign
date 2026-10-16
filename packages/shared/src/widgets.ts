@@ -100,6 +100,33 @@ export const countdownConfigSchema = z.object({
   background: color.default('#312e81'),
 });
 
+/** Dot path to an array inside a JSON document, e.g. "data.items" (at most 10 levels). */
+const jsonPath = z
+  .string()
+  .trim()
+  .max(200)
+  .regex(/^[A-Za-z0-9_$-]+(\.[A-Za-z0-9_$-]+){0,9}$/, 'Expected a dot path, e.g. data.items');
+
+export const tableConfigSchema = z.object({
+  source: z.enum(['csv', 'json']).default('csv'),
+  url: feedUrl,
+  /** JSON only: where the array is. Empty = the document itself. */
+  jsonPath: jsonPath.optional(),
+  /** CSV only: the first row holds the column names. */
+  hasHeader: z.boolean().default(true),
+  /** Comma-separated column names to show, in order. Empty = all columns. */
+  columns: z.string().trim().max(500).optional(),
+  title: z.string().trim().max(200).optional(),
+  rowsPerPage: z.number().int().min(1).max(20).default(8),
+  pageDurationMs: z.number().int().min(3000).max(60_000).default(10_000),
+  maxRows: z.number().int().min(1).max(200).default(50),
+  refreshMinutes: z.number().int().min(1).max(1440).default(5),
+  locale: z.enum(['he', 'en']).default('he'),
+  textColor: color.default('#f8fafc'),
+  background: color.default('#0f172a'),
+  accent: color.default('#1d4ed8'),
+});
+
 export const WIDGET_CONFIG_SCHEMAS = {
   clock: clockConfigSchema,
   text: textConfigSchema,
@@ -109,6 +136,7 @@ export const WIDGET_CONFIG_SCHEMAS = {
   weather: weatherConfigSchema,
   webpage: webpageConfigSchema,
   countdown: countdownConfigSchema,
+  table: tableConfigSchema,
   design: designConfigSchema,
 } as const;
 
@@ -117,7 +145,11 @@ export const WIDGET_TYPES = Object.keys(WIDGET_CONFIG_SCHEMAS) as WidgetType[];
 export type WidgetConfig<T extends WidgetType> = z.infer<(typeof WIDGET_CONFIG_SCHEMAS)[T]>;
 
 /** Widget types whose content is fetched by the server (never by the player directly). */
-export const DATA_WIDGET_TYPES = ['rss', 'weather'] as const satisfies readonly WidgetType[];
+export const DATA_WIDGET_TYPES = [
+  'rss',
+  'weather',
+  'table',
+] as const satisfies readonly WidgetType[];
 
 export function isWidgetType(value: string): value is WidgetType {
   return value in WIDGET_CONFIG_SCHEMAS;
@@ -154,4 +186,11 @@ export interface WeatherData {
   current: { temperature: number; weatherCode: number };
   daily: { date: string; min: number; max: number; weatherCode: number }[];
   attribution: string;
+}
+
+export interface TableData {
+  columns: string[];
+  rows: string[][];
+  /** True when the source had more rows than `maxRows`. */
+  truncated: boolean;
 }

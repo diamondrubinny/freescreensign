@@ -124,6 +124,54 @@ describe('built-in widgets', () => {
     expect(fetchData).toHaveBeenCalledWith('r');
   });
 
+  it('table: a real table with header cells, rotating pages', async () => {
+    vi.useFakeTimers();
+    const fetchData = vi.fn().mockResolvedValue({
+      columns: ['מנה', 'מחיר'],
+      rows: [
+        ['שקשוקה', '42'],
+        ['סלט', '38'],
+        ['<b>Soup</b>', '30'],
+      ],
+      truncated: false,
+    });
+    const { container, ok } = mount(
+      {
+        id: 't',
+        type: 'table',
+        config: {
+          url: 'https://example.org/menu.csv',
+          title: 'תפריט',
+          rowsPerPage: 2,
+          pageDurationMs: 3000,
+        },
+      },
+      runtime({ fetchData }),
+    );
+    expect(ok).toBe(true);
+    await vi.advanceTimersByTimeAsync(0);
+    const table = container.querySelector('table');
+    expect(table?.querySelector('caption')?.textContent).toBe('תפריט');
+    const headers = [...container.querySelectorAll('th')];
+    expect(headers.map((th) => th.textContent)).toEqual(['מנה', 'מחיר']);
+    expect(headers[0]?.scope).toBe('col');
+    expect(container.querySelector('.w-table')?.getAttribute('dir')).toBe('rtl');
+    const cells = () => [...container.querySelectorAll('tbody td')].map((td) => td.textContent);
+    expect(cells()).toEqual(['שקשוקה', '42', 'סלט', '38']);
+    expect(container.querySelectorAll('.w-table-pager span')).toHaveLength(2);
+
+    await vi.advanceTimersByTimeAsync(3000);
+    // Text only, never markup.
+    expect(cells()).toEqual(['<b>Soup</b>', '30']);
+    expect(container.querySelector('tbody b')).toBeNull();
+    expect(container.querySelector('.w-table-pager .active')).toBe(
+      container.querySelectorAll('.w-table-pager span')[1],
+    );
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(cells()[0]).toBe('שקשוקה');
+    expect(fetchData).toHaveBeenCalledWith('t');
+  });
+
   it('weather: current conditions, forecast and attribution', async () => {
     const fetchData = vi.fn().mockResolvedValue({
       units: 'metric',

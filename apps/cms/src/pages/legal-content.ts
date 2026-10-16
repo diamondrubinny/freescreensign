@@ -106,7 +106,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
           heading: 'צדדים שלישיים',
           paragraphs: [
             'Rubinny אינה כוללת כלי מדידה, פרסום או מעקב. מיילים נשלחים דרך שרת הדואר שהגדיר המפעיל, אם הוגדר. [רשימת ספקי המפעיל, למשל אחסון ודואר — תמולא על ידי המפעיל]',
-            'Widgets: פידי RSS מורדים על ידי השרת, כך שאתר הפיד רואה את כתובת השרת בלבד. אם המפעיל הפעיל מזג אוויר, השרת שולח לשירות מזג האוויר (Open-Meteo או שירות שהגדיר המפעיל) רק את קווי הרוחב והאורך שהוזנו ב-Widget. Widget "דף אינטרנט" נטען ישירות במסך, ולכן האתר המוצג מקבל את כתובת ה-IP של המסך וכפוף למדיניות הפרטיות שלו.',
+            'Widgets: פידי RSS וטבלאות נתונים (למשל Google Sheets) מורדים על ידי השרת, כך שהאתר המקורי רואה את כתובת השרת בלבד, ועותק של הנתונים נשמר בשרת עד 24 שעות. אם המפעיל הפעיל מזג אוויר, השרת שולח לשירות מזג האוויר (Open-Meteo או שירות שהגדיר המפעיל) רק את קווי הרוחב והאורך שהוזנו ב-Widget. Widget "דף אינטרנט" נטען ישירות במסך, ולכן האתר המוצג מקבל את כתובת ה-IP של המסך וכפוף למדיניות הפרטיות שלו.',
             'מאגר תמונות חופשי: מילות החיפוש נשלחות מהשרת ל-Openverse (או לשירות שהגדיר המפעיל) כדי למצוא תמונות. הדפדפן שלכם אינו פונה אליו, ולא נשלח מידע מזהה עליכם.',
             'אפליקציות המסך: הן פונות רק לשרת של המפעיל. רכיבי הדפדפן של המכשיר עשויים לפנות לשירותים של יצרן המכשיר או של Google לפי הגדרות ברירת המחדל שלהם (למשל Safe Browsing ב-WebView של Android, או עדכוני רכיבים ב-Chromium ב-Raspberry Pi). [דורש אימות מול התיעוד הרשמי של כל פלטפורמה]',
           ],
@@ -263,7 +263,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
           heading: 'Third parties',
           paragraphs: [
             "Rubinny contains no analytics, advertising or tracking tools. Emails are sent through the operator's mail server, if one is configured. [Operator's processors, e.g. hosting and email — to be completed by the operator]",
-            'Widgets: RSS feeds are downloaded by the server, so the feed site only sees the server\'s address. If the operator enabled weather, the server sends the weather service (Open-Meteo or one the operator configured) only the latitude and longitude entered in the widget. A "web page" widget is loaded directly on the screen, so the displayed site receives the screen\'s IP address and is subject to its own privacy policy.',
+            'Widgets: RSS feeds and data tables (Google Sheets, for example) are downloaded by the server, so the source site only sees the server\'s address, and a copy of the data is kept on the server for up to 24 hours. If the operator enabled weather, the server sends the weather service (Open-Meteo or one the operator configured) only the latitude and longitude entered in the widget. A "web page" widget is loaded directly on the screen, so the displayed site receives the screen\'s IP address and is subject to its own privacy policy.',
             'Free image library: search words are sent from the server to Openverse (or a service the operator configured) to find images. Your browser does not contact it, and no identifying information about you is sent.',
             "Screen apps: they contact only the operator's server. The device's browser components may contact services of the device maker or Google according to their defaults (for example Safe Browsing in Android's WebView, or component updates in Chromium on Raspberry Pi). [Requires verification against each platform's official documentation]",
           ],

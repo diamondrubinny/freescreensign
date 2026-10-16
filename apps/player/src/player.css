@@ -426,6 +426,86 @@ body,
   opacity: 0.9;
 }
 
+/* Table (CSV, Google Sheets, JSON) */
+.w-table {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--zone-h, 300px) * 0.025);
+  padding: calc(var(--zone-h, 300px) * 0.04) calc(var(--zone-w, 400px) * 0.03);
+}
+.w-table-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.w-table-grid {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  /* Lines share the zone height (--rows is set by the widget). */
+  font-size: min(
+    calc(var(--zone-h, 300px) * 0.42 / var(--rows, 9)),
+    calc(var(--zone-w, 400px) * 0.035)
+  );
+  line-height: 1.3;
+}
+.w-table-title {
+  padding-block-end: 0.4em;
+  font-size: 1.3em;
+  font-weight: 800;
+  text-align: start;
+}
+.w-table-grid th,
+.w-table-grid td {
+  padding: 0.35em 0.6em;
+  text-align: start;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.w-table-grid th {
+  background: var(--w-accent, #1d4ed8);
+  color: #fff;
+  font-weight: 700;
+}
+.w-table-grid th:first-child {
+  border-start-start-radius: 0.4em;
+}
+.w-table-grid th:last-child {
+  border-start-end-radius: 0.4em;
+}
+.w-table-grid tbody tr:nth-child(even) td {
+  background: rgb(255 255 255 / 0.07);
+}
+.w-table-grid tbody td {
+  border-block-end: 1px solid rgb(255 255 255 / 0.1);
+}
+.w-table-fade tbody {
+  animation: w-table-in 0.5s ease-out;
+}
+@keyframes w-table-in {
+  from {
+    opacity: 0;
+  }
+}
+.w-table-pager {
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--zone-h, 300px) * 0.012);
+  min-height: calc(var(--zone-h, 300px) * 0.015);
+}
+.w-table-pager span {
+  width: calc(var(--zone-h, 300px) * 0.015);
+  height: calc(var(--zone-h, 300px) * 0.015);
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.3;
+}
+.w-table-pager span.active {
+  width: calc(var(--zone-h, 300px) * 0.045);
+  opacity: 0.9;
+}
+
 /* Weather */
 .w-weather {
   display: flex;

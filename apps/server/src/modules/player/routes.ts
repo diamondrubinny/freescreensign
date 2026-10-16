@@ -130,7 +130,7 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   // ---------------------------------------------------------- widget data
-  /** RSS/weather content for a widget of the screen's own organization. */
+  /** Data-widget content (RSS, weather, table) for a widget of the screen's own organization. */
   app.get('/player/v1/widgets/:widgetId/data', async (request, reply) => {
     const screen = await requireScreen(ctx, request);
     const { widgetId } = parse(z.object({ widgetId: z.uuid() }), request.params);

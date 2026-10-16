@@ -8,6 +8,9 @@ All notable changes to Rubinny. The format follows
 
 ### Added
 
+- Data table widget: menus, price lists and timetables from Google Sheets, CSV or JSON,
+  fetched by the server (SSRF-safe), cached, paged on the screen and refreshed on their own
+  (see docs/phases/10a-data-table.md).
 - Credit: "Created by Diamond Rubinny" in the dashboard footer, README, NOTICE, a new
   AUTHORS.md, and the desktop app's author and package maintainer.
 

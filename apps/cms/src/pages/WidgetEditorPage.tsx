@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { isWidgetType, type RssData, type WeatherData, type WidgetType } from '@rubinny/shared';
+import {
+  DATA_WIDGET_TYPES,
+  isWidgetType,
+  type RssData,
+  type TableData,
+  type WeatherData,
+  type WidgetType,
+} from '@rubinny/shared';
 import { del, get, patch, post } from '../api/client';
 import type { WidgetData, WidgetItem, WidgetTypes } from '../api/types';
 import { Alert } from '../components/Alert';
@@ -12,6 +19,7 @@ import { Field } from '../components/Field';
 import { Form, value } from '../components/Form';
 import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
+import { TableRegion } from '../components/TableRegion';
 import type { FormErrors } from '../lib/api-errors';
 import { formatDateTime } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
@@ -185,11 +193,9 @@ function DataPreview({ orgId, widget }: { orgId: string; widget: WidgetItem }) {
                 ? t('widgets.stale', { when: formatDateTime(result.fetchedAt, i18n.language) })
                 : t('widgets.fetchedAt', { when: formatDateTime(result.fetchedAt, i18n.language) })}
             </p>
-            {result.type === 'rss' ? (
-              <RssPreview data={result.data as RssData} />
-            ) : (
-              <WeatherPreview data={result.data as WeatherData} />
-            )}
+            {result.type === 'rss' && <RssPreview data={result.data as RssData} />}
+            {result.type === 'weather' && <WeatherPreview data={result.data as WeatherData} />}
+            {result.type === 'table' && <TablePreview data={result.data as TableData} />}
           </div>
         )}
       </div>
@@ -216,6 +222,43 @@ function RssPreview({ data }: { data: RssData }) {
             </li>
           ))}
         </ul>
+      )}
+    </>
+  );
+}
+
+function TablePreview({ data }: { data: TableData }) {
+  const { t } = useTranslation();
+  if (data.rows.length === 0) return <p>{t('widgets.tableEmpty')}</p>;
+  return (
+    <>
+      <TableRegion label={t('widgets.tableCaption')}>
+        <table className="w-full text-sm">
+          <caption className="sr-only">{t('widgets.tableCaption')}</caption>
+          <thead>
+            <tr>
+              {data.columns.map((name, index) => (
+                <th key={String(index)} scope="col" className="px-2 py-1 text-start">
+                  <bdi>{name}</bdi>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((row, rowIndex) => (
+              <tr key={String(rowIndex)} className="border-t border-gray-200 dark:border-gray-800">
+                {row.map((value, index) => (
+                  <td key={String(index)} className="px-2 py-1">
+                    <bdi>{value}</bdi>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableRegion>
+      {data.truncated && (
+        <p className="mt-2 text-sm">{t('widgets.tableTruncated', { count: data.rows.length })}</p>
       )}
     </>
   );
@@ -357,6 +400,9 @@ export function WidgetEditorPage() {
         </div>
       )}
       {widgetType === 'rss' && <p className="mb-4 max-w-2xl text-sm">{t('widgets.rssPrivacy')}</p>}
+      {widgetType === 'table' && (
+        <p className="mb-4 max-w-2xl text-sm">{t('widgets.tablePrivacy')}</p>
+      )}
 
       <Form
         key={widget?.updatedAt ?? 'new'}
@@ -397,7 +443,7 @@ export function WidgetEditorPage() {
         )}
       </Form>
 
-      {widget && (widget.type === 'rss' || widget.type === 'weather') && (
+      {widget && (DATA_WIDGET_TYPES as readonly string[]).includes(widget.type) && (
         <DataPreview orgId={orgId} widget={widget} />
       )}
 

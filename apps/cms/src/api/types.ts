@@ -170,7 +170,7 @@ export interface WidgetTypes {
 }
 
 export interface WidgetData {
-  type: 'rss' | 'weather';
+  type: 'rss' | 'weather' | 'table';
   data: unknown;
   fetchedAt: string;
   stale: boolean;

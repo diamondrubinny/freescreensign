@@ -33,6 +33,25 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
         response.writeHead(200, { 'content-type': 'application/rss+xml' }).end(FEED);
         return;
       }
+      if (request.url === '/menu.csv') {
+        response
+          .writeHead(200, { 'content-type': 'text/csv; charset=utf-8' })
+          .end('﻿מנה;מחיר;הערה\r\n"שקשוקה";42;"חריף, ""מומלץ"""\r\nסלט;38;\r\n');
+        return;
+      }
+      if (request.url === '/rows.json') {
+        response.writeHead(200, { 'content-type': 'application/json' }).end(
+          JSON.stringify({
+            data: {
+              items: [
+                { name: 'A', n: 1 },
+                { name: 'B', n: 2 },
+              ],
+            },
+          }),
+        );
+        return;
+      }
       if (request.url?.startsWith('/forecast')) {
         response.writeHead(200, { 'content-type': 'application/json' }).end(
           JSON.stringify({
@@ -142,6 +161,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'weather',
       'webpage',
       'countdown',
+      'table',
       'design',
     ]);
 
@@ -315,6 +335,44 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
     await editor.delete(api(`/layouts/${layout.id}`));
     const fallback = (await playerGet('/player/v1/manifest', deviceToken)).json<ManifestV1>();
     expect(fallback.layouts[0]!.id).toBe('default');
+  });
+
+  it('turns CSV and JSON sources into tables for the player', async () => {
+    const menu = await createWidget('table', { url: `${feedBase}/menu.csv`, columns: 'מנה, הערה' });
+    expect(menu.config).toMatchObject({ source: 'csv', hasHeader: true, rowsPerPage: 8 });
+    const { deviceToken } = await pair();
+    const csv = await playerGet(`/player/v1/widgets/${menu.id}/data`, deviceToken);
+    expect(csv.statusCode, csv.body).toBe(200);
+    expect(csv.json()).toMatchObject({
+      type: 'table',
+      stale: false,
+      data: {
+        columns: ['מנה', 'הערה'],
+        rows: [
+          ['שקשוקה', 'חריף, "מומלץ"'],
+          ['סלט', ''],
+        ],
+        truncated: false,
+      },
+    });
+
+    const json = await createWidget('table', {
+      source: 'json',
+      url: `${feedBase}/rows.json`,
+      jsonPath: 'data.items',
+      maxRows: 1,
+    });
+    expect((await viewer.get(api(`/widgets/${json.id}/data`))).json()).toMatchObject({
+      data: { columns: ['name', 'n'], rows: [['A', '1']], truncated: true },
+    });
+
+    // A path that is not a dot path is rejected on save.
+    const bad = await editor.post(api('/widgets'), {
+      type: 'table',
+      name: 'Bad',
+      config: { source: 'json', url: `${feedBase}/rows.json`, jsonPath: '../etc' },
+    });
+    expect(bad.json()).toMatchObject({ error: { fields: [{ path: 'config.jsonPath' }] } });
   });
 
   it('fetches feed data through the server with caching and stale fallback', async () => {

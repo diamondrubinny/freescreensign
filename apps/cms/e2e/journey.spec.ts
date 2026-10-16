@@ -265,6 +265,19 @@ test('a layout shows a clock and a ticker side by side on a screen', async ({ pa
   await expect(page.getByText('ה-Widget נשמר והמסכים עודכנו.')).toBeVisible();
   await expectAccessible(page, 'widget editor (clock)');
 
+  // A data table from a published Google Sheet: the form is saved and accessible.
+  await page.getByRole('link', { name: 'חזרה לרשימת ה-Widgets' }).click();
+  await page.getByRole('link', { name: 'בחירה טבלת נתונים' }).click();
+  await page.getByLabel('שם ה-Widget').fill('תפריט');
+  await page
+    .getByLabel('כתובת הנתונים')
+    .fill('https://docs.google.com/spreadsheets/d/e/2PACX-example/pub?output=csv');
+  await page.getByLabel(/^עמודות להצגה/).fill('מנה, מחיר');
+  await page.getByRole('button', { name: 'Widget חדש' }).click();
+  await expect(page.getByText('ה-Widget נשמר והמסכים עודכנו.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'טעינת תצוגה מקדימה' })).toBeVisible();
+  await expectAccessible(page, 'widget editor (table)');
+
   await page.getByRole('link', { name: 'חזרה לרשימת ה-Widgets' }).click();
   await page.getByRole('link', { name: 'בחירה טקסט רץ' }).click();
   await page.getByLabel('שם ה-Widget').fill('הודעות');
