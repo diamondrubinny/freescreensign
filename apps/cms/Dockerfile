@@ -5,6 +5,24 @@
 
 ARG NODE_IMAGE=node:24-alpine
 ARG CADDY_IMAGE=caddy:2-alpine
+ARG GO_IMAGE=golang:1.27-alpine
+
+# Caddy from its official source, built with a patched Go toolchain and x/net. The binary
+# in the official image can lag behind Go security releases, and this is the public edge.
+# Same program as upstream's cmd/caddy (standard modules only).
+FROM ${GO_IMAGE} AS caddy
+ARG CADDY_VERSION=v2.11.7
+ARG X_NET_VERSION=v0.60.0
+WORKDIR /src
+RUN printf '%s\n' 'package main' '' 'import (' \
+      '	caddycmd "github.com/caddyserver/caddy/v2/cmd"' \
+      '	_ "github.com/caddyserver/caddy/v2/modules/standard"' \
+      ')' '' 'func main() { caddycmd.Main() }' > main.go \
+ && go mod init rubinny.local/caddy \
+ && go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}" "golang.org/x/net@${X_NET_VERSION}" \
+ && go mod tidy \
+ && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /caddy . \
+ && /caddy version
 
 FROM ${NODE_IMAGE} AS build
 RUN npm install -g pnpm@10.28.0
@@ -25,6 +43,8 @@ RUN pnpm --filter @rubinny/shared build \
  && pnpm --filter @rubinny/player exec vite build
 
 FROM ${CADDY_IMAGE} AS runtime
+COPY --from=caddy /caddy /usr/bin/caddy
+RUN setcap cap_net_bind_service=+ep /usr/bin/caddy
 COPY --from=build /repo/apps/cms/dist /srv/cms
 COPY --from=build /repo/apps/player/dist /srv/player
 COPY deploy/Caddyfile /etc/caddy/Caddyfile

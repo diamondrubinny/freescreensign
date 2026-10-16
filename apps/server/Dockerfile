@@ -22,6 +22,11 @@ FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000
+# The package managers are not needed at runtime: removing them removes their dependencies
+# (and their vulnerabilities) from the image.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* \
+      /usr/local/bin/yarn /usr/local/bin/yarnpkg
 WORKDIR /app
 # Application files are owned by root and read-only for the runtime user.
 COPY --from=build /out ./

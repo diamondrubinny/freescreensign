@@ -1,0 +1,3 @@
+# Accepted vulnerability findings. Each needs a statement (why) and expired_at (review date);
+# Trivy stops ignoring an entry after its date.
+vulnerabilities: []
