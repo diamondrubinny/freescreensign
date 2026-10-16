@@ -103,6 +103,12 @@ jobs:
       - name: Device tests (real WebView, screenshots, guards, crash recovery)
         run: ./gradlew --no-daemon connectedDebugAndroidTest
 
+      - name: Device test summary
+        if: always()
+        run: |
+          grep -h -o '<testsuite [^>]*' app/build/outputs/androidTest-results/connected/debug/*.xml || true
+          grep -h -o '<testcase name="[^"]*"' app/build/outputs/androidTest-results/connected/debug/*.xml || true
+
       - name: Keep test reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
