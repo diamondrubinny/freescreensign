@@ -13,7 +13,7 @@ import { HttpError } from './lib/http-error.js';
 import { registerErrorHandling } from './plugins/errors.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './modules/auth/routes.js';
-import { registerAuth } from './modules/auth/guards.js';
+import { assertOrgRouteGuarded, registerAuth } from './modules/auth/guards.js';
 import { meRoutes } from './modules/me/routes.js';
 import { orgRoutes } from './modules/orgs/routes.js';
 import { mediaRoutes } from './modules/media/routes.js';
@@ -41,6 +41,8 @@ export interface BuildAppOptions {
   logger?: boolean;
   /** Runs timers such as offline alerts (the server process; tests call jobs directly). */
   backgroundJobs?: boolean;
+  /** Called for every route as it is registered (tests and diagnostics). */
+  onRoute?: (route: { method: string; url: string }) => void;
   /** Services for the /api routes. When omitted only health endpoints are served. */
   services?: Omit<AppContext, 'env' | 'mailer'> & {
     /** A mailer, or a factory receiving the app logger. */
@@ -119,6 +121,14 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       ...services,
       mailer: typeof mailer === 'function' ? mailer(app.log) : mailer,
     };
+    // Before any route: an organization route without orgGuard stops the server from starting.
+    app.addHook('onRoute', assertOrgRouteGuarded);
+    const { onRoute } = options;
+    if (onRoute) {
+      app.addHook('onRoute', (route) => {
+        for (const method of [route.method].flat()) onRoute({ method, url: route.url });
+      });
+    }
     registerAuth(app, ctx);
     setupRoutes(app, ctx);
     authRoutes(app, ctx);

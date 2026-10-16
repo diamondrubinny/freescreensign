@@ -29,6 +29,8 @@ export interface Harness {
   redis: Redis;
   events: RedisScreenEvents;
   storage?: Storage;
+  /** Every route the app registered (method + url). */
+  routes: { method: string; url: string }[];
   close(): Promise<void>;
 }
 
@@ -89,9 +91,11 @@ export async function createHarness(
   const events = new RedisScreenEvents(redis, subscriber, `rubinny:screen-events:${schema}`);
   await events.start();
 
+  const routes: { method: string; url: string }[] = [];
   const app = await buildApp({
     env,
     logger: false,
+    onRoute: (route) => routes.push(route),
     services: {
       db,
       keys: new KeyRing(env.ENCRYPTION_KEY),
@@ -111,6 +115,7 @@ export async function createHarness(
     redis,
     events,
     ...(storage ? { storage } : {}),
+    routes,
     async close() {
       await app.close();
       await events.close();

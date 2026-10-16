@@ -1,5 +1,5 @@
 import type {} from '@fastify/cookie';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyRequest, RouteOptions } from 'fastify';
 import { z } from 'zod';
 import { hasRole, type Role } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
@@ -72,8 +72,11 @@ const orgParams = z.object({ orgId: z.uuid() });
  * preHandler factory: authenticates, loads the caller's membership in :orgId and
  * enforces the minimum role. Non-members get 404 so org ids cannot be probed.
  */
+/** Marks the preHandlers made by orgGuard (see assertOrgRouteGuarded). */
+const ORG_GUARD = Symbol('orgGuard');
+
 export function orgGuard(ctx: AppContext, minRole: Role) {
-  return async (request: FastifyRequest) => {
+  const guard = async (request: FastifyRequest) => {
     const { user } = requireAuth(request);
     const params = orgParams.safeParse(request.params);
     if (!params.success) throw new HttpError(404, 'NOT_FOUND', 'Resource not found');
@@ -114,6 +117,23 @@ export function orgGuard(ctx: AppContext, minRole: Role) {
       offlineAlertMinutes: row.offline_alert_minutes,
     };
   };
+  return Object.assign(guard, { [ORG_GUARD]: minRole });
+}
+
+/**
+ * Tenant isolation cannot be forgotten: registering a route under /api/v1/orgs/:orgId without
+ * an orgGuard preHandler fails at startup (used as an onRoute hook).
+ */
+export function assertOrgRouteGuarded(route: RouteOptions): void {
+  if (!route.url.startsWith('/api/v1/orgs/:orgId')) return;
+  const preHandlers: unknown[] = [route.preHandler].flat();
+  const guarded = preHandlers.some(
+    (handler) => typeof handler === 'function' && ORG_GUARD in handler,
+  );
+  if (!guarded) {
+    const methods = [route.method].flat().join(',');
+    throw new Error(`Organization route without orgGuard: ${methods} ${route.url}`);
+  }
 }
 
 export function requireOrg(request: FastifyRequest): OrgAccess {
