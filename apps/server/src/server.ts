@@ -107,7 +107,7 @@ async function main() {
 
   const maintenance = async () => {
     try {
-      const result = await runMaintenance(db, env.AUDIT_RETENTION_DAYS);
+      const result = await runMaintenance(db, env.AUDIT_RETENTION_DAYS, env.PLAY_RETENTION_DAYS);
       if (media) await cleanupStaleUploads(db, media.queue);
       app.log.info({ removed: result }, 'maintenance completed');
     } catch (err) {

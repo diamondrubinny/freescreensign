@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Blocks,
   CalendarClock,
+  ChartColumn,
   Images,
   LayoutDashboard,
   LayoutTemplate,
@@ -187,6 +188,7 @@ export function AppShell({ session }: { session: SessionInfo }) {
               </NavGroup>
               <NavGroup id={`${navId}-devices`} title={t('nav.groupDevices')}>
                 <NavItem to={`${org}/screens`} icon={Monitor} label={t('screens.nav')} />
+                <NavItem to={`${org}/reports`} icon={ChartColumn} label={t('reports.nav')} />
               </NavGroup>
             </>
           )}

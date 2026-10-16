@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { expectAccessible, totp } from './helpers';
 
@@ -491,6 +492,63 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   await expect(page.getByText('הלוח נשמר. המסכים מתעדכנים.')).toBeVisible();
   await expect(player.locator('.w-clock-time')).toHaveText(/^\d{2}:\d{2}$/, { timeout: 20_000 });
   await expect(player.locator('.zone')).toHaveCount(2);
+  await device.close();
+});
+
+test('operations: what a screen shows, proof of play and CSV export', async ({ page, browser }) => {
+  test.setTimeout(180_000);
+  await signIn(page, ADMIN, true);
+
+  // A playlist with a short image, on a fresh screen.
+  await openPage(page, 'פלייליסטים');
+  await page.getByLabel('שם הפלייליסט').fill('דוח');
+  await page.getByRole('button', { name: 'פלייליסט חדש' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: /עריכת פלייליסט: דוח/ })).toBeVisible();
+  await page.getByRole('button', { name: 'הוספה מבצע השבוע' }).click();
+  await page.getByLabel('משך בשניות עבור מבצע השבוע').fill('3');
+  await page.getByRole('button', { name: 'שמירת הפלייליסט' }).click();
+  await expect(page.getByText('הפלייליסט נשמר והמסכים עודכנו.')).toBeVisible();
+
+  const device = await browser.newContext({ ignoreHTTPSErrors: true });
+  const player = await device.newPage();
+  await player.goto('/player/');
+  const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
+  await openPage(page, 'מסכים');
+  const addForm = page.getByRole('form', { name: 'הוספת מסך' });
+  await addForm.getByLabel('קוד חיבור').fill(code ?? '');
+  await addForm.getByLabel('שם מלא').fill('מסך ניטור');
+  await addForm.getByLabel('פלייליסט').selectOption({ label: 'דוח' });
+  await addForm.getByRole('button', { name: 'הוספת מסך' }).click();
+  await expect(page.getByText('המסך חובר בהצלחה.')).toBeVisible();
+  await expect(player.locator('.layer img')).toBeVisible({ timeout: 20_000 });
+
+  // The screen page shows what the screen reports it is playing (next heartbeat ≤ 30 s).
+  await page.getByRole('link', { name: 'מסך ניטור' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'מסך ניטור' })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'מוצג עכשיו' }).getByText('מבצע השבוע'),
+  ).toBeVisible({ timeout: 50_000 });
+  await expect(page.getByText('השעון מסונכרן', { exact: false })).toBeVisible();
+  await expectAccessible(page, 'screen page');
+
+  // Proof of play: uploaded by the player every 30 s.
+  await openPage(page, 'דוחות', 'דוחות הצגה');
+  const row = page.getByRole('row', { name: /מבצע השבוע/ });
+  await expect(async () => {
+    await page.reload();
+    await expect(row).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 75_000, intervals: [5000] });
+  await expect(row.getByRole('cell').nth(1)).toHaveText(/^[1-9]\d*$/);
+  await expectAccessible(page, 'reports');
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('link', { name: 'ייצוא כל ההצגות (CSV)' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^rubinny-plays-.*-events\.csv$/);
+  const csv = await readFile(await download.path(), 'utf8');
+  expect(csv.startsWith('\uFEFF"started_at","time_zone","duration_seconds","screen"')).toBe(true);
+  expect(csv).toContain('"מסך ניטור","main","media","מבצע השבוע"');
   await device.close();
 });
 

@@ -6,6 +6,9 @@ import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
 import { orgGuard, requireOrg } from '../auth/guards.js';
 import { ONLINE_WINDOW_MS } from '../screens/routes.js';
+import { LIMITS } from '../../lib/limiter.js';
+import { requireScreen } from '../player/auth.js';
+import { ingestPlays, playUploadSchema } from './plays.js';
 import { uptimeSummary } from './uptime.js';
 
 type NowPlayingDto =
@@ -25,6 +28,14 @@ const isUuid = (value: string) => z.uuid().safeParse(value).success;
 
 export function opsRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
+
+  /** Proof-of-play upload from a player (see PlayLog in the player). */
+  app.post('/player/v1/plays', { bodyLimit: 512 * 1024 }, async (request) => {
+    const screen = await requireScreen(ctx, request);
+    await ctx.limiter.hit(LIMITS.playUploadScreen, screen.id);
+    const { events } = parse(playUploadSchema, request.body);
+    return ingestPlays(ctx.db, screen, events);
+  });
 
   /** Live status of a screen: what it shows now, clock and uptime. */
   app.get('/api/v1/orgs/:orgId/screens/:screenId/status', viewer, async (request) => {

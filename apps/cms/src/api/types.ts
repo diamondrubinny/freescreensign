@@ -265,3 +265,21 @@ export interface ScreenStatus {
   layout: { kind: 'layout' | 'playlist' | 'default'; name: string | null } | null;
   nowPlaying: NowPlayingEntry[];
 }
+
+export interface PlayReportItem {
+  kind: 'media' | 'widget';
+  /** Null when the content was deleted (the name is kept). */
+  contentId: string | null;
+  name: string;
+  plays: number;
+  durationMs: number;
+  screens: number;
+}
+
+export interface PlayReport {
+  from: string;
+  to: string;
+  timeZone: string;
+  totals: { plays: number; durationMs: number };
+  items: PlayReportItem[];
+}

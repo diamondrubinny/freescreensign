@@ -7,9 +7,9 @@ Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-> **Status: early development** — phase 6 of 9 complete (media, playlists, screens, offline
-> player, layouts, widgets, a free-form designer, a free image library and scheduling). Not
-> ready for production yet.
+> **Status: early development** — phase 7 of 9 complete (media, playlists, screens, offline
+> player, layouts, widgets, a free-form designer, a free image library, scheduling and
+> operations). Not ready for production yet.
 
 ![A screen running the "Lobby" kit: main content with a blurred backdrop, a clock with the Hebrew date, and an updates ticker](docs/screenshots/screen-lobby.png)
 
@@ -38,6 +38,10 @@ Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 - **Scheduling**: switch layouts or playlists by days, hours and dates (a breakfast menu until
   11:00, a one-week sale, Fridays). Entries are ordered by priority, evaluated on each screen's
   own clock, and a weekly timeline shows what will play — and which entries never will.
+- **Operations**: a page per screen with what each zone shows right now, 24 h / 7 day uptime and
+  a clock check (players correct a wrong device clock with the server time); e-mail alerts when a
+  screen goes offline and when it is back; **proof-of-play reports** per content and date range,
+  with CSV export.
 - **Ready-made kits**: one click creates a designed screen (lobby, menu board, notice board).
 - **Secure media library**: uploads are quarantined, scanned by ClamAV, re-encoded and stripped
   of metadata (EXIF/GPS) before use.
@@ -50,6 +54,10 @@ Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 
 <details>
 <summary>More screenshots</summary>
+
+| Screen status: now playing, uptime, clock                                                             | Proof-of-play report with CSV export                                             |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| ![A screen page with status, uptime and what each zone shows](docs/screenshots/cms-screen-status.png) | ![The play report: plays and time per content](docs/screenshots/cms-reports.png) |
 
 | Scheduling with the weekly timeline                                                            |
 | ---------------------------------------------------------------------------------------------- |
@@ -110,8 +118,8 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV                              | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                            | —        |
 
-Coming next: operations (proof of play, screenshots, offline alerts) and player wrappers for
-each platform. See the [roadmap](docs/PLAN.md).
+Coming next: player wrappers for each platform (Raspberry Pi kiosk image, Electron, Android),
+which also bring real remote screenshots. See the [roadmap](docs/PLAN.md).
 
 ## Development
 

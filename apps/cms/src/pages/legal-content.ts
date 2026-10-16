@@ -82,6 +82,8 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'אבטחה: סוד אימות דו-שלבי (מוצפן), חיבורים פעילים, ומזהה מוסתר של כתובת IP (HMAC, ללא אפשרות שחזור). המטרה: אבטחת החשבון ומניעת שימוש לרעה. הבסיס: אינטרס לגיטימי.',
             'יומן פעולות (Audit Log) של פעולות ניהול. המטרה: בקרה ואבטחה. הבסיס: אינטרס לגיטימי.',
             'תוכן שאתם מעלים להצגה על מסכים. המטרה: אספקת השירות.',
+            'נתוני תפעול של מסכים: זמני חיבור, מה הוצג ומתי (Proof-of-Play), וסטיית שעון המכשיר. המטרה: ניטור, דוחות הצגה והתראות. אין בהם מידע על צופים. הבסיס: אינטרס לגיטימי.',
+            'התראות ניתוק (אם הופעלו): בעלי הארגון והמנהלים מקבלים מייל עם שם המסך והזמן. הבסיס: אינטרס לגיטימי.',
           ],
         },
         {
@@ -90,6 +92,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'פרטי החשבון נשמרים כל עוד החשבון פעיל.',
             'חיבורים פגי תוקף וקישורים חד-פעמיים נמחקים אוטומטית.',
             'יומן הפעולות נשמר 365 ימים כברירת מחדל.',
+            'נתוני זמינות של מסכים נשמרים 90 יום, ודוחות ההצגה 90 יום כברירת מחדל (ניתן להגדרה).',
           ],
         },
         {
@@ -228,6 +231,8 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'Security data: two-factor secret (encrypted), active sessions, and a pseudonymized IP identifier (HMAC, not reversible). Purpose: account security and abuse prevention. Legal basis: legitimate interest.',
             'Audit log of administrative actions. Purpose: oversight and security. Legal basis: legitimate interest.',
             'Content you upload for display on screens. Purpose: providing the service.',
+            'Screen operations data: connection times, what was shown and when (proof of play), and the device clock offset. Purpose: monitoring, play reports and alerts. It contains no data about viewers. Legal basis: legitimate interest.',
+            'Offline alerts (when enabled): owners and admins receive an email with the screen name and time. Legal basis: legitimate interest.',
           ],
         },
         {
@@ -236,6 +241,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
             'Account data is kept while the account is active.',
             'Expired sessions and one-time links are deleted automatically.',
             'The audit log is kept for 365 days by default.',
+            'Screen uptime data is kept for 90 days, and play reports for 90 days by default (configurable).',
           ],
         },
         {

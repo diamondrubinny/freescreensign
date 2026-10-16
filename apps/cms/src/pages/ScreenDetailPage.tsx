@@ -165,14 +165,14 @@ export function ScreenDetailPage() {
             ))}
           </dl>
           {/* Decorative: the numbers above carry the information. */}
-          <div
-            aria-hidden="true"
-            title={t('screenPage.uptimeChart')}
-            className="flex h-10 items-end gap-0.5"
-          >
+          <div aria-hidden="true" className="flex h-10 items-end gap-0.5">
             {info.uptime.hours.map((ratio, index) => (
               <div
                 key={index}
+                title={t('screenPage.hourTooltip', {
+                  hours: info.uptime.hours.length - index,
+                  value: ratio === null ? '—' : percent(ratio),
+                })}
                 className={`flex-1 rounded-sm ${
                   ratio === null
                     ? 'h-1 bg-gray-200 dark:bg-gray-700'

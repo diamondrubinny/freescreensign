@@ -1,3 +1,4 @@
+import { PlayLog, localPlayLogStorage } from './play-log';
 import '@fontsource-variable/heebo';
 import { PlayerApi } from './api';
 import { CacheStorageBlobStore, MediaCache } from './media-cache';
@@ -58,6 +59,7 @@ player = new Player({
   onManifest: (manifest) => {
     store.pruneWidgetData(manifest.widgets.map((widget) => widget.id));
   },
+  playLog: new PlayLog(localPlayLogStorage),
 });
 
 void player.start();

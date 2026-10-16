@@ -1,6 +1,7 @@
 import type { ManifestV1, NowPlayingItem } from '@rubinny/shared';
 import { PairingExpiredError, UnauthorizedError, type PlayerApi } from './api';
 import type { MediaCache } from './media-cache';
+import type { PlayLog } from './play-log';
 import { wait, type Renderer } from './renderer';
 import { activeLayout, flattenPlaylist, type PlayableItem } from './sequence';
 import type { ServerEvent } from './socket';
@@ -27,10 +28,16 @@ export interface PlayerDeps {
   version: string;
   /** Called after a new manifest is accepted (e.g. to prune widget data). */
   onManifest?: (manifest: ManifestV1) => void;
+  /** Proof-of-play log (kept locally until uploaded). */
+  playLog: PlayLog;
 }
 
 export const SYNC_INTERVAL_MS = 5 * 60 * 1000;
 export const HEARTBEAT_INTERVAL_MS = 30_000;
+/** How often the proof-of-play log is uploaded. */
+export const PLAYS_UPLOAD_MS = 30_000;
+/** Shorter displays (skipped or interrupted at once) are not counted as plays. */
+export const MIN_PLAY_MS = 1000;
 export const PAIR_POLL_MS = 3000;
 const EMPTY_RETRY_MS = 10_000;
 /** How often the schedule is re-evaluated (layout switches by time of day). */
@@ -155,6 +162,7 @@ export class Player {
     socket.start();
     void this.#loop(SYNC_INTERVAL_MS, () => this.sync());
     void this.#loop(HEARTBEAT_INTERVAL_MS, () => this.#heartbeat());
+    void this.#loop(PLAYS_UPLOAD_MS, () => this.uploadPlays());
     void this.#loop(SCHEDULE_CHECK_MS, () => {
       this.#checkSchedule();
       return Promise.resolve();
@@ -244,10 +252,24 @@ export class Player {
     }
   }
 
+  /** Uploads the oldest logged plays; keeps them for a later try on transient errors. */
+  async uploadPlays(): Promise<void> {
+    const token = this.#token;
+    const batch = this.deps.playLog.peek();
+    if (!token || batch.length === 0) return;
+    try {
+      const result = await this.deps.api.plays(token, batch);
+      if (result === 'done') this.deps.playLog.ack(batch.map((event) => event.id));
+    } catch (error) {
+      if (error instanceof UnauthorizedError) await this.#unpair();
+    }
+  }
+
   async #unpair() {
     this.#stopped = true;
     this.#abort.abort();
     this.deps.store.clear();
+    this.deps.playLog.clear();
     await this.#cache?.clear();
     this.deps.reload();
   }
@@ -299,12 +321,20 @@ export class Player {
           url = (await this.#cache?.objectUrl(item.media)) ?? null;
           if (!url) continue; // not cached (yet): skip
         }
-        this.#playing.set(zoneId, {
-          zoneId,
-          kind: item.kind,
-          ref: item.kind === 'media' ? item.media.id : item.widget.id,
-        });
+        const ref = item.kind === 'media' ? item.media.id : item.widget.id;
+        this.#playing.set(zoneId, { zoneId, kind: item.kind, ref });
+        const started = this.now();
         await this.deps.renderer.play(zoneId, item, url, signal);
+        const durationMs = this.now().getTime() - started.getTime();
+        if (durationMs >= MIN_PLAY_MS) {
+          this.deps.playLog.add({
+            zoneId,
+            kind: item.kind,
+            ref,
+            startedAt: started.toISOString(),
+            durationMs: Math.min(durationMs, 86_400_000),
+          });
+        }
         played++;
       }
       // Nothing playable (e.g. all downloads failed): avoid a busy loop.

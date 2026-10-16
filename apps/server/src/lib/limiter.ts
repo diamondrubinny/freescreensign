@@ -91,6 +91,8 @@ export const LIMITS = {
   mediaUploadUser: { name: 'media-upload-user', max: 120, windowSeconds: 3600 },
   pairStartIp: { name: 'pair-start-ip', max: 20, windowSeconds: 3600 },
   screenClaimUser: { name: 'screen-claim-user', max: 30, windowSeconds: 3600 },
+  // A player uploads once a minute; this leaves room for catching up after an outage.
+  playUploadScreen: { name: 'play-upload-screen', max: 240, windowSeconds: 3600 },
   /** Outbound widget fetches (cache misses only) per organization. */
   widgetFetchOrg: { name: 'widget-fetch-org', max: 120, windowSeconds: 3600 },
   stockSearchUser: { name: 'stock-search-user', max: 120, windowSeconds: 3600 },

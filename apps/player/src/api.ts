@@ -1,4 +1,9 @@
-import { parseManifest, type HeartbeatInput, type ManifestV1 } from '@rubinny/shared';
+import {
+  parseManifest,
+  type HeartbeatInput,
+  type ManifestV1,
+  type PlayEvent,
+} from '@rubinny/shared';
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -114,5 +119,22 @@ export class PlayerApi {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Uploads proof-of-play events. Returns 'done' when the server handled them (accepted
+   * or permanently rejected) and 'retry' for transient failures (network, rate limit).
+   */
+  async plays(token: string, events: readonly PlayEvent[]): Promise<'done' | 'retry'> {
+    const res = await this.fetcher(`${this.base}/plays`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ events }),
+      credentials: 'omit',
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (res.ok) return 'done';
+    // A malformed batch would fail forever; anything else is worth another try.
+    return res.status === 400 || res.status === 413 ? 'done' : 'retry';
   }
 }

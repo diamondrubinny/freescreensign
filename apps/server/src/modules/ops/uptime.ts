@@ -33,7 +33,7 @@ export interface UptimeSummary {
 
 /**
  * Online fraction of the slots from `from` (or the screen's creation, if later) to `now`.
- * The current slot is excluded while it is still in progress.
+ * The current slot counts once the screen has called in during it (never as a gap).
  */
 export async function uptimeSummary(
   db: Db,
@@ -71,6 +71,14 @@ export async function uptimeSummary(
       up++;
       bucketUp[bucket] = (bucketUp[bucket] ?? 0) + 1;
     }
+  }
+  // The current slot is still open: it counts only once the screen has called in during it.
+  if (end + SLOT_MS > first && online(end)) {
+    const bucket = Math.min(bucketCount - 1, Math.floor((end - from.getTime()) / hourMs));
+    total++;
+    up++;
+    bucketTotal[bucket] = (bucketTotal[bucket] ?? 0) + 1;
+    bucketUp[bucket] = (bucketUp[bucket] ?? 0) + 1;
   }
   const hours = bucketTotal.map((count, i) => (count === 0 ? null : (bucketUp[i] ?? 0) / count));
   return { ratio: total === 0 ? null : up / total, hours };

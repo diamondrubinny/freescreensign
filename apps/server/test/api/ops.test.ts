@@ -142,6 +142,8 @@ describe.runIf(integrationEnabled)('operations: screen status and uptime', () =>
       { zoneId: 'side', kind: 'widget', id: clock, name: 'Lobby clock', widgetType: 'clock' },
     ]);
     expect(status.uptime.hours).toHaveLength(24);
+    // A screen that just connected is up, not "no data".
+    expect(status.uptime.day).toBe(1);
 
     const screens = (await viewer.get(api('/screens'))).json<{
       screens: { clockOffsetMs: number }[];
@@ -318,6 +320,169 @@ describe.runIf(integrationEnabled)('operations: screen status and uptime', () =>
       expect((await owner.patch(api(), { offlineAlertMinutes: 4 })).statusCode).toBe(400);
       expect((await owner.patch(api(), { offlineAlertMinutes: 1441 })).statusCode).toBe(400);
       expect((await editor.patch(api(), { offlineAlerts: false })).statusCode).toBe(403);
+    });
+  });
+
+  describe('proof of play', () => {
+    const DAY = 24 * 3_600_000;
+    const utcDate = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+    const event = (ref: string, startedAt: string, extra: Record<string, unknown> = {}) => ({
+      id: randomUUID(),
+      zoneId: 'main',
+      kind: 'media',
+      ref,
+      startedAt,
+      durationMs: 10_000,
+      ...extra,
+    });
+    const upload = (token: string, events: unknown) =>
+      h.app.inject({
+        method: 'POST',
+        url: '/player/v1/plays',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { events },
+      });
+    type Report = {
+      report: {
+        totals: { plays: number; durationMs: number };
+        items: { kind: string; name: string; plays: number; durationMs: number; screens: number }[];
+      };
+    };
+
+    it('stores only valid plays of the organization, once', async () => {
+      const image = await insertMedia(h.db, orgId, 'Open day');
+      const foreign = await insertMedia(h.db, otherOrgId, 'Not yours');
+      const clock = (
+        await editor.post(api('/widgets'), { type: 'clock', name: 'Clock', config: {} })
+      ).json<{ widget: { id: string } }>().widget.id;
+      const { deviceToken } = await pair();
+      const now = Date.now();
+      const good = event(image, new Date(now - 60_000).toISOString());
+      const res = await upload(deviceToken, [
+        good,
+        event(clock, new Date(now - 30_000).toISOString(), { kind: 'widget', zoneId: 'side' }),
+        event(foreign, new Date(now).toISOString()),
+        event(image, new Date(now - 40 * DAY).toISOString()), // too old
+        event(image, new Date(now + 10 * 60_000).toISOString()), // in the future
+        { ...event(image, new Date(now).toISOString()), durationMs: 0 }, // invalid
+        { nonsense: true },
+      ]);
+      expect(res.statusCode, res.body).toBe(200);
+      expect(res.json()).toEqual({ accepted: 2, skipped: 5 });
+      // A retry of the same events is ignored.
+      expect((await upload(deviceToken, [good])).json()).toEqual({ accepted: 0, skipped: 1 });
+
+      const rows = await h.db.selectFrom('play_events').selectAll().orderBy('started_at').execute();
+      expect(rows.map((r) => [r.content_kind, r.content_name, r.zone_id])).toEqual([
+        ['media', 'Open day', 'main'],
+        ['widget', 'Clock', 'side'],
+      ]);
+
+      // Envelope errors and authentication.
+      expect((await upload(deviceToken, [])).statusCode).toBe(400);
+      expect(
+        (
+          await upload(
+            deviceToken,
+            Array.from({ length: 501 }, () => good),
+          )
+        ).statusCode,
+      ).toBe(400);
+      expect((await upload('not-a-token', [good])).statusCode).toBe(401);
+    });
+
+    it('reports plays per content by local day, as JSON and safe CSV', async () => {
+      const image = await insertMedia(h.db, orgId, '=HYPERLINK("http://evil.test")');
+      const other = await insertMedia(h.db, orgId, 'פרסומת');
+      const first = await pair();
+      const second = await pair();
+      // Three days ago, 22:30 UTC: already the next day in Jerusalem (UTC+2/+3).
+      const day = Date.parse(`${utcDate(Date.now() - 3 * DAY)}T22:30:00Z`);
+      const at = (minutes: number) => new Date(day + minutes * 60_000).toISOString();
+      await upload(first.deviceToken, [
+        event(image, at(0)),
+        event(image, at(1)),
+        event(other, at(2)),
+      ]);
+      await upload(second.deviceToken, [event(image, at(3))]);
+
+      const nextDay = utcDate(day + DAY);
+      const query = (params: Record<string, string>) =>
+        `${api('/reports/plays')}?${new URLSearchParams({ from: nextDay, to: nextDay, ...params }).toString()}`;
+
+      const local = (await viewer.get(query({ tz: 'Asia/Jerusalem' }))).json<Report>().report;
+      expect(local.totals).toEqual({ plays: 4, durationMs: 40_000 });
+      expect(local.items.map((i) => [i.name, i.plays, i.durationMs, i.screens])).toEqual([
+        ['=HYPERLINK("http://evil.test")', 3, 30_000, 2],
+        ['פרסומת', 1, 10_000, 1],
+      ]);
+      // The same plays are on the previous day in UTC.
+      expect((await viewer.get(query({ tz: 'UTC' }))).json<Report>().report.totals.plays).toBe(0);
+      // Filter by screen.
+      const one = (await viewer.get(query({ screenId: second.screenId }))).json<Report>().report;
+      expect(one.totals.plays).toBe(1);
+
+      // CSV: BOM, header, and formulas neutralized.
+      const csv = await viewer.get(query({ format: 'csv' }));
+      expect(csv.headers['content-type']).toBe('text/csv; charset=utf-8');
+      expect(csv.headers['content-disposition']).toContain(
+        `rubinny-plays-${nextDay}-${nextDay}.csv`,
+      );
+      expect(csv.body.startsWith('\uFEFF"content","kind","plays","total_seconds","screens"')).toBe(
+        true,
+      );
+      expect(csv.body).toContain(`"'=HYPERLINK(""http://evil.test"")","media",3,30,2`);
+
+      const events = await viewer.get(query({ format: 'csv', view: 'events' }));
+      const lines = events.body.trim().split('\r\n');
+      expect(lines).toHaveLength(5);
+      expect(lines[1]).toMatch(
+        /^"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}","Asia\/Jerusalem",10,"Lobby","main","media","'=HYPERLINK/,
+      );
+
+      // Deleted content keeps its name in reports.
+      await h.db.deleteFrom('media').where('id', '=', other).execute();
+      const after = (await viewer.get(query({}))).json<Report>().report;
+      expect(after.items.map((i) => i.name)).toContain('פרסומת');
+    });
+
+    it('validates report ranges and isolates organizations', async () => {
+      const bad = [
+        { from: '2026-10-10', to: '2026-10-01' },
+        { from: '2026-01-01', to: '2026-06-01' },
+        { from: '2026-10-01', to: '2026-10-02', tz: 'Not/A_Zone' },
+        { from: '2026-02-30', to: '2026-03-01' },
+      ];
+      for (const params of bad) {
+        const res = await viewer.get(
+          `${api('/reports/plays')}?${new URLSearchParams(params).toString()}`,
+        );
+        expect(res.statusCode, JSON.stringify(params)).toBe(400);
+      }
+      const ok = `?${new URLSearchParams({ from: '2026-10-01', to: '2026-10-02' }).toString()}`;
+      expect((await outsider.get(`${api('/reports/plays')}${ok}`)).statusCode).toBe(404);
+    });
+
+    it('removes plays older than the retention period', async () => {
+      const image = await insertMedia(h.db, orgId, 'Old');
+      const { screenId } = await pair();
+      const row = (started: Date) => ({
+        id: randomUUID(),
+        org_id: orgId,
+        screen_id: screenId,
+        media_id: image,
+        content_kind: 'media' as const,
+        content_name: 'Old',
+        zone_id: 'main',
+        started_at: started,
+        duration_ms: 1000,
+      });
+      await h.db
+        .insertInto('play_events')
+        .values([row(new Date(Date.now() - 31 * DAY)), row(new Date(Date.now() - 29 * DAY))])
+        .execute();
+      expect((await runMaintenance(h.db, 365, 30)).playEvents).toBe(1);
+      expect(await h.db.selectFrom('play_events').select('id').execute()).toHaveLength(1);
     });
   });
 });

@@ -1,3 +1,4 @@
+import { PlayLog, memoryPlayLogStorage, uuid } from '../src/play-log';
 import { describe, expect, it, vi } from 'vitest';
 import type { ManifestV1 } from '@rubinny/shared';
 import { PairingExpiredError, UnauthorizedError, type PlayerApi } from '../src/api';
@@ -49,6 +50,7 @@ function setup(options: {
   store: ReturnType<typeof memoryStore>;
   stopAfterPlays?: number;
   now?: () => Date;
+  playLog?: PlayLog;
   blobStore?: MemoryBlobStore;
   download?: () => Promise<Blob>;
 }) {
@@ -92,6 +94,7 @@ function setup(options: {
     resolution: () => '1920x1080',
     host: 'signage.example.com',
     version: 'test',
+    playLog: options.playLog ?? new PlayLog(memoryPlayLogStorage()),
   };
   const player = new Player(deps);
   ref.player = player;
@@ -284,5 +287,75 @@ describe('Player', () => {
     });
     await ctx.player.start();
     expect(store.clockOffset()).toBe(5000);
+  });
+
+  it('logs each play with its real duration and uploads the log', async () => {
+    const m = await realManifest();
+    let tick = Date.parse('2026-10-15T10:00:00Z');
+    const playLog = new PlayLog(memoryPlayLogStorage());
+    let uploadResult: 'retry' | 'done' = 'retry';
+    const plays = vi.fn(() => Promise.resolve(uploadResult));
+    const ctx = setup({
+      store: memoryStore({ token: 't', clockOffset: 60_000 }),
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat: vi.fn(), plays },
+      // Every reading of the clock moves it 3 s forward.
+      now: () => new Date((tick += 3000)),
+      playLog,
+      stopAfterPlays: 3,
+    });
+    await ctx.player.start();
+    const logged = playLog.peek();
+    expect(logged.length).toBeGreaterThanOrEqual(2);
+    expect(logged[0]).toMatchObject({ zoneId: 'main', kind: 'media', ref: 'm1' });
+    // The measured time (other loops read the same simulated clock in between).
+    expect(logged[0]!.durationMs % 3000).toBe(0);
+    expect(logged[0]!.durationMs).toBeGreaterThanOrEqual(3000);
+    expect(logged[0]?.id).toMatch(/^[0-9a-f-]{36}$/);
+    // Times are on the server clock (device minus the 60 s offset).
+    expect(Date.parse(logged[0]!.startedAt)).toBeLessThan(tick - 60_000);
+
+    // Transient failures (during the run, the upload loop already tried) keep the events…
+    expect(plays).toHaveBeenCalled();
+    await ctx.player.uploadPlays();
+    expect(playLog.size).toBe(logged.length);
+    // …and a handled upload removes them.
+    uploadResult = 'done';
+    await ctx.player.uploadPlays();
+    expect(plays).toHaveBeenLastCalledWith('t', logged);
+    expect(playLog.size).toBe(0);
+  });
+});
+
+describe('PlayLog', () => {
+  it('persists, drops the oldest beyond its limit and acknowledges by id', () => {
+    const storage = memoryPlayLogStorage();
+    const log = new PlayLog(storage, 3);
+    for (const ref of ['a', 'b', 'c', 'd']) {
+      log.add({
+        zoneId: 'z',
+        kind: 'media',
+        ref,
+        startedAt: '2026-10-15T10:00:00Z',
+        durationMs: 5,
+      });
+    }
+    expect(log.peek().map((e) => e.ref)).toEqual(['b', 'c', 'd']);
+    expect(new PlayLog(storage, 3).peek().map((e) => e.ref)).toEqual(['b', 'c', 'd']);
+    log.ack([log.peek()[0]!.id]);
+    expect(log.peek(1).map((e) => e.ref)).toEqual(['c']);
+    // Garbage in storage is ignored.
+    expect(new PlayLog({ load: () => 'nope', save: vi.fn() }).size).toBe(0);
+  });
+
+  it('creates valid v4 UUIDs without crypto.randomUUID', () => {
+    const original = crypto.randomUUID.bind(crypto);
+    Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true });
+    try {
+      expect(uuid()).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', { value: original, configurable: true });
+    }
   });
 });

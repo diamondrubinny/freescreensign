@@ -9,6 +9,7 @@ export interface MaintenanceResult {
   invitations: number;
   auditLogs: number;
   uptimeDays: number;
+  playEvents: number;
 }
 
 /** Uptime history kept per screen. */
@@ -18,6 +19,7 @@ export const UPTIME_RETENTION_DAYS = 90;
 export async function runMaintenance(
   db: Db,
   auditRetentionDays: number,
+  playRetentionDays = 90,
 ): Promise<MaintenanceResult> {
   const now = new Date();
   const dayAgo = new Date(now.getTime() - DAY_MS);
@@ -50,8 +52,13 @@ export async function runMaintenance(
       new Date(now.getTime() - UPTIME_RETENTION_DAYS * DAY_MS).toISOString().slice(0, 10),
     )
     .executeTakeFirst();
+  const playEvents = await db
+    .deleteFrom('play_events')
+    .where('started_at', '<', new Date(now.getTime() - playRetentionDays * DAY_MS))
+    .executeTakeFirst();
   return {
     uptimeDays: Number(uptimeDays.numDeletedRows),
+    playEvents: Number(playEvents.numDeletedRows),
     sessions: Number(sessions.numDeletedRows),
     tokens: Number(tokens.numDeletedRows),
     invitations: Number(invitations.numDeletedRows),

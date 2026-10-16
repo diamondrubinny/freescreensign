@@ -57,6 +57,8 @@ export const envSchema = z
     SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(14),
     SESSION_ABSOLUTE_DAYS: z.coerce.number().int().min(1).max(365).default(30),
     AUDIT_RETENTION_DAYS: z.coerce.number().int().min(30).default(365),
+    /** Proof-of-play history (what screens showed). */
+    PLAY_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
     MIGRATE_ON_START: booleanString.default(true),
 
     // --- Object storage (S3-compatible). Media features are disabled when unset.
