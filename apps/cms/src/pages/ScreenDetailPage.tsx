@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CLOCK_WARNING_MS } from '@rubinny/shared';
-import { Image as ImageIcon, Puzzle, Video } from 'lucide-react';
+import { Camera, Image as ImageIcon, Puzzle, Video } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { get, post } from '../api/client';
@@ -72,12 +72,17 @@ export function ScreenDetailPage() {
     queryKey: ['screen-status', orgId, screenId],
     queryFn: () =>
       get<{ status: ScreenStatus }>(`/api/v1/orgs/${orgId}/screens/${screenId}/status`),
-    refetchInterval: 15_000,
+    // Poll faster while a screenshot is on its way.
+    refetchInterval: (query) => (query.state.data?.status.screenshotPending ? 2000 : 15_000),
+  });
+  const screenshot = useMutation({
+    mutationFn: () => post(`/api/v1/orgs/${orgId}/screens/${screenId}/screenshot`),
+    onSuccess: () => status.refetch(),
   });
   const reload = useMutation({
     mutationFn: () => post(`/api/v1/orgs/${orgId}/screens/${screenId}/reload`),
   });
-  const errors = useFormErrors(status.error ?? screens.error ?? reload.error);
+  const errors = useFormErrors(status.error ?? screens.error ?? reload.error ?? screenshot.error);
 
   if (status.isPending || screens.isPending) return <Loading />;
   const screen = screens.data?.screens.find((s) => s.id === screenId);
@@ -127,6 +132,8 @@ export function ScreenDetailPage() {
             <dd dir="ltr" className="text-end">
               {screen.playerVersion ?? '—'}
             </dd>
+            <dt className="font-medium">{t('screenPage.platform')}</dt>
+            <dd className="text-end">{t(`screenPage.platforms.${info.platform}`)}</dd>
             <dt className="font-medium">{t('screenPage.timezone')}</dt>
             <dd dir="ltr" className="text-end">
               {screen.timezone}
@@ -228,6 +235,63 @@ export function ScreenDetailPage() {
               <NowPlayingCard key={`${entry.zoneId}-${entry.id}`} entry={entry} />
             ))}
           </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="screenshot-heading" className="mt-8">
+        <h2 id="screenshot-heading" className="mb-2 text-xl font-semibold">
+          {t('screenPage.screenshot')}
+        </h2>
+        {info.capabilities.includes('screenshot') ? (
+          <>
+            {canEdit && (
+              <div className="mb-3 flex flex-wrap items-center gap-3">
+                <Button
+                  variant="secondary"
+                  loading={screenshot.isPending || info.screenshotPending}
+                  disabled={!info.online}
+                  onClick={() => {
+                    screenshot.mutate();
+                  }}
+                >
+                  <Camera aria-hidden="true" className="size-4" />
+                  {t('screenPage.takeScreenshot')}
+                </Button>
+                <span role="status" className="text-sm">
+                  {info.screenshotPending
+                    ? t('screenPage.screenshotPending')
+                    : !info.online
+                      ? t('screenPage.screenshotOffline')
+                      : ''}
+                </span>
+              </div>
+            )}
+            {info.screenshot ? (
+              <figure>
+                <img
+                  src={`/api/v1/orgs/${orgId}/screens/${screenId}/screenshot?t=${encodeURIComponent(info.screenshot.takenAt)}`}
+                  alt={t('screenPage.screenshotAlt', {
+                    name: screen.name,
+                    when: formatDateTime(info.screenshot.takenAt, i18n.language),
+                  })}
+                  width={info.screenshot.width}
+                  height={info.screenshot.height}
+                  className="h-auto w-full max-w-3xl rounded-lg border border-gray-300 bg-black dark:border-gray-700"
+                />
+                <figcaption className="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                  {t('screenPage.screenshotTaken', {
+                    when: formatDateTime(info.screenshot.takenAt, i18n.language),
+                  })}
+                </figcaption>
+              </figure>
+            ) : (
+              <p className="text-gray-700 dark:text-gray-300">{t('screenPage.noScreenshot')}</p>
+            )}
+          </>
+        ) : (
+          <p className="text-gray-700 dark:text-gray-300">
+            {t('screenPage.screenshotUnsupported')}
+          </p>
         )}
       </section>
     </>

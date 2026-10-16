@@ -264,6 +264,11 @@ export interface ScreenStatus {
   uptime: { day: number | null; week: number | null; hours: (number | null)[] };
   layout: { kind: 'layout' | 'playlist' | 'default'; name: string | null } | null;
   nowPlaying: NowPlayingEntry[];
+  /** Where the player runs: a browser or a native wrapper. */
+  platform: 'web' | 'electron' | 'android';
+  capabilities: string[];
+  screenshot: { takenAt: string; width: number; height: number } | null;
+  screenshotPending: boolean;
 }
 
 export interface PlayReportItem {

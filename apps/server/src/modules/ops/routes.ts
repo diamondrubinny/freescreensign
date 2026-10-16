@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { CLOCK_WARNING_MS } from '@rubinny/shared';
+import { CLOCK_WARNING_MS, SCREENSHOT_LIMITS } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
@@ -111,6 +111,11 @@ export function opsRoutes(app: FastifyInstance, ctx: AppContext) {
       layout = { kind: 'layout', name: row?.name ?? null };
     }
 
+    const shot = await ctx.db
+      .selectFrom('screen_screenshots')
+      .select(['taken_at', 'width', 'height'])
+      .where('screen_id', '=', screen.id)
+      .executeTakeFirst();
     const offset = screen.clock_offset_ms;
     return {
       status: {
@@ -119,6 +124,15 @@ export function opsRoutes(app: FastifyInstance, ctx: AppContext) {
         clockOffsetMs: offset,
         clockOk: offset === null ? null : Math.abs(offset) <= CLOCK_WARNING_MS,
         uptime: { day: day.ratio, week: week.ratio, hours: day.hours },
+        platform: screen.platform,
+        capabilities: screen.capabilities,
+        screenshot: shot
+          ? { takenAt: shot.taken_at.toISOString(), width: shot.width, height: shot.height }
+          : null,
+        screenshotPending:
+          screen.screenshot_requested_at !== null &&
+          now.getTime() - screen.screenshot_requested_at.getTime() <=
+            SCREENSHOT_LIMITS.requestTtlMs,
         layout,
         nowPlaying: items.flatMap((item): NowPlayingDto[] => {
           if (item.kind === 'media') {

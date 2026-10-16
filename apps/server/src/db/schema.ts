@@ -1,5 +1,5 @@
 import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
-import type { NowPlayingItem, Role } from '@rubinny/shared';
+import type { NowPlayingItem, PlayerCapability, PlayerPlatform, Role } from '@rubinny/shared';
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 type NullableTimestamp = ColumnType<
@@ -208,6 +208,10 @@ export interface ScreensTable {
   current_layout_id: string | null;
   now_playing: ColumnType<NowPlayingItem[] | null, string | null | undefined, string | null>;
   offline_alerted_at: NullableTimestamp;
+  platform: Generated<PlayerPlatform>;
+  capabilities: Generated<PlayerCapability[]>;
+  screenshot_request_id: string | null;
+  screenshot_requested_at: NullableTimestamp;
   created_by: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
@@ -242,6 +246,14 @@ export interface ScreenUptimeDaysTable {
   screen_id: string;
   day: string;
   slots: Generated<string>;
+}
+
+export interface ScreenScreenshotsTable {
+  screen_id: string;
+  image: Buffer;
+  width: number;
+  height: number;
+  taken_at: Generated<Date>;
 }
 
 export interface PlayEventsTable {
@@ -288,6 +300,7 @@ export interface Database {
   schedule_entries: ScheduleEntriesTable;
   screen_uptime_days: ScreenUptimeDaysTable;
   play_events: PlayEventsTable;
+  screen_screenshots: ScreenScreenshotsTable;
 }
 
 export type User = Selectable<UsersTable>;

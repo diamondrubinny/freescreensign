@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ScreenDetailPage } from '../src/pages/ScreenDetailPage';
 import { mockApi, renderRoutes } from './render';
@@ -53,6 +54,10 @@ describe('screen page', () => {
             clockOffsetMs: -300_000,
             clockOk: false,
             uptime: { day: 0.975, week: null, hours: Array.from({ length: 24 }, () => 1) },
+            platform: 'web',
+            capabilities: [],
+            screenshot: null,
+            screenshotPending: false,
             layout: { kind: 'layout', name: 'לובי ראשי' },
             nowPlaying: [
               {
@@ -88,5 +93,52 @@ describe('screen page', () => {
     ]);
     // A viewer cannot send commands to the screen.
     expect(screen.queryByRole('button', { name: 'רענון הנגן' })).toBeNull();
+    // In a plain browser, screenshots are explained rather than offered.
+    expect(screen.getByText(/צילום מסך מרחוק זמין כשהנגן רץ באפליקציית המחשב/)).toBeVisible();
+  });
+
+  it('takes a remote screenshot on a screen with a native wrapper', async () => {
+    let shot: { takenAt: string; width: number; height: number } | null = null;
+    let pending = false;
+    const calls = mockApi({
+      'GET /api/v1/auth/session': () => ({
+        status: 200,
+        body: { ...session, memberships: [{ orgId: ORG, orgName: 'Org', role: 'EDITOR' }] },
+      }),
+      [`GET /api/v1/orgs/${ORG}/screens`]: () => ({ status: 200, body: { screens: [screenItem] } }),
+      [`GET /api/v1/orgs/${ORG}/screens/${SCREEN}/status`]: () => ({
+        status: 200,
+        body: {
+          status: {
+            online: true,
+            lastSeenAt: '2026-10-16T08:00:00Z',
+            clockOffsetMs: 0,
+            clockOk: true,
+            uptime: { day: 1, week: 1, hours: [] },
+            layout: null,
+            nowPlaying: [],
+            platform: 'electron',
+            capabilities: ['screenshot'],
+            screenshot: shot,
+            screenshotPending: pending,
+          },
+        },
+      }),
+      [`POST /api/v1/orgs/${ORG}/screens/${SCREEN}/screenshot`]: () => {
+        pending = false;
+        shot = { takenAt: '2026-10-16T08:01:00Z', width: 1920, height: 1080 };
+        return { status: 202, body: { requestId: 'r1' } };
+      },
+    });
+    renderRoutes(
+      [{ path: '/orgs/:orgId/screens/:screenId', element: <ScreenDetailPage /> }],
+      `/orgs/${ORG}/screens/${SCREEN}`,
+    );
+    expect(await screen.findByText('אפליקציית מחשב')).toBeVisible();
+    expect(screen.getByText('עדיין לא צולם מסך.')).toBeVisible();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'צילום מסך עכשיו' }));
+    const image = await screen.findByRole('img', { name: /צילום מסך של מסך לובי/ });
+    expect(image.getAttribute('src')).toContain(`/screens/${SCREEN}/screenshot?t=`);
+    expect(calls.some((c) => c.key.startsWith('POST') && c.key.endsWith('/screenshot'))).toBe(true);
   });
 });

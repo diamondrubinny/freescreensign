@@ -2,7 +2,12 @@ import { EventEmitter } from 'node:events';
 import type { Redis } from 'ioredis';
 
 /** Events pushed to connected players. */
-export type ScreenEvent = { type: 'manifest.changed' } | { type: 'reload' } | { type: 'revoked' };
+export type ScreenEvent =
+  | { type: 'manifest.changed' }
+  | { type: 'reload' }
+  | { type: 'revoked' }
+  /** A wrapper with the "screenshot" capability uploads a screenshot for this request. */
+  | { type: 'screenshot'; requestId: string };
 
 export interface ScreenEvents {
   publish(screenId: string, event: ScreenEvent): Promise<void>;
@@ -30,7 +35,19 @@ export class LocalScreenEvents implements ScreenEvents {
   }
 }
 
-const EVENT_TYPES = new Set(['manifest.changed', 'reload', 'revoked']);
+const EVENT_TYPES = new Set(['manifest.changed', 'reload', 'revoked', 'screenshot']);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** Only known events, with only their own fields, are delivered to players. */
+function toScreenEvent(event: { type?: unknown; requestId?: unknown }): ScreenEvent | null {
+  if (typeof event.type !== 'string' || !EVENT_TYPES.has(event.type)) return null;
+  if (event.type === 'screenshot') {
+    return typeof event.requestId === 'string' && UUID.test(event.requestId)
+      ? { type: 'screenshot', requestId: event.requestId }
+      : null;
+  }
+  return { type: event.type as 'manifest.changed' | 'reload' | 'revoked' };
+}
 
 /**
  * Valkey/Redis pub/sub so that events reach players connected to any server
@@ -47,14 +64,12 @@ export class RedisScreenEvents implements ScreenEvents {
     subscriber.on('message', (channel: string, message: string) => {
       if (channel !== this.channel || !this.#handler) return;
       try {
-        const parsed = JSON.parse(message) as { screenId?: unknown; event?: { type?: unknown } };
-        if (
-          typeof parsed.screenId === 'string' &&
-          typeof parsed.event?.type === 'string' &&
-          EVENT_TYPES.has(parsed.event.type)
-        ) {
-          this.#handler(parsed.screenId, parsed.event as ScreenEvent);
-        }
+        const parsed = JSON.parse(message) as {
+          screenId?: unknown;
+          event?: { type?: unknown; requestId?: unknown };
+        };
+        const event = parsed.event ? toScreenEvent(parsed.event) : null;
+        if (typeof parsed.screenId === 'string' && event) this.#handler(parsed.screenId, event);
       } catch {
         // Ignore malformed messages.
       }

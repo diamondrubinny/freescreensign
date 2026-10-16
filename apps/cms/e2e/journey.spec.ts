@@ -510,6 +510,28 @@ test('operations: what a screen shows, proof of play and CSV export', async ({ p
   await expect(page.getByText('הפלייליסט נשמר והמסכים עודכנו.')).toBeVisible();
 
   const device = await browser.newContext({ ignoreHTTPSErrors: true });
+  // Simulates a native wrapper (Electron/Android) bridge that can capture the screen.
+  await device.addInitScript(() => {
+    Object.defineProperty(window, 'RubinnyNative', {
+      value: {
+        platform: 'electron',
+        version: 'e2e',
+        capabilities: ['screenshot'],
+        capture: async () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 320;
+          canvas.height = 180;
+          const g = canvas.getContext('2d')!;
+          g.fillStyle = '#1d4ed8';
+          g.fillRect(0, 0, 320, 180);
+          const blob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob(resolve, 'image/jpeg', 0.8);
+          });
+          return new Uint8Array(await blob!.arrayBuffer());
+        },
+      },
+    });
+  });
   const player = await device.newPage();
   await player.goto('/player/');
   const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
@@ -529,6 +551,13 @@ test('operations: what a screen shows, proof of play and CSV export', async ({ p
     page.getByRole('region', { name: 'מוצג עכשיו' }).getByText('מבצע השבוע'),
   ).toBeVisible({ timeout: 50_000 });
   await expect(page.getByText('השעון מסונכרן', { exact: false })).toBeVisible();
+
+  // Remote screenshot through the (simulated) wrapper bridge.
+  await expect(page.getByText('אפליקציית מחשב')).toBeVisible();
+  await page.getByRole('button', { name: 'צילום מסך עכשיו' }).click();
+  const shot = page.getByRole('img', { name: /צילום מסך של מסך ניטור/ });
+  await expect(shot).toBeVisible({ timeout: 20_000 });
+  await expect.poll(() => shot.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(320);
   await expectAccessible(page, 'screen page');
 
   // Proof of play: uploaded by the player every 30 s.

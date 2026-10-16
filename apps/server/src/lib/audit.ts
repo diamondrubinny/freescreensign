@@ -35,6 +35,7 @@ export type AuditAction =
   | 'screen.updated'
   | 'screen.reloaded'
   | 'screen.removed'
+  | 'screen.screenshot_requested'
   | 'playlist.created'
   | 'playlist.updated'
   | 'playlist.deleted'

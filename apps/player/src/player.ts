@@ -1,6 +1,7 @@
-import type { ManifestV1, NowPlayingItem } from '@rubinny/shared';
+import type { ManifestV1, NowPlayingItem, RubinnyNativeBridge } from '@rubinny/shared';
 import { PairingExpiredError, UnauthorizedError, type PlayerApi } from './api';
 import type { MediaCache } from './media-cache';
+import { captureBytes } from './native';
 import type { PlayLog } from './play-log';
 import { wait, type Renderer } from './renderer';
 import { activeLayout, flattenPlaylist, type PlayableItem } from './sequence';
@@ -30,6 +31,8 @@ export interface PlayerDeps {
   onManifest?: (manifest: ManifestV1) => void;
   /** Proof-of-play log (kept locally until uploaded). */
   playLog: PlayLog;
+  /** The native wrapper bridge, when running inside one (see native.ts). */
+  native?: RubinnyNativeBridge | null;
 }
 
 export const SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -154,6 +157,7 @@ export class Player {
       (event) => {
         if (event.type === 'manifest.changed') void this.sync();
         if (event.type === 'reload') this.deps.reload();
+        if (event.type === 'screenshot') void this.#screenshot(event.requestId);
       },
       () => {
         void this.#unpair();
@@ -239,6 +243,8 @@ export class Player {
         clockOffsetMs: Math.round(this.#clockOffset),
         layoutId: this.#layoutId,
         nowPlaying: [...this.#playing.entries()].map(([zoneId, item]) => ({ ...item, zoneId })),
+        platform: this.deps.native?.platform ?? 'web',
+        capabilities: [...(this.deps.native?.capabilities ?? [])],
       });
       const received = this.deps.now().getTime();
       const server = result ? Date.parse(result.serverTime) : Number.NaN;
@@ -247,6 +253,18 @@ export class Player {
         this.#clockOffset = Math.round((sent + received) / 2 - server);
         this.deps.store.setClockOffset(this.#clockOffset);
       }
+    } catch (error) {
+      if (error instanceof UnauthorizedError) await this.#unpair();
+    }
+  }
+
+  /** Captures the screen through the native wrapper and answers the request. */
+  async #screenshot(requestId: string): Promise<void> {
+    const capture = this.deps.native?.capture;
+    if (!this.#token || !capture) return; // a plain browser cannot take screenshots
+    try {
+      const jpeg = captureBytes(await capture());
+      await this.deps.api.uploadScreenshot(this.#token, requestId, jpeg);
     } catch (error) {
       if (error instanceof UnauthorizedError) await this.#unpair();
     }

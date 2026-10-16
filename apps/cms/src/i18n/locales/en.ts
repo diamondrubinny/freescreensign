@@ -678,6 +678,17 @@ export const en: Messages = {
     unknownLayout: 'A deleted layout',
     zone: 'Zone {{name}}',
     media: { image: 'Image', video: 'Video' },
+    platform: 'Runs in',
+    platforms: { web: 'Browser', electron: 'Desktop app', android: 'Android' },
+    screenshot: 'Screenshot',
+    takeScreenshot: 'Take a screenshot now',
+    screenshotPending: 'Waiting for the screen…',
+    screenshotOffline: 'The screen is offline.',
+    screenshotAlt: 'Screenshot of {{name}} at {{when}}',
+    screenshotTaken: 'Taken {{when}}',
+    noScreenshot: 'No screenshot yet.',
+    screenshotUnsupported:
+      'Remote screenshots work when the player runs in the desktop app or on Android. A plain browser cannot capture the screen.',
     open: 'Details',
   },
   schedules: {

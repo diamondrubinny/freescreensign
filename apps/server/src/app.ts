@@ -27,6 +27,7 @@ import { scheduleRoutes } from './modules/schedules/routes.js';
 import { startOfflineAlerts } from './modules/ops/alerts.js';
 import { opsRoutes } from './modules/ops/routes.js';
 import { reportRoutes } from './modules/ops/reports.js';
+import { screenshotRoutes } from './modules/ops/screenshots.js';
 import { widgetRoutes } from './modules/widgets/routes.js';
 import { kitRoutes } from './modules/kits/routes.js';
 import { stockRoutes } from './modules/stock/routes.js';
@@ -132,6 +133,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     scheduleRoutes(app, ctx);
     opsRoutes(app, ctx);
     reportRoutes(app, ctx);
+    screenshotRoutes(app, ctx);
     if (options.backgroundJobs) startOfflineAlerts(app, ctx);
     kitRoutes(app, ctx);
     if (ctx.media) {

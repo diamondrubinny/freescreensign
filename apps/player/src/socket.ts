@@ -1,5 +1,9 @@
 export type ServerEvent =
-  { type: 'hello' } | { type: 'manifest.changed' } | { type: 'reload' } | { type: 'revoked' };
+  | { type: 'hello' }
+  | { type: 'manifest.changed' }
+  | { type: 'reload' }
+  | { type: 'revoked' }
+  | { type: 'screenshot'; requestId: string };
 
 /**
  * WebSocket client with exponential reconnect. The token is sent in the first

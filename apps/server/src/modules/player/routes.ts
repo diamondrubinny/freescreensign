@@ -158,6 +158,10 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
         ...(body.clockOffsetMs !== undefined ? { clock_offset_ms: body.clockOffsetMs } : {}),
         ...(body.layoutId !== undefined ? { current_layout_id: body.layoutId } : {}),
         ...(body.nowPlaying !== undefined ? { now_playing: JSON.stringify(body.nowPlaying) } : {}),
+        ...(body.platform !== undefined ? { platform: body.platform } : {}),
+        ...(body.capabilities !== undefined
+          ? { capabilities: [...new Set(body.capabilities)] }
+          : {}),
       })
       .where('id', '=', screen.id)
       .execute();

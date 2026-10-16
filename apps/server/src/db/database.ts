@@ -9,6 +9,7 @@ import * as m0005 from './migrations/0005_item_fit.js';
 import * as m0006 from './migrations/0006_media_source.js';
 import * as m0007 from './migrations/0007_schedules.js';
 import * as m0008 from './migrations/0008_ops.js';
+import * as m0009 from './migrations/0009_screenshots.js';
 
 export type Db = Kysely<Database>;
 
@@ -38,6 +39,7 @@ export const MIGRATIONS: readonly (readonly [name: string, migration: Migration]
   ['0006_media_source', m0006],
   ['0007_schedules', m0007],
   ['0008_ops', m0008],
+  ['0009_screenshots', m0009],
 ];
 
 /**

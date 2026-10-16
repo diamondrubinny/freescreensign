@@ -51,6 +51,7 @@ function setup(options: {
   stopAfterPlays?: number;
   now?: () => Date;
   playLog?: PlayLog;
+  native?: PlayerDeps['native'];
   blobStore?: MemoryBlobStore;
   download?: () => Promise<Blob>;
 }) {
@@ -95,6 +96,7 @@ function setup(options: {
     host: 'signage.example.com',
     version: 'test',
     playLog: options.playLog ?? new PlayLog(memoryPlayLogStorage()),
+    native: options.native ?? null,
   };
   const player = new Player(deps);
   ref.player = player;
@@ -323,6 +325,46 @@ describe('Player', () => {
     await ctx.player.uploadPlays();
     expect(plays).toHaveBeenLastCalledWith('t', logged);
     expect(playLog.size).toBe(0);
+  });
+  it('answers screenshot requests through the native wrapper, and reports its capabilities', async () => {
+    const m = await realManifest();
+    const capture = vi.fn().mockResolvedValue('/9j/');
+    const uploadScreenshot = vi.fn().mockResolvedValue(undefined);
+    const heartbeat = vi.fn().mockResolvedValue(null);
+    const ctx = setup({
+      store: memoryStore({ token: 't' }),
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat, uploadScreenshot },
+      native: { platform: 'electron', version: '1.0.0', capabilities: ['screenshot'], capture },
+      stopAfterPlays: 20,
+    });
+    const run = ctx.player.start();
+    await vi.waitUntil(() => ctx.played.length >= 1);
+    ctx.emit({ type: 'screenshot', requestId: 'r-1' });
+    await run;
+    await vi.waitFor(() => {
+      expect(uploadScreenshot).toHaveBeenCalledWith('t', 'r-1', new Uint8Array([0xff, 0xd8, 0xff]));
+    });
+    expect(heartbeat.mock.calls.at(-1)?.[1]).toMatchObject({
+      platform: 'electron',
+      capabilities: ['screenshot'],
+    });
+  });
+
+  it('ignores screenshot requests in a plain browser', async () => {
+    const m = await realManifest();
+    const uploadScreenshot = vi.fn();
+    const heartbeat = vi.fn().mockResolvedValue(null);
+    const ctx = setup({
+      store: memoryStore({ token: 't' }),
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat, uploadScreenshot },
+      stopAfterPlays: 5,
+    });
+    const run = ctx.player.start();
+    await vi.waitUntil(() => ctx.played.length >= 1);
+    ctx.emit({ type: 'screenshot', requestId: 'r-2' });
+    await run;
+    expect(uploadScreenshot).not.toHaveBeenCalled();
+    expect(heartbeat.mock.calls.at(-1)?.[1]).toMatchObject({ platform: 'web', capabilities: [] });
   });
 });
 

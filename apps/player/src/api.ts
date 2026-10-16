@@ -137,4 +137,18 @@ export class PlayerApi {
     // A malformed batch would fail forever; anything else is worth another try.
     return res.status === 400 || res.status === 413 ? 'done' : 'retry';
   }
+
+  /** Answers a screenshot request with a JPEG from the native wrapper. */
+  async uploadScreenshot(token: string, requestId: string, jpeg: Uint8Array): Promise<void> {
+    const res = await this.fetcher(
+      `${this.base}/screenshot?requestId=${encodeURIComponent(requestId)}`,
+      {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'image/jpeg' },
+        body: jpeg as unknown as BodyInit,
+        credentials: 'omit',
+      },
+    );
+    if (res.status === 401) throw new UnauthorizedError();
+  }
 }

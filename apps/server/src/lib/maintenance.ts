@@ -1,4 +1,5 @@
 import type { Db } from '../db/database.js';
+import { pruneScreenshots } from '../modules/ops/screenshots.js';
 import type { MediaQueue } from '../queue.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -10,6 +11,7 @@ export interface MaintenanceResult {
   auditLogs: number;
   uptimeDays: number;
   playEvents: number;
+  screenshots: number;
 }
 
 /** Uptime history kept per screen. */
@@ -56,7 +58,9 @@ export async function runMaintenance(
     .deleteFrom('play_events')
     .where('started_at', '<', new Date(now.getTime() - playRetentionDays * DAY_MS))
     .executeTakeFirst();
+  const screenshots = await pruneScreenshots(db, now);
   return {
+    screenshots,
     uptimeDays: Number(uptimeDays.numDeletedRows),
     playEvents: Number(playEvents.numDeletedRows),
     sessions: Number(sessions.numDeletedRows),

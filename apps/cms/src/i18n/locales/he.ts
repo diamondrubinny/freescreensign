@@ -660,6 +660,17 @@ export const he = {
     unknownLayout: 'תבנית שנמחקה',
     zone: 'אזור {{name}}',
     media: { image: 'תמונה', video: 'וידאו' },
+    platform: 'הפעלה',
+    platforms: { web: 'דפדפן', electron: 'אפליקציית מחשב', android: 'Android' },
+    screenshot: 'צילום מסך',
+    takeScreenshot: 'צילום מסך עכשיו',
+    screenshotPending: 'ממתין לצילום מהמסך…',
+    screenshotOffline: 'המסך לא מחובר.',
+    screenshotAlt: 'צילום מסך של {{name}} מ-{{when}}',
+    screenshotTaken: 'צולם ב-{{when}}',
+    noScreenshot: 'עדיין לא צולם מסך.',
+    screenshotUnsupported:
+      'צילום מסך מרחוק זמין כשהנגן רץ באפליקציית המחשב או ב-Android. דפדפן רגיל לא מאפשר לצלם את המסך.',
     open: 'פרטים',
   },
   schedules: {

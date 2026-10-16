@@ -1,3 +1,4 @@
+import { detectNative } from './native';
 import { PlayLog, localPlayLogStorage } from './play-log';
 import '@fontsource-variable/heebo';
 import { PlayerApi } from './api';
@@ -60,6 +61,7 @@ player = new Player({
     store.pruneWidgetData(manifest.widgets.map((widget) => widget.id));
   },
   playLog: new PlayLog(localPlayLogStorage),
+  native: detectNative(),
 });
 
 void player.start();

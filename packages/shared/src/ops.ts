@@ -19,6 +19,36 @@ export const PLAY_LIMITS = {
 /** A device clock further off than this is flagged in the CMS. */
 export const CLOCK_WARNING_MS = 60_000;
 
+/** Where the player runs: a browser, or one of the native wrappers (see docs/phases/08). */
+export const PLAYER_PLATFORMS = ['web', 'electron', 'android'] as const;
+export type PlayerPlatform = (typeof PLAYER_PLATFORMS)[number];
+/** What a wrapper adds to the web player. */
+export const PLAYER_CAPABILITIES = ['screenshot'] as const;
+export type PlayerCapability = (typeof PLAYER_CAPABILITIES)[number];
+
+export const SCREENSHOT_LIMITS = {
+  /** Uploads larger than this are rejected. */
+  maxBytes: 4 * 1024 * 1024,
+  /** A request must be answered within this time. */
+  requestTtlMs: 2 * 60 * 1000,
+  /** Stored images are scaled down to fit this box. */
+  maxSize: 1920,
+  /** The latest screenshot of a screen is kept this long. */
+  retentionDays: 7,
+} as const;
+
+/**
+ * The bridge a native wrapper exposes to the web player as `window.RubinnyNative`.
+ * Deliberately small: no files, no system commands, no network.
+ */
+export interface RubinnyNativeBridge {
+  platform: Exclude<PlayerPlatform, 'web'>;
+  version: string;
+  capabilities: readonly PlayerCapability[];
+  /** A JPEG of the player window: bytes, or base64 (Android). */
+  capture?: () => Promise<Uint8Array | ArrayBuffer | string>;
+}
+
 const contentKind = z.enum(['media', 'widget']);
 const zoneId = z.string().min(1).max(64);
 
@@ -42,6 +72,8 @@ export const heartbeatSchema = z.object({
   layoutId: z.string().min(1).max(64).nullable().optional(),
   /** What each zone shows right now. */
   nowPlaying: z.array(nowPlayingItemSchema).max(32).optional(),
+  platform: z.enum(PLAYER_PLATFORMS).optional(),
+  capabilities: z.array(z.enum(PLAYER_CAPABILITIES)).max(8).optional(),
 });
 export type HeartbeatInput = z.infer<typeof heartbeatSchema>;
 
