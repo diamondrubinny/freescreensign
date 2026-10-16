@@ -4,7 +4,7 @@ All notable changes to Rubinny. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) (0.x: anything may still change).
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-16
 
 The first release: a complete, self-hosted digital signage system. Not yet reviewed by an
 external penetration tester, accessibility auditor or lawyer: see
@@ -42,6 +42,10 @@ external penetration tester, accessibility auditor or lawyer: see
   (gitleaks), dependency and image scanning (Trivy), SBOMs (CycloneDX), a passive dynamic
   scan (OWASP ZAP), CodeQL, and device tests of the Android app on an emulator.
 - Release images are signed with Sigstore cosign (keyless) and carry build provenance.
+- Rate limits per verified screen and session, so many screens and staff behind one school
+  network address do not share one budget. Measured on a 4-core test machine: manifest
+  886 req/s (p99 97 ms), heartbeat 616 req/s (p99 122 ms), about 18,000 screens per server
+  process at one heartbeat every 30 s.
 
 ### Known limitations
 
