@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { normalizePairingCode } from '@rubinny/shared';
+import { hasRole, normalizePairingCode } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import type { Screen } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
@@ -173,6 +173,13 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
     );
     const normalized = normalizePairingCode(body.code);
     if (!normalized) throw invalidCode();
+    // What a screen shows waits for approval: an editor pairs it empty, then assigns content
+    // by editing the screen (a change that is held for an admin).
+    if (org.requireApproval && !hasRole(org.role, 'ADMIN') && (body.playlistId || body.layoutId)) {
+      throw new HttpError(409, 'CONFLICT', 'Assigning content needs approval', [
+        { path: body.playlistId ? 'playlistId' : 'layoutId', reason: 'approval_required' },
+      ]);
+    }
     await assertPlaylistInOrg(org.id, body.playlistId);
     await assertLayoutInOrg(org.id, body.layoutId);
     const codeHash = pairingCodeHash(normalized);

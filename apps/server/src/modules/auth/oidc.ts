@@ -38,8 +38,10 @@ export function oidcEnabled(env: Env): boolean {
   return Boolean(env.OIDC_ISSUER && env.OIDC_CLIENT_ID && env.OIDC_CLIENT_SECRET);
 }
 
+// __Secure- (not __Host-): browsers reject __Host- cookies unless Path=/, and this one
+// should reach the OIDC routes only.
 function stateCookieName(env: Env): string {
-  return env.PUBLIC_URL.startsWith('https://') ? '__Host-rubinny_oidc' : 'rubinny_oidc';
+  return env.PUBLIC_URL.startsWith('https://') ? '__Secure-rubinny_oidc' : 'rubinny_oidc';
 }
 
 /** Only paths inside the dashboard: never another site (no open redirect). */
@@ -281,14 +283,34 @@ export function oidcRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
     if (existing) {
-      await link(existing.id);
       if (!existing.email_verified_at) {
-        await ctx.db
-          .updateTable('users')
-          .set({ email_verified_at: new Date() })
-          .where('id', '=', existing.id)
-          .execute();
+        // Nobody proved this address before: whoever registered it may not own it. The
+        // provider proves it now, so the owner takes the account over and every credential
+        // set before (password, MFA, recovery codes, sessions) stops working.
+        const reset = await ctx.db.transaction().execute(async (trx) => {
+          await trx.deleteFrom('sessions').where('user_id', '=', existing.id).execute();
+          await trx.deleteFrom('recovery_codes').where('user_id', '=', existing.id).execute();
+          await trx.deleteFrom('user_tokens').where('user_id', '=', existing.id).execute();
+          return trx
+            .updateTable('users')
+            .set({
+              email_verified_at: new Date(),
+              password_hash: await hashPassword(randomToken()),
+              password_login: false,
+              mfa_secret_enc: null,
+              mfa_pending_secret_enc: null,
+              mfa_enabled_at: null,
+              mfa_last_step: null,
+              updated_at: new Date(),
+            })
+            .where('id', '=', existing.id)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        });
+        await link(existing.id);
+        return { user: reset, created: false };
       }
+      await link(existing.id);
       return { user: existing, created: false };
     }
 

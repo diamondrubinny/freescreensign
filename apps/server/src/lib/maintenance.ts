@@ -42,10 +42,18 @@ export async function runMaintenance(
     .deleteFrom('pairing_codes')
     .where('expires_at', '<', new Date(now.getTime() - DAY_MS))
     .execute();
+  // An approval interrupted while applying (process restart): back to pending, so an admin
+  // decides again (re-applying the same PUT/PATCH is harmless; a done DELETE reports stale).
+  await db
+    .updateTable('approval_requests')
+    .set({ status: 'pending', decided_by: null, decided_at: null })
+    .where('status', '=', 'applying')
+    .where('decided_at', '<', new Date(now.getTime() - 15 * 60 * 1000))
+    .execute();
   // Decided approval requests are kept 90 days (the decision stays in the audit log).
   await db
     .deleteFrom('approval_requests')
-    .where('status', '!=', 'pending')
+    .where('status', 'not in', ['pending', 'applying'])
     .where('decided_at', '<', new Date(now.getTime() - 90 * DAY_MS))
     .execute();
   const auditLogs = await db

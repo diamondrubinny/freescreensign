@@ -180,7 +180,7 @@ export interface WidgetItem {
 
 export interface ApprovalItem {
   id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  status: 'pending' | 'applying' | 'approved' | 'rejected' | 'withdrawn';
   summary: {
     kind: 'playlist' | 'widget' | 'layout' | 'schedule' | 'screen' | 'media';
     name: string | null;

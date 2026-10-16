@@ -366,6 +366,8 @@ export const he = {
     title: 'מסכים',
     nav: 'מסכים',
     add: 'הוספת מסך',
+    pairEmptyForApproval:
+      'המסך יתווסף בלי תוכן. אחרי ההוספה אפשר לבחור לו תוכן בעריכת המסך, והשינוי יישלח לאישור מנהל.',
     addIntro: 'פתחו את הנגן במסך החדש (\u200E/player\u200E) והזינו כאן את הקוד שמופיע עליו.',
     code: 'קוד חיבור',
     codeHint: '6 תווים, למשל K7Q-29M. הקוד תקף ל-10 דקות.',
@@ -691,6 +693,7 @@ export const he = {
     actionsLabel: { update: 'עריכה', items: 'שינוי התוכן', delete: 'מחיקה' },
     statuses: {
       pending: 'ממתין',
+      applying: 'בתהליך החלה',
       approved: 'אושר',
       rejected: 'נדחה',
       withdrawn: 'בוטל',

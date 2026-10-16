@@ -10,6 +10,7 @@ import {
   insertUser,
   integrationEnabled,
   login,
+  STRONG_PASSWORD,
   type Harness,
 } from '../support/harness.js';
 import {
@@ -126,6 +127,40 @@ describe.runIf(integrationEnabled)('sign-in through an OpenID Connect provider',
     expect(res.headers.location).toBe(`${PUBLIC_URL}/login?sso=unverified_email`);
     expect((await browser.get('/api/v1/auth/session')).statusCode).toBe(401);
     expect(await h.db.selectFrom('user_identities').selectAll().execute()).toEqual([]);
+  });
+
+  it('takes over an account whose address was never verified: old credentials stop working', async () => {
+    // Someone registered the address first (verification off, so they could sign in).
+    h = await harness({ REQUIRE_EMAIL_VERIFICATION: 'false' });
+    const userId = await insertUser(h.db, 'owner@school.example', { verified: false });
+    const squatter = await login(h.app, 'owner@school.example', '198.51.100.40');
+    expect((await squatter.get('/api/v1/auth/session')).statusCode).toBe(200);
+
+    op.signInAs({ sub: 'owner-1', email: 'owner@school.example', email_verified: true });
+    const { browser } = await ssoSignIn();
+    expect((await browser.get('/api/v1/auth/session')).json()).toMatchObject({
+      user: { id: userId, emailVerified: true, hasPassword: false },
+    });
+    // The squatter's session and password are gone.
+    expect((await squatter.get('/api/v1/auth/session')).statusCode).toBe(401);
+    const again = await new Client(h.app, '198.51.100.41').post('/api/v1/auth/login', {
+      email: 'owner@school.example',
+      password: STRONG_PASSWORD,
+    });
+    expect(again.statusCode).toBe(401);
+  });
+
+  it('names the state cookie so browsers accept it over https', async () => {
+    h = await harness({ PUBLIC_URL: 'https://signage.example' });
+    const start = await h.app.inject({ url: '/api/v1/auth/oidc/start' });
+    expect(start.statusCode).toBe(302);
+    const cookie = start.cookies.find((c) => c.name.endsWith('rubinny_oidc'));
+    // __Host- would need Path=/ (RFC 6265bis); this cookie is scoped to the OIDC routes.
+    expect(cookie).toMatchObject({
+      name: '__Secure-rubinny_oidc',
+      path: '/api/v1/auth/oidc',
+      secure: true,
+    });
   });
 
   it('creates accounts only with an invitation (invite mode), without a usable password', async () => {

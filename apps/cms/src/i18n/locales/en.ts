@@ -383,6 +383,8 @@ export const en: Messages = {
     title: 'Screens',
     nav: 'Screens',
     add: 'Add screen',
+    pairEmptyForApproval:
+      'The screen is added without content. Afterwards, choose its content by editing the screen; the change is sent to an admin for approval.',
     addIntro: 'Open the player on the new screen (/player) and enter the code it shows.',
     code: 'Pairing code',
     codeHint: '6 characters, e.g. K7Q-29M. The code is valid for 10 minutes.',
@@ -716,6 +718,7 @@ export const en: Messages = {
     actionsLabel: { update: 'Edit', items: 'Content change', delete: 'Delete' },
     statuses: {
       pending: 'Waiting',
+      applying: 'Being applied',
       approved: 'Approved',
       rejected: 'Rejected',
       withdrawn: 'Withdrawn',

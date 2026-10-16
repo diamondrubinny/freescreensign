@@ -18,6 +18,24 @@ All notable changes to Rubinny. The format follows
   invitations respected, local two-factor authentication still applies. Linked accounts are
   listed (and can be unlinked) on the account page. See docs/OPERATIONS.md (SSO).
 
+### Security
+
+Found in an internal review before release (none of these reached a released version):
+
+- SSO: signing in through the provider to an account whose address was never verified now
+  takes it over cleanly (the previous password, two-factor setup, recovery codes, links and
+  sessions stop working), so whoever registered the address first keeps no access.
+- SSO: the sign-in state cookie is named `__Secure-` (a `__Host-` cookie needs `Path=/`,
+  so browsers refused it and SSO failed on every https server).
+- Approvals: approving claims the request first and applies the change without holding a
+  database connection, so many approvals at once cannot exhaust the pool; a change that fails
+  to apply always stays pending, also without row-level security.
+- Requests aborted by the client roll back their transaction, and a handler still running
+  cannot continue outside it. The database pool now times out waiting for a connection
+  (10 s), and PostgreSQL ends a transaction left idle for 60 s.
+- Approvals: in an organization that requires approval, editors pair new screens without
+  content (assigning it is a change that waits for an admin).
+
 ## [0.2.0] - 2026-10-16
 
 Data tables, emergency alerts, row-level security and arm64 images. Upgrading from 0.1: see

@@ -81,9 +81,12 @@ export function ScreensPage() {
   const { orgId = '' } = useParams();
   const session = useSession().data;
   const queryClient = useQueryClient();
-  const role = session?.memberships.find((m) => m.orgId === orgId)?.role;
+  const membership = session?.memberships.find((m) => m.orgId === orgId);
+  const role = membership?.role;
   const canEdit = role ? hasRole(role, 'EDITOR') : false;
   const canRemove = role ? hasRole(role, 'ADMIN') : false;
+  // Content shown on screens waits for approval: editors pair screens empty.
+  const contentHeld = Boolean(membership?.requireApproval) && !canRemove;
 
   const screens = useQuery({
     queryKey: ['screens', orgId],
@@ -185,14 +188,18 @@ export function ScreensPage() {
               error={addErrors.fields.code}
             />
             <Field label={t('fields.name')} name="name" required error={addErrors.fields.name} />
-            <ContentSelect
-              id="add-screen-playlist"
-              name="playlistId"
-              label={t('screens.playlist')}
-              emptyLabel={t('screens.noPlaylist')}
-              options={playlists.data?.playlists ?? []}
-              defaultValue={null}
-            />
+            {contentHeld ? (
+              <p className="text-sm">{t('screens.pairEmptyForApproval')}</p>
+            ) : (
+              <ContentSelect
+                id="add-screen-playlist"
+                name="playlistId"
+                label={t('screens.playlist')}
+                emptyLabel={t('screens.noPlaylist')}
+                options={playlists.data?.playlists ?? []}
+                defaultValue={null}
+              />
+            )}
             <Button type="submit" loading={add.isPending}>
               {t('screens.add')}
             </Button>

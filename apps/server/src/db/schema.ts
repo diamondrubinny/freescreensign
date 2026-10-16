@@ -259,7 +259,7 @@ export interface ScreenScreenshotsTable {
   taken_at: Generated<Date>;
 }
 
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+export type ApprovalStatus = 'pending' | 'applying' | 'approved' | 'rejected' | 'withdrawn';
 
 export interface ApprovalSummary {
   kind: string;

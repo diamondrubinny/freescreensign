@@ -27,9 +27,13 @@ interface TenantStore {
    * then rolled back, and this records it; its result is the response (202).
    */
   dryRun: (() => Promise<object>) | null;
+  /** The client went away and the transaction was rolled back: later queries must fail. */
+  aborted?: boolean;
 }
 
 const storage = new AsyncLocalStorage<TenantStore>();
+/** The same stores by request: abort hooks run outside the request's async context. */
+const stores = new WeakMap<FastifyRequest, TenantStore>();
 
 /** The tenant transaction of the current request, if any (for tests and diagnostics). */
 export function currentTenantTransaction(): Trx | null {
@@ -63,7 +67,10 @@ function nestedTransaction(trx: Trx) {
 export function tenantAwareDb(base: Db): Db {
   return new Proxy(base, {
     get(target, prop) {
-      const trx = storage.getStore()?.trx;
+      const store = storage.getStore();
+      // Never fall back to the unrestricted connection for a handler still running.
+      if (store?.aborted) throw new Error('The request was aborted');
+      const trx = store?.trx;
       if (trx && !trx.isCommitted && !trx.isRolledBack) {
         if (prop === 'transaction') return () => nestedTransaction(trx);
         const value: unknown = Reflect.get(trx, prop, trx);
@@ -154,8 +161,10 @@ async function finish(store: TenantStore, commit: boolean): Promise<void> {
  * if the request ends any other way (aborted, closed).
  */
 export function registerTenantHooks(app: FastifyInstance): void {
-  app.addHook('onRequest', (_request, _reply, done) => {
-    storage.run({ trx: null, afterCommit: [], dryRun: null }, done);
+  app.addHook('onRequest', (request, _reply, done) => {
+    const store: TenantStore = { trx: null, afterCommit: [], dryRun: null };
+    stores.set(request, store);
+    storage.run(store, done);
   });
   app.addHook('onSend', async (_request: FastifyRequest, reply: FastifyReply, payload) => {
     const store = storage.getStore();
@@ -173,11 +182,14 @@ export function registerTenantHooks(app: FastifyInstance): void {
     return payload;
   });
   // Fastify requires async onRequestAbort hooks to declare exactly one parameter.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const cleanUp = async (_request: FastifyRequest) => {
-    const store = storage.getStore();
+  const cleanUp = async (request: FastifyRequest) => {
+    const store = stores.get(request);
     if (store?.trx) await finish(store, false).catch(() => undefined);
   };
   app.addHook('onResponse', cleanUp);
-  app.addHook('onRequestAbort', cleanUp);
+  app.addHook('onRequestAbort', async (request: FastifyRequest) => {
+    const store = stores.get(request);
+    if (store?.trx) store.aborted = true;
+    await cleanUp(request);
+  });
 }

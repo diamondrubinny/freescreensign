@@ -142,6 +142,9 @@ function approvalDto(row: ApprovalRow, requestedBy: string | null, decidedBy: st
 export function approvalRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const admin = { preHandler: orgGuard(ctx, 'ADMIN') };
+  // Approving runs the change as a separate (internal) request: holding this request's
+  // transaction meanwhile would take two pooled connections per approval.
+  const approver = { preHandler: orgGuard(ctx, 'ADMIN', { transaction: false }) };
   const params = z.object({ orgId: z.uuid(), approvalId: z.uuid() });
 
   async function withNames(rows: ApprovalRow[]) {
@@ -171,8 +174,8 @@ export function approvalRoutes(app: FastifyInstance, ctx: AppContext) {
       .limit(200);
     query =
       status === 'pending'
-        ? query.where('status', '=', 'pending')
-        : query.where('status', '!=', 'pending');
+        ? query.where('status', 'in', ['pending', 'applying'])
+        : query.where('status', 'not in', ['pending', 'applying']);
     // Editors and viewers see their own requests; admins see everyone's.
     if (!hasRole(org.role, 'ADMIN')) query = query.where('requested_by', '=', user.id);
     return { approvals: await withNames(await query.execute()) };
@@ -180,13 +183,13 @@ export function approvalRoutes(app: FastifyInstance, ctx: AppContext) {
 
   async function decide(
     request: FastifyRequest,
-    status: 'approved' | 'rejected' | 'withdrawn',
+    status: 'applying' | 'rejected' | 'withdrawn',
     note: string | null,
   ) {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     const { approvalId } = parse(params, request.params);
-    // Locks the row: a second decision at the same time waits, then finds it decided.
+    // Only one decision wins: a second one at the same time waits, then finds it decided.
     let update = ctx.db
       .updateTable('approval_requests')
       .set({ status, decided_by: user.id, decided_at: sql<Date>`now()`, note })
@@ -211,30 +214,53 @@ export function approvalRoutes(app: FastifyInstance, ctx: AppContext) {
     return { org, user, row };
   }
 
-  app.post('/api/v1/orgs/:orgId/approvals/:approvalId/approve', admin, async (request) => {
-    const { org, user, row } = await decide(request, 'approved', null);
+  app.post('/api/v1/orgs/:orgId/approvals/:approvalId/approve', approver, async (request) => {
+    // Two steps: the claim ('applying') commits first, so a concurrent decision is refused and
+    // no lock or connection is held while the change runs.
+    const { org, user, row } = await decide(request, 'applying', null);
+    const release = () =>
+      ctx.db
+        .updateTable('approval_requests')
+        .set({ status: 'pending', decided_by: null, decided_at: null })
+        .where('id', '=', row.id)
+        .where('status', '=', 'applying')
+        .execute();
     if (!row.path.startsWith(`/api/v1/orgs/${org.id}/`)) {
+      await release();
       throw new HttpError(409, 'CONFLICT', 'The request cannot be applied');
     }
     // The original request again, as this admin (admins are never held for approval).
-    const applied = await app.inject({
-      method: row.method,
-      url: row.path,
-      remoteAddress: request.ip,
-      headers: {
-        ...(request.headers.cookie ? { cookie: request.headers.cookie } : {}),
-        ...(request.headers.origin ? { origin: request.headers.origin } : {}),
-        ...(row.body !== null ? { 'content-type': 'application/json' } : {}),
-      },
-      ...(row.body !== null ? { payload: JSON.stringify(row.body) } : {}),
-    });
+    let applied;
+    try {
+      applied = await app.inject({
+        method: row.method,
+        url: row.path,
+        remoteAddress: request.ip,
+        headers: {
+          ...(request.headers.cookie ? { cookie: request.headers.cookie } : {}),
+          ...(request.headers.origin ? { origin: request.headers.origin } : {}),
+          ...(row.body !== null ? { 'content-type': 'application/json' } : {}),
+        },
+        ...(row.body !== null ? { payload: JSON.stringify(row.body) } : {}),
+      });
+    } catch (error) {
+      await release();
+      throw error;
+    }
     if (applied.statusCode >= 400) {
-      // The decision rolls back with this error: the request stays pending.
+      // Nothing was applied: the request stays pending, with the reason.
+      await release();
       const error = applied.json<{ error?: { code?: string } }>().error?.code ?? 'CONFLICT';
       throw new HttpError(409, 'CONFLICT', 'The change can no longer be applied', [
         { path: 'approval', reason: error.toLowerCase() },
       ]);
     }
+    const approved = await ctx.db
+      .updateTable('approval_requests')
+      .set({ status: 'approved', decided_at: sql<Date>`now()` })
+      .where('id', '=', row.id)
+      .returningAll()
+      .executeTakeFirstOrThrow();
     await audit(ctx.db, {
       action: 'approval.approved',
       orgId: org.id,
@@ -242,7 +268,7 @@ export function approvalRoutes(app: FastifyInstance, ctx: AppContext) {
       targetType: 'approval',
       targetId: row.id,
     });
-    return { approval: (await withNames([row]))[0] };
+    return { approval: (await withNames([approved]))[0] };
   });
 
   app.post('/api/v1/orgs/:orgId/approvals/:approvalId/reject', admin, async (request) => {

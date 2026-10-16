@@ -20,7 +20,14 @@ const MAINTENANCE_INTERVAL_MS = 60 * 60 * 1000;
 async function main() {
   const env = loadEnv();
 
-  const pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: env.DATABASE_POOL_MAX });
+  const pool = new pg.Pool({
+    connectionString: env.DATABASE_URL,
+    max: env.DATABASE_POOL_MAX,
+    // Fail a request instead of waiting forever when the pool is exhausted.
+    connectionTimeoutMillis: 10_000,
+    // A request transaction left open (a hung handler) is ended by PostgreSQL.
+    idle_in_transaction_session_timeout: 60_000,
+  });
   const redis = new Redis(env.REDIS_URL, {
     maxRetriesPerRequest: 2,
     // Fail fast instead of queueing commands while Redis is unreachable.

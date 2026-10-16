@@ -18,6 +18,7 @@ import { useOrgRole } from '../lib/use-org-role';
 
 const STATUS_TONES = {
   pending: 'amber',
+  applying: 'brand',
   approved: 'green',
   rejected: 'red',
   withdrawn: 'gray',
@@ -136,7 +137,7 @@ export function ApprovalsPage() {
               {withActions && (
                 <td className="px-2 py-2">
                   <div className="flex flex-wrap gap-2">
-                    {isAdmin ? (
+                    {item.status === 'applying' ? null : isAdmin ? (
                       <>
                         <Button
                           size="sm"

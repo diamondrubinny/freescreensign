@@ -1,3 +1,4 @@
+import http from 'node:http';
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -81,6 +82,57 @@ describe.runIf(integrationEnabled)('row-level security', () => {
     }
     return { orgA, orgB, a };
   }
+
+  it('rolls back an aborted request; its handler cannot continue outside the transaction', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let started: () => void = () => undefined;
+    const inHandler = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let outcome: Promise<string> | undefined;
+    h = await createHarness(
+      {},
+      {
+        extraRoutes: (app, ctx) => {
+          app.get('/api/v1/orgs/:orgId/__slow', { preHandler: orgGuard(ctx, 'VIEWER') }, () => {
+            outcome = (async () => {
+              started();
+              await gate;
+              try {
+                await ctx.db.selectFrom('widgets').select('id').execute();
+                return 'queried';
+              } catch (error) {
+                return error instanceof Error ? error.message : 'failed';
+              }
+            })();
+            return outcome;
+          });
+        },
+      },
+    );
+    const orgA = await insertOrg(h.db, await insertUser(h.db, 'a@example.com'), 'A', false);
+    const a = await login(h.app, 'a@example.com');
+    await h.app.listen({ port: 0, host: '127.0.0.1' });
+    const address = h.app.server.address();
+    const port = typeof address === 'object' && address ? address.port : 0;
+
+    // A real connection that goes away while the handler waits.
+    const req = http.get({
+      host: '127.0.0.1',
+      port,
+      path: `/api/v1/orgs/${orgA}/__slow`,
+      headers: { cookie: a.cookie ?? '' },
+    });
+    req.on('error', () => undefined);
+    await inHandler;
+    req.destroy();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    release();
+    expect(await outcome).toBe('The request was aborted');
+  });
 
   it('shows only the organization’s rows to a query without a filter', async () => {
     const { orgA, a } = await twoOrgs();

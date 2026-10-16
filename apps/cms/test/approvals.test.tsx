@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApprovalItem } from '../src/api/types';
 import { ApprovalsPage } from '../src/pages/ApprovalsPage';
+import { ScreensPage } from '../src/pages/ScreensPage';
 import { WidgetEditorPage } from '../src/pages/WidgetEditorPage';
 import { mockApi, renderRoutes } from './render';
 
@@ -154,5 +155,21 @@ describe('content approval', () => {
     const status = await screen.findByRole('status');
     expect(status).toHaveTextContent('השינוי נבדק ונשלח לאישור מנהל.');
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+  it('editors pair screens without choosing content when approval is required', async () => {
+    const list = (key: string) => () => ({ status: 200, body: { [key]: [] } });
+    mockApi({
+      'GET /api/v1/auth/session': () => ({ status: 200, body: session('EDITOR') }),
+      [`GET /api/v1/orgs/${ORG}/screens`]: list('screens'),
+      [`GET /api/v1/orgs/${ORG}/playlists`]: list('playlists'),
+      [`GET /api/v1/orgs/${ORG}/layouts`]: list('layouts'),
+      [`GET /api/v1/orgs/${ORG}/schedules`]: list('schedules'),
+    });
+    renderRoutes(
+      [{ path: '/orgs/:orgId/screens', element: <ScreensPage /> }],
+      `/orgs/${ORG}/screens`,
+    );
+    expect(await screen.findByText(/המסך יתווסף בלי תוכן/, {}, { timeout: 5000 })).toBeVisible();
+    expect(document.querySelector('select[name="playlistId"]')).toBeNull();
   });
 });

@@ -230,6 +230,57 @@ describe.runIf(integrationEnabled)('content approval', () => {
     const held = await editor.patch(api(`/widgets/${widget.id}`), { config: { text: 'x' } });
     expect(held.statusCode).toBe(202);
     expect(await widgetText(widget.id)).toBe('Welcome');
+
+    // Without a request transaction too, a change that fails to apply stays pending.
+    const { approval } = held.json<{ approval: Approval }>();
+    await admin.delete(api(`/widgets/${widget.id}`));
+    expect((await admin.post(api(`/approvals/${approval.id}/approve`))).statusCode).toBe(409);
+    const pending = (await admin.get(api('/approvals'))).json<{ approvals: Approval[] }>();
+    expect(pending.approvals).toMatchObject([{ id: approval.id, status: 'pending' }]);
+  });
+
+  it('approves many requests at once without exhausting the connection pool', async () => {
+    const { widget } = await content();
+    await admin.patch(api(), { requireApproval: true });
+    // More approvals than the test pool has connections (5).
+    const ids: string[] = [];
+    for (let i = 0; i < 8; i++) {
+      const held = await editor.patch(api(`/widgets/${widget.id}`), {
+        config: { text: `Text ${String(i)}` },
+      });
+      ids.push(held.json<{ approval: Approval }>().approval.id);
+    }
+    const results = await Promise.all(
+      [...ids, ids[0] ?? ''].map((id) => admin.post(api(`/approvals/${id}/approve`))),
+    );
+    const codes = results.map((r) => r.statusCode);
+    // Each request applies once; the duplicate decision is refused.
+    expect(codes.filter((c) => c === 200)).toHaveLength(8);
+    expect(codes.filter((c) => c === 409)).toHaveLength(1);
+    const statuses = await h.db
+      .selectFrom('approval_requests')
+      .select('status')
+      .where('org_id', '=', orgId)
+      .execute();
+    expect(statuses.every((r) => r.status === 'approved')).toBe(true);
+  }, 30_000);
+
+  it('editors pair screens without content when approval is required', async () => {
+    const { playlist } = await content();
+    await admin.patch(api(), { requireApproval: true });
+    const player = new Client(h.app, '203.0.113.41');
+    const { code } = (await player.post('/player/v1/pair/start')).json<{ code: string }>();
+    const withContent = await editor.post(api('/screens'), {
+      code,
+      name: 'Gym',
+      playlistId: playlist.id,
+    });
+    expect(withContent.statusCode).toBe(409);
+    expect(withContent.json()).toMatchObject({
+      error: { fields: [{ path: 'playlistId', reason: 'approval_required' }] },
+    });
+    const empty = await editor.post(api('/screens'), { code, name: 'Gym' });
+    expect(empty.statusCode).toBe(201);
   });
 
   it('keeps organizations apart', async () => {
