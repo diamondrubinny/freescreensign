@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Db } from '../../src/db/database.js';
 import { runMaintenance } from '../../src/lib/maintenance.js';
+import { reportScreenBack, runOfflineAlerts } from '../../src/modules/ops/alerts.js';
 import { recordUptime, uptimeSummary } from '../../src/modules/ops/uptime.js';
 import {
   Client,
@@ -220,5 +221,103 @@ describe.runIf(integrationEnabled)('operations: screen status and uptime', () =>
     expect(await h.db.selectFrom('screen_uptime_days').select('day').execute()).toHaveLength(
       before.length - 1,
     );
+  });
+
+  describe('offline alerts', () => {
+    const HOUR = 3_600_000;
+    const deps = () => ({ db: h.db, mailer: h.mailer, publicUrl: 'https://signage.example.com' });
+    const longAgo = () => new Date(Date.now() - HOUR);
+    const offlineFor = (screenId: string, minutes: number) =>
+      h.db
+        .updateTable('screens')
+        .set({ last_seen_at: new Date(Date.now() - minutes * 60_000) })
+        .where('id', '=', screenId)
+        .execute();
+
+    async function setup() {
+      // A second admin without a verified address gets nothing.
+      const unverified = await insertUser(h.db, 'unverified@example.com', { verified: false });
+      await h.db
+        .insertInto('memberships')
+        .values({ org_id: orgId, user_id: unverified, role: 'ADMIN' })
+        .execute();
+      await h.db
+        .updateTable('organizations')
+        .set({ offline_alerts: true, offline_alert_minutes: 10 })
+        .where('id', '=', orgId)
+        .execute();
+      return pair();
+    }
+
+    it('e-mails owners and admins once per outage, and again when the screen is back', async () => {
+      const { deviceToken, screenId } = await setup();
+      await h.db.updateTable('screens').set({ name: 'Lobby\nBcc: x@evil.test' }).execute();
+      await offlineFor(screenId, 11);
+      h.mailer.sent.length = 0;
+
+      expect(await runOfflineAlerts(deps(), longAgo())).toEqual({ orgs: 1, screens: 1 });
+      expect(h.mailer.sent.map((m) => m.to)).toEqual(['owner@example.com']);
+      const mail = h.mailer.sent[0]!;
+      // A screen name can never add header lines to the subject.
+      expect(mail.subject).toBe('המסך "Lobby Bcc: x@evil.test" לא מחובר');
+      expect(mail.text).toContain('יותר מ-10 דקות');
+      expect(mail.text).toContain(`https://signage.example.com/orgs/${orgId}/screens`);
+
+      // Once per outage.
+      expect(await runOfflineAlerts(deps(), longAgo())).toEqual({ orgs: 0, screens: 0 });
+      expect(h.mailer.sent).toHaveLength(1);
+
+      // The next heartbeat reports the screen back (once).
+      expect((await heartbeat(deviceToken, {})).statusCode).toBe(200);
+      await vi.waitFor(() => {
+        expect(h.mailer.sent).toHaveLength(2);
+      });
+      expect(h.mailer.sent[1]?.subject).toContain('חזר לפעול');
+      expect(await reportScreenBack(deps(), screenId)).toBe(false);
+      expect(await runOfflineAlerts(deps(), longAgo())).toEqual({ orgs: 0, screens: 0 });
+    });
+
+    it('groups screens, respects the delay, startup grace and the organization setting', async () => {
+      const first = await setup();
+      const second = await pair();
+      const never = await pair();
+      await h.db
+        .updateTable('screens')
+        .set({ last_seen_at: null })
+        .where('id', '=', never.screenId)
+        .execute();
+      await offlineFor(first.screenId, 30);
+      await offlineFor(second.screenId, 9); // not yet past the 10-minute delay
+      h.mailer.sent.length = 0;
+
+      // Right after the server starts, screens get time to reconnect first.
+      expect(await runOfflineAlerts(deps(), new Date())).toEqual({ orgs: 0, screens: 0 });
+
+      expect(await runOfflineAlerts(deps(), longAgo())).toEqual({ orgs: 1, screens: 1 });
+      await offlineFor(second.screenId, 12);
+      await h.db.updateTable('screens').set({ offline_alerted_at: null }).execute();
+      h.mailer.sent.length = 0;
+      expect(await runOfflineAlerts(deps(), longAgo())).toEqual({ orgs: 1, screens: 2 });
+      // One message listing both (a screen that never connected is not reported).
+      expect(h.mailer.sent).toHaveLength(1);
+      expect(h.mailer.sent[0]?.subject).toBe('2 מסכים לא מחוברים ב-Org');
+
+      await h.db.updateTable('screens').set({ offline_alerted_at: null }).execute();
+      await h.db.updateTable('organizations').set({ offline_alerts: false }).execute();
+      expect(await runOfflineAlerts(deps(), longAgo())).toEqual({ orgs: 0, screens: 0 });
+    });
+
+    it('lets only admins change the alert settings, within limits', async () => {
+      const owner = await login(h.app, 'owner@example.com');
+      const res = await owner.patch(api(), { offlineAlerts: true, offlineAlertMinutes: 15 });
+      expect(res.statusCode, res.body).toBe(200);
+      expect(res.json()).toMatchObject({ org: { offlineAlerts: true, offlineAlertMinutes: 15 } });
+      expect((await owner.get(api())).json()).toMatchObject({
+        org: { offlineAlerts: true, offlineAlertMinutes: 15 },
+      });
+      expect((await owner.patch(api(), { offlineAlertMinutes: 4 })).statusCode).toBe(400);
+      expect((await owner.patch(api(), { offlineAlertMinutes: 1441 })).statusCode).toBe(400);
+      expect((await editor.patch(api(), { offlineAlerts: false })).statusCode).toBe(403);
+    });
   });
 });

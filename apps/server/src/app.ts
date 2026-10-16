@@ -24,6 +24,7 @@ import { screenRoutes } from './modules/screens/routes.js';
 import { setupRoutes } from './modules/setup/routes.js';
 import { layoutRoutes } from './modules/layouts/routes.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
+import { startOfflineAlerts } from './modules/ops/alerts.js';
 import { opsRoutes } from './modules/ops/routes.js';
 import { widgetRoutes } from './modules/widgets/routes.js';
 import { kitRoutes } from './modules/kits/routes.js';
@@ -36,6 +37,8 @@ export interface BuildAppOptions {
   redis?: Redis;
   /** Override logging (tests pass `false`). */
   logger?: boolean;
+  /** Runs timers such as offline alerts (the server process; tests call jobs directly). */
+  backgroundJobs?: boolean;
   /** Services for the /api routes. When omitted only health endpoints are served. */
   services?: Omit<AppContext, 'env' | 'mailer'> & {
     /** A mailer, or a factory receiving the app logger. */
@@ -127,6 +130,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     layoutRoutes(app, ctx);
     scheduleRoutes(app, ctx);
     opsRoutes(app, ctx);
+    if (options.backgroundJobs) startOfflineAlerts(app, ctx);
     kitRoutes(app, ctx);
     if (ctx.media) {
       await app.register(multipart, {

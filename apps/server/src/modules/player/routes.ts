@@ -14,6 +14,7 @@ import { clientIp } from '../auth/sessions.js';
 import { findScreenByToken, requireScreen } from './auth.js';
 import { buildManifest } from './manifest.js';
 import { getWidgetData } from '../widgets/data.js';
+import { reportScreenBack } from '../ops/alerts.js';
 import { recordUptime } from '../ops/uptime.js';
 
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
@@ -161,6 +162,13 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('id', '=', screen.id)
       .execute();
     await recordUptime(ctx.db, screen.id);
+    // Back after an offline alert: tell the admins (in the background, best effort).
+    void reportScreenBack(
+      { db: ctx.db, mailer: ctx.mailer, publicUrl: ctx.env.PUBLIC_URL },
+      screen.id,
+    ).catch((err: unknown) => {
+      request.log.error({ err }, 'screen back notice failed');
+    });
     return { serverTime: new Date().toISOString() };
   });
 

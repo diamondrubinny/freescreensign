@@ -62,7 +62,14 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
     });
     await audit(ctx.db, { action: 'org.created', orgId: org.id, actorUserId: user.id });
     return reply.status(201).send({
-      org: { id: org.id, name: org.name, requireAdminMfa: org.require_admin_mfa, role: 'OWNER' },
+      org: {
+        id: org.id,
+        name: org.name,
+        requireAdminMfa: org.require_admin_mfa,
+        offlineAlerts: org.offline_alerts,
+        offlineAlertMinutes: org.offline_alert_minutes,
+        role: 'OWNER',
+      },
     });
   });
 
@@ -73,7 +80,12 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
     const { user } = requireAuth(request);
     const body = parse(
       z
-        .object({ name: nameSchema.optional(), requireAdminMfa: z.boolean().optional() })
+        .object({
+          name: nameSchema.optional(),
+          requireAdminMfa: z.boolean().optional(),
+          offlineAlerts: z.boolean().optional(),
+          offlineAlertMinutes: z.number().int().min(5).max(1440).optional(),
+        })
         .refine((value) => Object.keys(value).length > 0, { message: 'Nothing to update' }),
       request.body,
     );
@@ -85,6 +97,10 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
       .set({
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.requireAdminMfa !== undefined ? { require_admin_mfa: body.requireAdminMfa } : {}),
+        ...(body.offlineAlerts !== undefined ? { offline_alerts: body.offlineAlerts } : {}),
+        ...(body.offlineAlertMinutes !== undefined
+          ? { offline_alert_minutes: body.offlineAlertMinutes }
+          : {}),
         updated_at: new Date(),
       })
       .where('id', '=', org.id)
@@ -101,6 +117,8 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
         id: updated.id,
         name: updated.name,
         requireAdminMfa: updated.require_admin_mfa,
+        offlineAlerts: updated.offline_alerts,
+        offlineAlertMinutes: updated.offline_alert_minutes,
         role: org.role,
       },
     };

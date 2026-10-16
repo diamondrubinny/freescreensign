@@ -41,6 +41,7 @@ async function main() {
   const app = await buildApp({
     env,
     redis,
+    backgroundJobs: true,
     checks: [
       postgresCheck(pool),
       redisCheck(redis),

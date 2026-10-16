@@ -30,6 +30,9 @@ export interface Org {
   name: string;
   role: Role;
   requireAdminMfa: boolean;
+  /** E-mail owners and admins when a screen stays offline. */
+  offlineAlerts: boolean;
+  offlineAlertMinutes: number;
 }
 
 export interface Member {

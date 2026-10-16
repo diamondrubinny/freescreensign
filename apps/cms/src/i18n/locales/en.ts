@@ -221,6 +221,12 @@ export const en: Messages = {
     requireAdminMfaHint:
       'Recommended. Owners and admins cannot perform administrative actions without two-factor authentication.',
     ownerOnly: 'Only owners can change this setting.',
+    alertsTitle: 'Alerts',
+    offlineAlerts: 'E-mail when a screen is offline',
+    offlineAlertsHint:
+      'Owners and admins (with a verified address) get one e-mail per outage, and a message when the screen is back.',
+    offlineAlertMinutes: 'Minutes without a connection',
+    offlineAlertMinutesHint: 'Between 5 and 1440 minutes.',
     create: 'Create a new organization',
   },
   audit: {

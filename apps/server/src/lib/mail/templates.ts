@@ -5,7 +5,9 @@ export type MailTemplate =
   | { kind: 'reset-password'; url: string }
   | { kind: 'account-exists'; loginUrl: string; resetUrl: string }
   | { kind: 'invitation'; url: string; orgName: string; inviterName: string }
-  | { kind: 'security-notice'; event: 'password-changed' | 'mfa-enabled' | 'mfa-disabled' };
+  | { kind: 'security-notice'; event: 'password-changed' | 'mfa-enabled' | 'mfa-disabled' }
+  | { kind: 'screens-offline'; orgName: string; screens: string[]; minutes: number; url: string }
+  | { kind: 'screens-online'; orgName: string; screens: string[]; url: string };
 
 export interface RenderedMail {
   subject: string;
@@ -29,6 +31,9 @@ interface Copy {
 }
 
 const SIGNATURE = { he: 'צוות Rubinny', en: 'The Rubinny team' } as const;
+
+/** User-provided text in a subject line: never let it add header lines. */
+const oneLine = (value: string) => value.replace(/[\r\n\t]+/g, ' ').slice(0, 120);
 
 function copyFor(template: MailTemplate, locale: Locale): Copy {
   const he = locale === 'he';
@@ -101,6 +106,48 @@ function copyFor(template: MailTemplate, locale: Locale): Copy {
               'The invitation expires in 7 days.',
             ],
             action: { label: 'Accept invitation', url: template.url },
+          };
+    case 'screens-offline': {
+      const many = template.screens.length > 1;
+      return he
+        ? {
+            subject: many
+              ? `${String(template.screens.length)} מסכים לא מחוברים ב-${oneLine(template.orgName)}`
+              : `המסך "${oneLine(template.screens[0] ?? '')}" לא מחובר`,
+            lines: [
+              `המסכים הבאים בארגון ${template.orgName} לא התחברו לשרת במשך יותר מ-${String(template.minutes)} דקות:`,
+              ...template.screens.map((name) => `• ${name}`),
+              'בדקו שהמכשיר דולק ומחובר לרשת. כשהמסך יחזור, תישלח הודעה.',
+            ],
+            action: { label: 'צפייה במסכים', url: template.url },
+          }
+        : {
+            subject: many
+              ? `${String(template.screens.length)} screens offline in ${oneLine(template.orgName)}`
+              : `Screen "${oneLine(template.screens[0] ?? '')}" is offline`,
+            lines: [
+              `These screens in ${template.orgName} have not reached the server for more than ${String(template.minutes)} minutes:`,
+              ...template.screens.map((name) => `• ${name}`),
+              'Check that the device is on and connected. You will get a message when it is back.',
+            ],
+            action: { label: 'View screens', url: template.url },
+          };
+    }
+    case 'screens-online':
+      return he
+        ? {
+            subject: `המסך "${oneLine(template.screens[0] ?? '')}" חזר לפעול`,
+            lines: [
+              `המסך ${template.screens.join(', ')} בארגון ${template.orgName} מחובר שוב ומציג תוכן.`,
+            ],
+            action: { label: 'צפייה במסכים', url: template.url },
+          }
+        : {
+            subject: `Screen "${oneLine(template.screens[0] ?? '')}" is back online`,
+            lines: [
+              `${template.screens.join(', ')} in ${template.orgName} is connected again and showing content.`,
+            ],
+            action: { label: 'View screens', url: template.url },
           };
     case 'security-notice': {
       const events = {

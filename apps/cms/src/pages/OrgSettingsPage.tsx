@@ -22,8 +22,14 @@ export function OrgSettingsPage() {
     queryFn: () => get<{ org: Org }>(`/api/v1/orgs/${orgId}`),
   });
   const save = useMutation({
-    mutationFn: (body: Partial<{ name: string; requireAdminMfa: boolean }>) =>
-      patch<{ org: Org }>(`/api/v1/orgs/${orgId}`, body),
+    mutationFn: (
+      body: Partial<{
+        name: string;
+        requireAdminMfa: boolean;
+        offlineAlerts: boolean;
+        offlineAlertMinutes: number;
+      }>,
+    ) => patch<{ org: Org }>(`/api/v1/orgs/${orgId}`, body),
     onSuccess: async (data) => {
       queryClient.setQueryData(['org', orgId], data);
       await refreshSession();
@@ -45,6 +51,8 @@ export function OrgSettingsPage() {
           save.mutate({
             name: value(data, 'name'),
             ...(isOwner ? { requireAdminMfa: data.get('requireAdminMfa') === 'on' } : {}),
+            offlineAlerts: data.get('offlineAlerts') === 'on',
+            offlineAlertMinutes: Number(value(data, 'offlineAlertMinutes')),
           });
         }}
       >
@@ -71,6 +79,37 @@ export function OrgSettingsPage() {
             {t('orgSettings.requireAdminMfaHint')} {!isOwner && t('orgSettings.ownerOnly')}
           </p>
         </div>
+        <fieldset className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+          <legend className="px-1 font-semibold">{t('orgSettings.alertsTitle')}</legend>
+          <div className="flex flex-col gap-1">
+            <label className="flex items-center gap-2 font-medium">
+              <input
+                type="checkbox"
+                name="offlineAlerts"
+                className="size-4"
+                defaultChecked={org.data.org.offlineAlerts}
+                aria-describedby="offline-alerts-hint"
+              />
+              {t('orgSettings.offlineAlerts')}
+            </label>
+            <p id="offline-alerts-hint" className="text-sm text-gray-700 dark:text-gray-300">
+              {t('orgSettings.offlineAlertsHint')}
+            </p>
+          </div>
+          <Field
+            label={t('orgSettings.offlineAlertMinutes')}
+            name="offlineAlertMinutes"
+            type="number"
+            inputMode="numeric"
+            min={5}
+            max={1440}
+            required
+            dir="ltr"
+            defaultValue={String(org.data.org.offlineAlertMinutes)}
+            hint={t('orgSettings.offlineAlertMinutesHint')}
+            error={errors.fields.offlineAlertMinutes}
+          />
+        </fieldset>
         <Button type="submit" loading={save.isPending}>
           {t('common.save')}
         </Button>

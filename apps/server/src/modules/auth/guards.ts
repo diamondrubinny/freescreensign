@@ -11,6 +11,9 @@ export interface OrgAccess {
   name: string;
   role: Role;
   requireAdminMfa: boolean;
+  /** E-mail admins when a screen stays offline for `offlineAlertMinutes`. */
+  offlineAlerts: boolean;
+  offlineAlertMinutes: number;
 }
 
 declare module 'fastify' {
@@ -82,6 +85,8 @@ export function orgGuard(ctx: AppContext, minRole: Role) {
         'organizations.id',
         'organizations.name',
         'organizations.require_admin_mfa',
+        'organizations.offline_alerts',
+        'organizations.offline_alert_minutes',
         'memberships.role',
       ])
       .where('memberships.user_id', '=', user.id)
@@ -105,6 +110,8 @@ export function orgGuard(ctx: AppContext, minRole: Role) {
       name: row.name,
       role: row.role,
       requireAdminMfa: row.require_admin_mfa,
+      offlineAlerts: row.offline_alerts,
+      offlineAlertMinutes: row.offline_alert_minutes,
     };
   };
 }

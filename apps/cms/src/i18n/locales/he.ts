@@ -217,6 +217,12 @@ export const he = {
     requireAdminMfa: 'חיוב אימות דו-שלבי למנהלים',
     requireAdminMfaHint: 'מומלץ. בעלים ומנהלים לא יוכלו לבצע פעולות ניהול בלי אימות דו-שלבי.',
     ownerOnly: 'רק בעלי הארגון יכולים לשנות הגדרה זו.',
+    alertsTitle: 'התראות',
+    offlineAlerts: 'שליחת מייל כשמסך לא מחובר',
+    offlineAlertsHint:
+      'בעלי הארגון והמנהלים (עם אימייל מאומת) יקבלו מייל אחד לכל ניתוק, והודעה כשהמסך חוזר.',
+    offlineAlertMinutes: 'אחרי כמה דקות בלי חיבור',
+    offlineAlertMinutesHint: 'בין 5 ל-1440 דקות.',
     create: 'יצירת ארגון חדש',
   },
   audit: {
