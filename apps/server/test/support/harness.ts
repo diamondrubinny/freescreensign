@@ -3,6 +3,7 @@ import pg from 'pg';
 import { Redis } from 'ioredis';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { buildApp } from '../../src/app.js';
+import type { AppContext } from '../../src/context.js';
 import { loadEnv, type Env } from '../../src/config/env.js';
 import { createDb, migrateToLatest, type Db } from '../../src/db/database.js';
 import { KeyRing } from '../../src/lib/crypto.js';
@@ -42,7 +43,10 @@ export const mediaIntegrationEnabled =
 
 export async function createHarness(
   envOverrides: Record<string, string> = {},
-  options: { media?: boolean } = {},
+  options: {
+    media?: boolean;
+    extraRoutes?: (app: FastifyInstance, ctx: AppContext) => void;
+  } = {},
 ): Promise<Harness> {
   const suffix = randomBytes(6).toString('hex');
   const env = loadEnv({
@@ -96,6 +100,7 @@ export async function createHarness(
     env,
     logger: false,
     onRoute: (route) => routes.push(route),
+    ...(options.extraRoutes ? { extraRoutes: options.extraRoutes } : {}),
     services: {
       db,
       keys: new KeyRing(env.ENCRYPTION_KEY),

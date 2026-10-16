@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { hasRole, type Role } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import { HttpError } from '../../lib/http-error.js';
+import { beginTenantTransaction } from '../../lib/tenant.js';
 import { resolveSession, sessionCookieName, type AuthState } from './sessions.js';
 
 export interface OrgAccess {
@@ -75,7 +76,18 @@ const orgParams = z.object({ orgId: z.uuid() });
 /** Marks the preHandlers made by orgGuard (see assertOrgRouteGuarded). */
 const ORG_GUARD = Symbol('orgGuard');
 
-export function orgGuard(ctx: AppContext, minRole: Role) {
+export function orgGuard(
+  ctx: AppContext,
+  minRole: Role,
+  options: {
+    /**
+     * false: no request transaction (row-level security) for routes that stream large
+     * uploads, so they do not hold a database connection for minutes. Their queries keep
+     * filtering by organization in code, and the cross-tenant tests cover them.
+     */
+    transaction?: boolean;
+  } = {},
+) {
   const guard = async (request: FastifyRequest) => {
     const { user } = requireAuth(request);
     const params = orgParams.safeParse(request.params);
@@ -116,6 +128,9 @@ export function orgGuard(ctx: AppContext, minRole: Role) {
       offlineAlerts: row.offline_alerts,
       offlineAlertMinutes: row.offline_alert_minutes,
     };
+    if (options.transaction !== false) {
+      await beginTenantTransaction(ctx.db, ctx.rls === true, row.id);
+    }
   };
   return Object.assign(guard, { [ORG_GUARD]: minRole });
 }

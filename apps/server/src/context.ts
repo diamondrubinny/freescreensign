@@ -12,6 +12,8 @@ import type { MediaQueue } from './queue.js';
 export interface AppContext {
   env: Env;
   db: Db;
+  /** Organization requests run under row-level security (see lib/tenant.ts). */
+  rls?: boolean;
   keys: KeyRing;
   mailer: Mailer;
   limiter: Limiter;

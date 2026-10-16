@@ -73,6 +73,28 @@ cd deploy
 - **Audit log:** sign-ins, failed sign-ins, role changes, deletions and admin actions are in
   the organization's audit log (kept one year).
 
+## Database isolation (row-level security)
+
+Since 0.2, every request to an organization's data runs in a database transaction as the
+role `rubinny_tenant`, with the organization set for that transaction. PostgreSQL then only
+shows and accepts that organization's rows, even if a query in the code forgot to filter. Screens,
+the worker and sign-in keep using the regular database user.
+
+- **Setup:** none. The migration creates the role and grants it to the database user. This
+  needs permission to create roles, which the bundled PostgreSQL container has.
+- **Managed databases (RDS, Cloud SQL and similar):** if the database user may not create
+  roles, the server logs `Row-level security is not active` at startup and keeps working with
+  the isolation in the code, as in 0.1. Whether and how a role can be created there requires
+  verification against the provider's documentation.
+- **Settings:**
+  - `DATABASE_POOL_MAX` (default 20): connections per server process. An organization request
+    holds one connection while it runs; media uploads do not.
+  - `DATABASE_RLS=false` turns it off (for troubleshooting only).
+- **Cost:** measured on the test machine, organization routes serve 20–30% fewer requests per
+  second (about 550–650 instead of 780–850). Screens are not affected.
+- **Restoring by hand:** roles belong to the PostgreSQL server, not to a dump. Before
+  `pg_restore` into a new server, create the role as `deploy/restore.sh` does.
+
 ## Security updates
 
 - Run `docker compose pull && docker compose up -d --build` regularly (base images, ClamAV)

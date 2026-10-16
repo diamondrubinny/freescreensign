@@ -28,6 +28,8 @@ const idParams = z.object({ orgId: z.uuid(), imageId: z.uuid() });
 
 export function stockRoutes(app: FastifyInstance, ctx: AppContext) {
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
+  // Imports download a file first: no request transaction (see orgGuard).
+  const importer = { preHandler: orgGuard(ctx, 'EDITOR', { transaction: false }) };
   const base = ctx.env.STOCK_API_URL;
   // The library is an external service chosen by the operator (it may be self-hosted),
   // but the image files it points to are arbitrary URLs: those stay SSRF-protected.
@@ -89,7 +91,7 @@ export function stockRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   /** Downloads a stock image into the media library through the normal scan pipeline. */
-  app.post('/api/v1/orgs/:orgId/stock/images/:imageId/import', editor, async (request, reply) => {
+  app.post('/api/v1/orgs/:orgId/stock/images/:imageId/import', importer, async (request, reply) => {
     enabled();
     const org = requireOrg(request);
     const { user } = requireAuth(request);

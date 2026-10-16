@@ -108,6 +108,20 @@ log "Restoring PostgreSQL"
 docker compose up -d --wait postgres >/dev/null
 docker compose exec -T postgres sh -c \
   'dropdb -U "$POSTGRES_USER" --if-exists --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+# Roles belong to the server, not to the dump: the row-level security role (migration 0011)
+# must exist before the dump's grants to it are restored.
+cat <<'SQL' | docker compose exec -T postgres sh -c 'psql -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d postgres'
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rubinny_tenant') THEN
+    CREATE ROLE rubinny_tenant NOLOGIN NOSUPERUSER NOINHERIT NOBYPASSRLS;
+  END IF;
+  IF NOT pg_has_role(current_user, 'rubinny_tenant', 'MEMBER') THEN
+    EXECUTE format('GRANT rubinny_tenant TO %I', current_user);
+  END IF;
+END
+$$;
+SQL
 docker compose exec -T postgres sh -c \
   'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --exit-on-error' <"$WORK/postgres.dump"
 # The database role keeps the password of this installation; set the restored one.

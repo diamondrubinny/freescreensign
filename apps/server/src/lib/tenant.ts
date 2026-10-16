@@ -1,0 +1,152 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { sql, type ControlledTransaction } from 'kysely';
+import type { Db } from '../db/database.js';
+import type { Database } from '../db/schema.js';
+
+/**
+ * Row-level security for organization requests (defense in depth, see migration 0011).
+ *
+ * Each request gets a store (AsyncLocalStorage). When orgGuard admits a request it opens a
+ * transaction as the role rubinny_tenant with app.org_id set; from then on `ctx.db` (a proxy)
+ * runs every query of that request in it, including queries in shared helpers. The
+ * transaction commits before the response is sent (rolled back on an error response), and
+ * side effects that others would act on at once (screen notifications, worker jobs) run only
+ * after the commit, so nobody reads the database before the change is visible.
+ */
+
+export const TENANT_ROLE = 'rubinny_tenant';
+
+type Trx = ControlledTransaction<Database>;
+
+interface TenantStore {
+  trx: Trx | null;
+  afterCommit: (() => Promise<void>)[];
+}
+
+const storage = new AsyncLocalStorage<TenantStore>();
+
+/** The tenant transaction of the current request, if any (for tests and diagnostics). */
+export function currentTenantTransaction(): Trx | null {
+  return storage.getStore()?.trx ?? null;
+}
+
+let savepoints = 0;
+
+/** `db.transaction()` inside a request transaction becomes a savepoint (same atomicity). */
+function nestedTransaction(trx: Trx) {
+  const builder = {
+    setIsolationLevel: () => builder,
+    setAccessMode: () => builder,
+    async execute<T>(callback: (trx: Trx) => Promise<T>): Promise<T> {
+      const name = `rubinny_sp_${String(++savepoints)}`;
+      const point = await trx.savepoint(name).execute();
+      try {
+        const result = await callback(point);
+        await point.releaseSavepoint(name).execute();
+        return result;
+      } catch (error) {
+        await point.rollbackToSavepoint(name).execute();
+        throw error;
+      }
+    },
+  };
+  return builder;
+}
+
+/** `db` for the application: inside a tenant transaction it is that transaction. */
+export function tenantAwareDb(base: Db): Db {
+  return new Proxy(base, {
+    get(target, prop) {
+      const trx = storage.getStore()?.trx;
+      if (trx && !trx.isCommitted && !trx.isRolledBack) {
+        if (prop === 'transaction') return () => nestedTransaction(trx);
+        const value: unknown = Reflect.get(trx, prop, trx);
+        return typeof value === 'function' ? (value as () => unknown).bind(trx) : value;
+      }
+      const value: unknown = Reflect.get(target, prop, target);
+      return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+    },
+  });
+}
+
+/**
+ * Runs `task` after the request's tenant transaction commits (dropped if it rolls back).
+ * Outside a tenant transaction it runs at once.
+ */
+export async function afterCommit(task: () => Promise<void>): Promise<void> {
+  const store = storage.getStore();
+  if (store?.trx) {
+    store.afterCommit.push(task);
+    return;
+  }
+  await task();
+}
+
+/** True when the database has the tenant role and this connection may use it. */
+export async function tenantRoleAvailable(db: Db): Promise<boolean> {
+  const result = await sql<{ ok: boolean }>`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_roles
+      WHERE rolname = ${TENANT_ROLE} AND pg_has_role(current_user, oid, 'MEMBER')
+    ) AS ok`.execute(db);
+  return result.rows[0]?.ok === true;
+}
+
+/** Called by orgGuard once membership is verified. No-op when RLS is unavailable. */
+export async function beginTenantTransaction(
+  base: Db,
+  enabled: boolean,
+  orgId: string,
+): Promise<void> {
+  const store = storage.getStore();
+  if (!enabled || !store || store.trx) return;
+  const trx = await base.startTransaction().execute();
+  try {
+    // One round trip: set_config('role', …, true) is SET LOCAL ROLE.
+    await sql`SELECT set_config('role', ${TENANT_ROLE}, true), set_config('app.org_id', ${orgId}, true)`.execute(
+      trx,
+    );
+  } catch (error) {
+    await trx.rollback().execute();
+    throw error;
+  }
+  store.trx = trx;
+}
+
+async function finish(store: TenantStore, commit: boolean): Promise<void> {
+  const trx = store.trx;
+  if (!trx) return;
+  store.trx = null;
+  const tasks = store.afterCommit.splice(0);
+  if (trx.isCommitted || trx.isRolledBack) return;
+  if (!commit) {
+    await trx.rollback().execute();
+    return;
+  }
+  await trx.commit().execute();
+  for (const task of tasks) await task();
+}
+
+/**
+ * Hooks: a store per request; commit (or roll back) before the response is sent; roll back
+ * if the request ends any other way (aborted, closed).
+ */
+export function registerTenantHooks(app: FastifyInstance): void {
+  app.addHook('onRequest', (_request, _reply, done) => {
+    storage.run({ trx: null, afterCommit: [] }, done);
+  });
+  app.addHook('onSend', async (_request: FastifyRequest, reply: FastifyReply, payload) => {
+    const store = storage.getStore();
+    if (store) await finish(store, reply.statusCode < 400);
+    return payload;
+  });
+  // Fastify requires async onRequestAbort hooks to declare exactly one parameter.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const cleanUp = async (_request: FastifyRequest) => {
+    const store = storage.getStore();
+    if (store?.trx) await finish(store, false).catch(() => undefined);
+  };
+  app.addHook('onResponse', cleanUp);
+  app.addHook('onRequestAbort', cleanUp);
+}

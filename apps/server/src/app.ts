@@ -10,6 +10,12 @@ import type { AppContext } from './context.js';
 import type { HealthCheck } from './lib/health-checks.js';
 import type { Mailer } from './lib/mail/mailer.js';
 import { HttpError } from './lib/http-error.js';
+import {
+  afterCommit,
+  registerTenantHooks,
+  tenantAwareDb,
+  tenantRoleAvailable,
+} from './lib/tenant.js';
 import { registerErrorHandling } from './plugins/errors.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './modules/auth/routes.js';
@@ -46,8 +52,10 @@ export interface BuildAppOptions {
   backgroundJobs?: boolean;
   /** Called for every route as it is registered (tests and diagnostics). */
   onRoute?: (route: { method: string; url: string }) => void;
+  /** Tests: extra routes registered with the same context as the application's. */
+  extraRoutes?: (app: FastifyInstance, ctx: AppContext) => void;
   /** Services for the /api routes. When omitted only health endpoints are served. */
-  services?: Omit<AppContext, 'env' | 'mailer'> & {
+  services?: Omit<AppContext, 'env' | 'mailer' | 'rls'> & {
     /** A mailer, or a factory receiving the app logger. */
     mailer: Mailer | ((log: FastifyBaseLogger) => Mailer);
   };
@@ -140,9 +148,40 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   if (options.services) {
     const { mailer, ...services } = options.services;
+    // Organization requests run in a row-level-security transaction (see lib/tenant.ts):
+    // the database, screen events and worker jobs are wrapped to follow it.
+    const rls = env.DATABASE_RLS && (await tenantRoleAvailable(services.db));
+    if (env.DATABASE_RLS && !rls) {
+      app.log.warn(
+        'Row-level security is not active: the database role rubinny_tenant is missing (see docs/OPERATIONS.md)',
+      );
+    }
+    registerTenantHooks(app);
+    const events = services.events;
+    const queue = services.media?.queue;
     const ctx: AppContext = {
       env,
       ...services,
+      db: tenantAwareDb(services.db),
+      rls,
+      events: {
+        publish: (screenId, event) => afterCommit(() => events.publish(screenId, event)),
+        onEvent: (handler) => {
+          events.onEvent(handler);
+        },
+        close: () => events.close(),
+      },
+      ...(services.media && queue
+        ? {
+            media: {
+              storage: services.media.storage,
+              queue: {
+                enqueue: (job) => afterCommit(() => queue.enqueue(job)),
+                close: () => queue.close(),
+              },
+            },
+          }
+        : {}),
       mailer: typeof mailer === 'function' ? mailer(app.log) : mailer,
     };
     // Before any route: an organization route without orgGuard stops the server from starting.
@@ -180,6 +219,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       mediaRoutes(app, ctx, ctx.media);
       stockRoutes(app, ctx);
     }
+    options.extraRoutes?.(app, ctx);
   }
 
   return app;

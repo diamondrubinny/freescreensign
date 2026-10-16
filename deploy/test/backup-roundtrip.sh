@@ -98,5 +98,11 @@ fingerprint_db >"$TMP/db.after"
 fingerprint_storage >"$TMP/storage.after"
 diff -u "$TMP/db.before" "$TMP/db.after" || fail "database differs after the restore"
 diff -u "$TMP/storage.before" "$TMP/storage.after" || fail "media differs after the restore"
+# Row-level security came back with the data: the role, its grants and the policies.
+[ "$(psql_value "SELECT pg_has_role(current_user, 'rubinny_tenant', 'MEMBER')
+  AND has_table_privilege('rubinny_tenant', 'widgets', 'SELECT')
+  AND (SELECT count(*) FROM pg_policies
+         WHERE schemaname = current_schema() AND policyname = 'tenant_isolation') = 17;")" = t ] ||
+  fail "row-level security is not complete after the restore"
 ok "database, media and settings are identical after the restore; the stack is healthy"
 rm -f .env.before-restore-*

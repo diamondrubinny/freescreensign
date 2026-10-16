@@ -8,6 +8,10 @@ All notable changes to Rubinny. The format follows
 
 ### Added
 
+- Row-level security in PostgreSQL: requests to an organization's data run as a restricted
+  role that only sees and changes that organization's rows, even if a query forgets to filter.
+  Screen notifications and worker jobs are sent only after the change is committed. See
+  docs/OPERATIONS.md (database isolation).
 - Images for arm64 as well as amd64 (Raspberry Pi 5, Apple Silicon, ARM cloud servers): built,
   scanned and signed for both; checked in CI under emulation. On arm64, set
   `CLAMAV_IMAGE=clamav/clamav-debian:stable` (the default ClamAV image is amd64 only).

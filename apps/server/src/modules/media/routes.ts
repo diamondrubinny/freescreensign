@@ -79,6 +79,8 @@ export function mediaRoutes(
   const { storage, queue } = media;
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
+  // Uploads stream for minutes: no request transaction (see orgGuard).
+  const uploader = { preHandler: orgGuard(ctx, 'EDITOR', { transaction: false }) };
   const maxUpload = Math.max(ctx.env.MEDIA_MAX_IMAGE_BYTES, ctx.env.MEDIA_MAX_VIDEO_BYTES);
 
   const usedBytes = (orgId: string) => sharedUsedBytes(ctx, orgId);
@@ -99,7 +101,7 @@ export function mediaRoutes(
   }
 
   // ------------------------------------------------------------------ upload
-  app.post('/api/v1/orgs/:orgId/media', editor, async (request, reply) => {
+  app.post('/api/v1/orgs/:orgId/media', uploader, async (request, reply) => {
     const org = requireOrg(request);
     const { user } = requireAuth(request);
     await ctx.limiter.hit(LIMITS.mediaUploadUser, user.id);

@@ -34,6 +34,10 @@ export const envSchema = z
     PUBLIC_URL: z.url({ protocol: /^https?$/ }),
     ALLOW_INSECURE_PUBLIC_URL: booleanString.default(false),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+    /** Connections per server process. Organization requests hold one while they run. */
+    DATABASE_POOL_MAX: z.coerce.number().int().min(2).max(200).default(20),
+    /** Row-level security for organization requests (needs the role from migration 0011). */
+    DATABASE_RLS: booleanString.default(true),
     REDIS_URL: z.url({ protocol: /^rediss?$/ }),
     TRUST_PROXY: trustProxy,
     BODY_LIMIT_BYTES: z.coerce

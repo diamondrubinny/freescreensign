@@ -20,7 +20,7 @@ const MAINTENANCE_INTERVAL_MS = 60 * 60 * 1000;
 async function main() {
   const env = loadEnv();
 
-  const pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: 10 });
+  const pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: env.DATABASE_POOL_MAX });
   const redis = new Redis(env.REDIS_URL, {
     maxRetriesPerRequest: 2,
     // Fail fast instead of queueing commands while Redis is unreachable.
