@@ -88,6 +88,11 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
     const player = new Client(h.app, '203.0.113.20');
     const start = (await player.post('/player/v1/pair/start')).json<{ code: string }>();
     ids.screenId = await created('/screens', { code: start.code, name: 'A screen' }, 'screen');
+    ids.alertId = await created(
+      '/alerts',
+      { style: 'notice', title: 'A notice', durationMinutes: 60 },
+      'alert',
+    );
     ids.invitationId = await created(
       '/invitations',
       { email: 'new@example.com', role: 'VIEWER' },
@@ -195,5 +200,11 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
       .where('id', '=', ids.invitationId!)
       .executeTakeFirst();
     expect(invitation).toBeDefined();
+    const alert = await h.db
+      .selectFrom('alerts')
+      .select('ended_at')
+      .where('id', '=', ids.alertId!)
+      .executeTakeFirstOrThrow();
+    expect(alert.ended_at).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { PlayLog, memoryPlayLogStorage, uuid } from '../src/play-log';
 import { describe, expect, it, vi } from 'vitest';
-import type { ManifestV1 } from '@rubinny/shared';
+import type { ManifestAlert, ManifestV1 } from '@rubinny/shared';
 import { PairingExpiredError, UnauthorizedError, type PlayerApi } from '../src/api';
 import { MediaCache, MemoryBlobStore } from '../src/media-cache';
 import { Player, type PlayerDeps } from '../src/player';
@@ -25,7 +25,12 @@ function memoryStore(
   let token = initial.token ?? null;
   let saved: ManifestV1 | null = initial.manifest ?? null;
   let offset = initial.clockOffset ?? 0;
+  let alert: ManifestAlert | null = null;
   return {
+    alert: () => alert,
+    setAlert: (a: ManifestAlert | null) => {
+      alert = a;
+    },
     clockOffset: () => offset,
     setClockOffset: (value: number) => {
       offset = value;
@@ -58,11 +63,13 @@ function setup(options: {
   const played: PlayableItem[] = [];
   const zonesPlayed: string[] = [];
   const messages: { title: string; code?: string }[] = [];
+  const alerts: (ManifestAlert | null)[] = [];
   let emit: (e: ServerEvent) => void = () => undefined;
   const ref: { player?: Player } = {};
   const renderer: Renderer = {
     setOrientation: vi.fn(),
     showMessage: (m) => messages.push(m),
+    showAlert: (a) => alerts.push(a),
     clear: vi.fn(),
     mountLayout: vi.fn(),
     play: (zoneId, item) => {
@@ -105,6 +112,7 @@ function setup(options: {
     played,
     zonesPlayed,
     messages,
+    alerts,
     reload,
     emit: (e: ServerEvent) => {
       emit(e);
@@ -211,6 +219,57 @@ describe('Player', () => {
     await run;
     expect(idOf(ctx.played.at(-1)!)).toBe('m2');
     expect(ctx.player.manifest?.version).toBe('v2');
+  });
+
+  it('shows an alert at once, before the media of the new content is downloaded', async () => {
+    const m = await realManifest();
+    m.alert = { id: 'a1', style: 'emergency', title: 'פינוי מיידי', message: '', endsAt: null };
+    const store = memoryStore({ token: 't' });
+    // The download never finishes (a huge video on a slow network).
+    const ctx = setup({
+      store,
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat: vi.fn() },
+      download: () => new Promise<Blob>(() => undefined),
+    });
+    void ctx.player.start();
+    await vi.waitUntil(() => ctx.alerts.length > 0);
+    expect(ctx.alerts).toEqual([m.alert]);
+    expect(ctx.player.manifest).toBeNull(); // the content itself still waits for its media
+    expect(store.alert()).toEqual(m.alert); // kept for an offline restart
+    ctx.player.stop();
+  });
+
+  it('ends an alert on time by itself, also offline, on the corrected clock', async () => {
+    const m = await realManifest();
+    let clock = Date.parse('2026-10-15T10:00:00Z');
+    const store = memoryStore({ token: 't', manifest: m, clockOffset: 60_000 });
+    store.setAlert({
+      id: 'a1',
+      style: 'notice',
+      title: 'Main gate closed',
+      message: 'Use the side gate',
+      endsAt: '2026-10-15T10:05:00Z',
+    });
+    const ctx = setup({
+      store,
+      api: {
+        manifest: vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+        heartbeat: vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+      },
+      now: () => new Date(clock),
+      stopAfterPlays: 1_000_000,
+    });
+    void ctx.player.start();
+    await vi.waitUntil(() => ctx.alerts.length > 0);
+    expect(ctx.alerts[0]?.title).toBe('Main gate closed');
+    // The device clock runs a minute fast: at 10:05:30 device time it is 10:04:30.
+    clock = Date.parse('2026-10-15T10:05:30Z');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(ctx.alerts).toHaveLength(1);
+    clock = Date.parse('2026-10-15T10:06:30Z');
+    await vi.waitUntil(() => ctx.alerts.length === 2);
+    expect(ctx.alerts[1]).toBeNull();
+    ctx.player.stop();
   });
 
   it('plays every zone of a layout independently, including widgets', async () => {

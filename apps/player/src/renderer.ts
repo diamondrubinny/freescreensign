@@ -1,10 +1,12 @@
-import type { ManifestLayout } from '@rubinny/shared';
+import type { ManifestAlert, ManifestLayout } from '@rubinny/shared';
 import { itemKey, type PlayableItem } from './sequence';
 import type { WidgetRuntime } from './widgets/runtime';
 
 export interface Renderer {
   setOrientation(orientation: string): void;
   showMessage(message: { title: string; lines: string[]; code?: string }): void;
+  /** Shows an alert over everything (content keeps playing underneath), or removes it. */
+  showAlert(alert: ManifestAlert | null): void;
   /** Prepares the stage for a layout. Zones that did not change keep their content. */
   mountLayout(layout: ManifestLayout): void;
   /** Shows one item in a zone; resolves when it should be replaced. `url` is set for media. */
@@ -59,11 +61,14 @@ export class DomRenderer implements Renderer {
   #layout: ManifestLayout | null = null;
   readonly #zones = new Map<string, Zone>();
   #message: HTMLElement | null = null;
+  readonly #root: HTMLElement;
+  #alertLayer: HTMLElement | null = null;
 
   constructor(
     root: HTMLElement,
     private readonly widgets: WidgetRuntime,
   ) {
+    this.#root = root;
     this.#stage = document.createElement('div');
     this.#stage.className = 'stage';
     root.replaceChildren(this.#stage);
@@ -75,7 +80,35 @@ export class DomRenderer implements Renderer {
   setOrientation(orientation: string) {
     if (this.#stage.dataset.orientation === orientation) return;
     this.#stage.dataset.orientation = orientation;
+    if (this.#alertLayer) this.#alertLayer.dataset.orientation = orientation;
     this.#resize();
+  }
+
+  showAlert(alert: ManifestAlert | null) {
+    this.#alertLayer?.remove();
+    this.#alertLayer = null;
+    if (!alert) return;
+    const layer = document.createElement('div');
+    layer.className = 'stage alert-layer';
+    layer.dataset.orientation = this.#stage.dataset.orientation ?? 'landscape';
+    layer.dataset.style = alert.style;
+    const panel = document.createElement('section');
+    panel.className = 'alert';
+    panel.setAttribute('role', 'alert');
+    panel.append(alertIcon(alert.style));
+    const title = document.createElement('h1');
+    title.textContent = alert.title;
+    title.dir = 'auto';
+    panel.append(title);
+    if (alert.message) {
+      const message = document.createElement('p');
+      message.textContent = alert.message;
+      message.dir = 'auto';
+      panel.append(message);
+    }
+    layer.append(panel);
+    this.#root.append(layer);
+    this.#alertLayer = layer;
   }
 
   showMessage(message: { title: string; lines: string[]; code?: string }) {
@@ -302,6 +335,25 @@ export class DomRenderer implements Renderer {
 const SVG = 'http://www.w3.org/2000/svg';
 
 /** The Rubinny mark (the same drawing as the dashboard's icon) and name. */
+/** A warning triangle (emergency) or an information circle (notice), decorative. */
+function alertIcon(style: ManifestAlert['style']): SVGElement {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('viewBox', '0 0 64 64');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('class', 'alert-icon');
+  const shape = document.createElementNS(SVG, 'path');
+  shape.setAttribute('d', style === 'emergency' ? 'M32 4 62 58H2Z' : 'M32 2a30 30 0 1 0 0.01 0Z');
+  shape.setAttribute('fill', '#fff');
+  const mark = document.createElementNS(SVG, 'path');
+  mark.setAttribute(
+    'd',
+    style === 'emergency' ? 'M29 22h6l-1 20h-4ZM29 46h6v6h-6Z' : 'M29 14h6v6h-6ZM29 26h6v24h-6Z',
+  );
+  mark.setAttribute('fill', style === 'emergency' ? '#991b1b' : '#92400e');
+  svg.append(shape, mark);
+  return svg;
+}
+
 function brandMark(): HTMLElement {
   const brand = document.createElement('div');
   brand.className = 'brand';

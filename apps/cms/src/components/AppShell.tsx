@@ -3,6 +3,7 @@ import {
   Blocks,
   CalendarClock,
   ChartColumn,
+  Siren,
   Images,
   LayoutDashboard,
   LayoutTemplate,
@@ -190,6 +191,7 @@ export function AppShell({ session }: { session: SessionInfo }) {
               <NavGroup id={`${navId}-devices`} title={t('nav.groupDevices')}>
                 <NavItem to={`${org}/screens`} icon={Monitor} label={t('screens.nav')} />
                 <NavItem to={`${org}/reports`} icon={ChartColumn} label={t('reports.nav')} />
+                <NavItem to={`${org}/alerts`} icon={Siren} label={t('alerts.nav')} />
               </NavGroup>
             </>
           )}

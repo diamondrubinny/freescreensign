@@ -8,6 +8,10 @@ All notable changes to Rubinny. The format follows
 
 ### Added
 
+- Emergency alerts: one click shows an emergency or urgent notice over everything on all or
+  chosen screens within seconds (before any media download), until ended or for a set time,
+  also offline; ready templates (evacuation, shelter, lockdown), confirmation, audit log
+  (see docs/phases/10b-emergency-alerts.md).
 - Data table widget: menus, price lists and timetables from Google Sheets, CSV or JSON,
   fetched by the server (SSRF-safe), cached, paged on the screen and refreshed on their own
   (see docs/phases/10a-data-table.md).

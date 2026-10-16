@@ -164,6 +164,22 @@ export interface WidgetItem {
   updatedAt: string;
 }
 
+export interface AlertItem {
+  id: string;
+  style: 'emergency' | 'notice';
+  title: string;
+  message: string;
+  /** null: every screen of the organization. */
+  screenIds: string[] | null;
+  startsAt: string;
+  endsAt: string | null;
+  endedAt: string | null;
+  active: boolean;
+  createdBy: string | null;
+  endedBy: string | null;
+  createdAt: string;
+}
+
 export interface WidgetTypes {
   types: { type: string; available: boolean; serverData: boolean }[];
   weather: { enabled: boolean; attribution: string };

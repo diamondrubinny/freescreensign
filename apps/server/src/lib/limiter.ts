@@ -99,4 +99,5 @@ export const LIMITS = {
   widgetFetchOrg: { name: 'widget-fetch-org', max: 120, windowSeconds: 3600 },
   stockSearchUser: { name: 'stock-search-user', max: 120, windowSeconds: 3600 },
   stockImportUser: { name: 'stock-import-user', max: 60, windowSeconds: 3600 },
+  alertStartOrg: { name: 'alert-start-org', max: 10, windowSeconds: 60 },
 } as const satisfies Record<string, LimitRule>;

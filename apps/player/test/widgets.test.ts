@@ -461,6 +461,31 @@ describe('DomRenderer', () => {
     expect(root.querySelector('[data-zone="ticker"] .layer:last-child')).not.toBe(first);
   });
 
+  it('shows an alert over the content, rotated with it, as text only', () => {
+    const { r, root } = renderer();
+    r.setOrientation('portrait');
+    r.mountLayout(layout);
+    r.showAlert({
+      id: 'a',
+      style: 'emergency',
+      title: 'היכנסו למרחב המוגן',
+      message: '<img src=x onerror=alert(1)>',
+      endsAt: null,
+    });
+    const layer = root.querySelector<HTMLElement>('.alert-layer')!;
+    expect(layer.dataset.style).toBe('emergency');
+    expect(layer.dataset.orientation).toBe('portrait');
+    expect(layer.querySelector('[role="alert"] h1')?.textContent).toBe('היכנסו למרחב המוגן');
+    expect(layer.querySelector('p')?.textContent).toBe('<img src=x onerror=alert(1)>');
+    expect(layer.querySelector('img')).toBeNull();
+    // The content stays mounted underneath.
+    expect(root.querySelector('.canvas')).not.toBeNull();
+    r.setOrientation('landscape');
+    expect(layer.dataset.orientation).toBe('landscape');
+    r.showAlert(null);
+    expect(root.querySelector('.alert-layer')).toBeNull();
+  });
+
   it('fits media: cover, and blur with a backdrop copy', async () => {
     const { r, root } = renderer();
     r.mountLayout(layout);

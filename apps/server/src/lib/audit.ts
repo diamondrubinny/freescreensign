@@ -47,7 +47,9 @@ export type AuditAction =
   | 'layout.deleted'
   | 'schedule.created'
   | 'schedule.updated'
-  | 'schedule.deleted';
+  | 'schedule.deleted'
+  | 'alert.started'
+  | 'alert.ended';
 
 export interface AuditEvent {
   action: AuditAction;

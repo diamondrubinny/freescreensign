@@ -506,6 +506,30 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   await expect(page.getByText('הלוח נשמר. המסכים מתעדכנים.')).toBeVisible();
   await expect(player.locator('.w-clock-time')).toHaveText(/^\d{2}:\d{2}$/, { timeout: 20_000 });
   await expect(player.locator('.zone')).toHaveCount(2);
+
+  // An emergency alert to this screen only: on screen within seconds, over the content.
+  await openPage(page, 'התראות חירום');
+  await expect(page.getByText('אין התראות פעילות')).toBeVisible();
+  await page.getByRole('button', { name: 'פינוי מיידי' }).click();
+  await expect(page.getByLabel(/^כותרת/)).toHaveValue('פינוי מיידי');
+  await page.getByRole('radio', { name: 'מסכים נבחרים' }).check();
+  await page.getByRole('checkbox', { name: 'מסך אירועים' }).check();
+  await expectAccessible(page, 'alerts');
+  await page.getByRole('button', { name: 'הצגה במסכים' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'הצגה במסכים' }).click();
+  await expect(page.getByText('ההתראה נשלחה למסך אחד.')).toBeVisible();
+  await expect(player.locator('.alert-layer h1')).toHaveText('פינוי מיידי', { timeout: 10_000 });
+  await expect(player.locator('.alert-layer')).toHaveAttribute('data-style', 'emergency');
+  await expect(player.locator('.zone')).toHaveCount(2); // the content keeps running underneath
+  await expectAccessible(page, 'alerts (active)');
+
+  // Ending it brings the content back at once.
+  await page.getByRole('button', { name: 'סיום ההתראה: פינוי מיידי' }).click();
+  await expect(
+    page.getByText('ההתראה "פינוי מיידי" הסתיימה. המסכים חוזרים לתוכן הרגיל.'),
+  ).toBeVisible();
+  await expect(player.locator('.alert-layer')).toHaveCount(0, { timeout: 10_000 });
+  await expect(page.getByRole('row', { name: /פינוי מיידי/ })).toContainText('הסתיימה');
   await device.close();
 });
 

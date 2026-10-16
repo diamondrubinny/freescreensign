@@ -39,6 +39,60 @@ body,
   transform: rotate(180deg);
 }
 
+/* Alerts: a layer over everything (rotated with the stage), content keeps playing below. */
+.alert-layer {
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #991b1b; /* white text: 8.3:1 */
+}
+.alert-layer[data-style='notice'] {
+  background: #92400e; /* white text: 7.1:1 */
+}
+.alert {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3vmin;
+  max-width: 88%;
+  text-align: center;
+}
+.alert-icon {
+  width: 16vmin;
+  height: 16vmin;
+}
+.alert-layer[data-style='emergency'] .alert-icon {
+  /* Slow pulse: far below the 3 flashes per second limit (WCAG 2.3.1). */
+  animation: alert-pulse 2s ease-in-out infinite;
+}
+.alert h1 {
+  margin: 0;
+  font-size: 10vmin;
+  font-weight: 800;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.alert p {
+  margin: 0;
+  font-size: 4.6vmin;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+@keyframes alert-pulse {
+  50% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alert-layer[data-style='emergency'] .alert-icon {
+    animation: none;
+  }
+}
+
 /* Layout canvas: scaled to fit the screen (letterboxed); sizes are set by the renderer. */
 .canvas {
   position: absolute;

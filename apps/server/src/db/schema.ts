@@ -256,6 +256,21 @@ export interface ScreenScreenshotsTable {
   taken_at: Generated<Date>;
 }
 
+export interface AlertsTable {
+  id: Generated<string>;
+  org_id: string;
+  style: 'emergency' | 'notice';
+  title: string;
+  message: Generated<string>;
+  screen_ids: string[] | null;
+  starts_at: Generated<Date>;
+  ends_at: Date | null;
+  ended_at: Date | null;
+  created_by: string | null;
+  ended_by: string | null;
+  created_at: Generated<Date>;
+}
+
 export interface PlayEventsTable {
   id: string;
   org_id: string;
@@ -301,6 +316,7 @@ export interface Database {
   screen_uptime_days: ScreenUptimeDaysTable;
   play_events: PlayEventsTable;
   screen_screenshots: ScreenScreenshotsTable;
+  alerts: AlertsTable;
 }
 
 export type User = Selectable<UsersTable>;

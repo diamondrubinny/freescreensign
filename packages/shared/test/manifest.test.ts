@@ -64,6 +64,22 @@ describe('parseManifest', () => {
     expect(result.success && result.manifest.playlists[0]!.items[0]!.transition).toBe('none');
   });
 
+  it('accepts manifests with and without an alert (servers and players of any version)', () => {
+    expect(parseManifest({ ...validManifest(), alert: null }).success).toBe(true);
+    const alert = {
+      id: 'a1',
+      style: 'emergency',
+      title: 'פינוי מיידי',
+      message: '',
+      endsAt: '2026-10-16T10:00:00Z',
+    };
+    const result = parseManifest({ ...validManifest(), alert });
+    expect(result.success && result.manifest.alert).toEqual(alert);
+    expect(parseManifest({ ...validManifest(), alert: { ...alert, style: 'panic' } }).success).toBe(
+      false,
+    );
+  });
+
   it('rejects unknown schema versions and garbage input without throwing', () => {
     expect(parseManifest({ ...validManifest(), schemaVersion: 2 }).success).toBe(false);
     expect(parseManifest(null).success).toBe(false);

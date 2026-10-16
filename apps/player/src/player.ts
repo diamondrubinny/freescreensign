@@ -1,4 +1,10 @@
-import type { ManifestV1, NowPlayingItem, RubinnyNativeBridge } from '@rubinny/shared';
+import {
+  alertActive,
+  type ManifestAlert,
+  type ManifestV1,
+  type NowPlayingItem,
+  type RubinnyNativeBridge,
+} from '@rubinny/shared';
 import { PairingExpiredError, UnauthorizedError, type PlayerApi } from './api';
 import type { MediaCache } from './media-cache';
 import { captureBytes } from './native';
@@ -13,7 +19,15 @@ export interface PlayerDeps {
   renderer: Renderer;
   store: Pick<
     typeof defaultStore,
-    'token' | 'setToken' | 'manifest' | 'setManifest' | 'clear' | 'clockOffset' | 'setClockOffset'
+    | 'token'
+    | 'setToken'
+    | 'manifest'
+    | 'setManifest'
+    | 'clear'
+    | 'clockOffset'
+    | 'setClockOffset'
+    | 'alert'
+    | 'setAlert'
   >;
   createCache: (token: string) => MediaCache;
   createSocket: (
@@ -45,6 +59,8 @@ export const PAIR_POLL_MS = 3000;
 const EMPTY_RETRY_MS = 10_000;
 /** How often the schedule is re-evaluated (layout switches by time of day). */
 export const SCHEDULE_CHECK_MS = 30_000;
+/** How often an alert's end time is checked (it ends on the screen even offline). */
+export const ALERT_CHECK_MS = 1000;
 /** Clock samples with a slower round trip are too imprecise to use. */
 const MAX_CLOCK_RTT_MS = 10_000;
 
@@ -73,6 +89,9 @@ export class Player {
 
   /** Device clock minus server clock (ms). */
   #clockOffset: number;
+  /** The alert from the latest manifest (shown while active), and whether it is on screen. */
+  #alert: ManifestAlert | null = null;
+  #alertShown: string | null = null;
   /** What each zone shows right now (reported in the heartbeat). */
   #playing = new Map<string, NowPlayingItem>();
 
@@ -149,6 +168,8 @@ export class Player {
   async #runPaired(token: string) {
     this.#cache = this.deps.createCache(token);
     this.#manifest = this.deps.store.manifest(); // offline boot from the last good manifest
+    this.#alert = this.deps.store.alert();
+    this.#applyAlert();
     if (!this.#manifest)
       this.deps.renderer.showMessage({ title: 'טוען תוכן… · Loading…', lines: [] });
 
@@ -167,6 +188,10 @@ export class Player {
     void this.#loop(SYNC_INTERVAL_MS, () => this.sync());
     void this.#loop(HEARTBEAT_INTERVAL_MS, () => this.#heartbeat());
     void this.#loop(PLAYS_UPLOAD_MS, () => this.uploadPlays());
+    void this.#loop(ALERT_CHECK_MS, () => {
+      this.#applyAlert();
+      return Promise.resolve();
+    });
     void this.#loop(SCHEDULE_CHECK_MS, () => {
       this.#checkSchedule();
       return Promise.resolve();
@@ -201,6 +226,8 @@ export class Player {
       this.offline = false;
       // 304, or a 200 with the same version (e.g. a proxy stripped the ETag): nothing to do.
       if (!fresh || fresh.version === this.#manifest?.version) return;
+      // Alerts go on screen at once, before any (possibly slow) media download.
+      this.#setAlert(fresh.alert ?? null);
       const { failed } = await this.#cache.sync(fresh.media);
       if (failed.length > 0 && this.#manifest) return; // keep playing the old content; retry later
       this.#manifest = fresh;
@@ -214,6 +241,22 @@ export class Player {
       }
       this.offline = true; // keep playing from cache
     }
+  }
+
+  #setAlert(alert: ManifestAlert | null) {
+    if (JSON.stringify(alert) === JSON.stringify(this.#alert)) return;
+    this.#alert = alert;
+    this.deps.store.setAlert(alert);
+    this.#applyAlert();
+  }
+
+  /** Shows the alert while it is active, on the server's clock; hides it afterwards. */
+  #applyAlert() {
+    const alert = alertActive(this.#alert, this.now()) ? this.#alert : null;
+    const key = alert ? JSON.stringify(alert) : null;
+    if (key === this.#alertShown) return;
+    this.#alertShown = key;
+    this.deps.renderer.showAlert(alert);
   }
 
   /** Interrupts all zones so the play loop picks up new content at once. */

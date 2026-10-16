@@ -113,6 +113,40 @@ export const scheduleEntrySchema = z
     path: ['timeTo'],
   });
 
+export const ALERT_STYLES = ['emergency', 'notice'] as const;
+export type AlertStyle = (typeof ALERT_STYLES)[number];
+
+/** An emergency or urgent notice, shown over everything until `endsAt` or until ended. */
+export const manifestAlertSchema = z.object({
+  id,
+  style: z.enum(ALERT_STYLES),
+  title: z.string().min(1).max(120),
+  message: z.string().max(500),
+  endsAt: z.iso.datetime({ offset: true }).nullable(),
+});
+export type ManifestAlert = z.infer<typeof manifestAlertSchema>;
+
+/** Which alert a screen shows: the newest emergency, otherwise the newest notice. */
+export function pickAlert<T extends { style: AlertStyle; startsAt: Date }>(
+  alerts: readonly T[],
+): T | null {
+  let best: T | null = null;
+  for (const alert of alerts) {
+    if (
+      !best ||
+      (alert.style === 'emergency' && best.style !== 'emergency') ||
+      (alert.style === best.style && alert.startsAt > best.startsAt)
+    )
+      best = alert;
+  }
+  return best;
+}
+
+/** True while an alert should be on screen (`now` on the server's clock). */
+export function alertActive(alert: ManifestAlert | null | undefined, now: Date): boolean {
+  return Boolean(alert && (alert.endsAt === null || Date.parse(alert.endsAt) > now.getTime()));
+}
+
 export const manifestV1Schema = z
   .object({
     schemaVersion: z.literal(1),
@@ -133,6 +167,8 @@ export const manifestV1Schema = z
       defaultLayoutId: id.nullable(),
       entries: z.array(scheduleEntrySchema).max(1000),
     }),
+    /** Optional, so players and servers of different versions still understand each other. */
+    alert: manifestAlertSchema.nullable().optional(),
   })
   .superRefine((manifest, ctx) => {
     const report = (message: string, path: (string | number)[]) => {

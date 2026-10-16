@@ -1,4 +1,9 @@
-import { parseManifest, type ManifestV1 } from '@rubinny/shared';
+import {
+  manifestAlertSchema,
+  parseManifest,
+  type ManifestAlert,
+  type ManifestV1,
+} from '@rubinny/shared';
 
 /**
  * Persistent player state. localStorage can be unavailable (e.g. blocked site
@@ -8,6 +13,7 @@ const TOKEN_KEY = 'rubinny.player.token';
 const MANIFEST_KEY = 'rubinny.player.manifest';
 const WIDGET_DATA_PREFIX = 'rubinny.player.widget-data.';
 const CLOCK_OFFSET_KEY = 'rubinny.player.clock-offset';
+const ALERT_KEY = 'rubinny.player.alert';
 
 function read(key: string): string | null {
   try {
@@ -43,6 +49,20 @@ export const store = {
   },
   setManifest: (manifest: ManifestV1 | null) => {
     write(MANIFEST_KEY, manifest ? JSON.stringify(manifest) : null);
+  },
+  /** The current alert, kept apart from the manifest: it is shown before media is ready. */
+  alert(): ManifestAlert | null {
+    const raw = read(ALERT_KEY);
+    if (!raw) return null;
+    try {
+      const result = manifestAlertSchema.safeParse(JSON.parse(raw));
+      return result.success ? result.data : null;
+    } catch {
+      return null;
+    }
+  },
+  setAlert: (alert: ManifestAlert | null) => {
+    write(ALERT_KEY, alert ? JSON.stringify(alert) : null);
   },
   /** Device clock minus server clock (ms), kept for offline restarts. */
   clockOffset(): number {
@@ -83,6 +103,7 @@ export const store = {
     write(TOKEN_KEY, null);
     write(MANIFEST_KEY, null);
     write(CLOCK_OFFSET_KEY, null);
+    write(ALERT_KEY, null);
     this.pruneWidgetData([]);
   },
 };

@@ -11,6 +11,7 @@ import type { Env } from '../../config/env.js';
 import type { Db } from '../../db/database.js';
 import type { Screen } from '../../db/schema.js';
 import { ACCEPTED_TYPES } from '../../media/types.js';
+import { alertForScreen } from '../alerts/active.js';
 
 export const DEFAULT_IMAGE_DURATION_MS = 10_000;
 export const DEFAULT_WIDGET_DURATION_MS = 15_000;
@@ -331,6 +332,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
     playlists: [...playlists.values()],
     layouts,
     schedule: { defaultLayoutId: defaultLayout.id, entries },
+    alert: await alertForScreen(db, screen),
   };
 
   // The version identifies the content only (not the generation time).
