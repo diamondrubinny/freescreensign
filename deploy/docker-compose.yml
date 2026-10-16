@@ -172,7 +172,12 @@ services:
       - ./seaweedfs/entrypoint.sh:/rubinny/entrypoint.sh:ro
       - storage-data:/data
     healthcheck:
-      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:9333/cluster/status']
+      # Healthy only when the S3 API answers too (it starts last, and later with much data).
+      test:
+        [
+          'CMD-SHELL',
+          'wget -q -O /dev/null http://127.0.0.1:9333/cluster/status && wget -q -O /dev/null http://127.0.0.1:8333/healthz',
+        ]
       interval: 10s
       timeout: 3s
       retries: 20

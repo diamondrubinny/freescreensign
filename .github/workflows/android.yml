@@ -70,16 +70,29 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-          sdkmanager --install emulator platform-tools "$SYSTEM_IMAGE" > /dev/null
+          yes | sdkmanager --install emulator platform-tools "$SYSTEM_IMAGE" | grep -v '^\[' || true
+          ls "$ANDROID_HOME/system-images/android-$API_LEVEL/google_apis/x86_64/system.img"
+          emulator -version | head -1
+          emulator -accel-check
           echo no | avdmanager create avd --force --name ci --package "$SYSTEM_IMAGE" --device pixel_6
           nohup emulator -avd ci -no-window -no-audio -no-boot-anim -no-snapshot \
-            -gpu swiftshader_indirect -camera-back none > "$RUNNER_TEMP/emulator.log" 2>&1 &
-          timeout 600 adb wait-for-device
-          timeout 600 sh -c 'until [ "$(adb shell getprop sys.boot_completed | tr -d "\r")" = 1 ]; do sleep 3; done'
+            -gpu swiftshader_indirect -camera-back none -camera-front none > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/emulator.pid"
+          # Wait for the boot, but stop at once if the emulator process died.
+          for i in $(seq 1 200); do
+            kill -0 "$(cat "$RUNNER_TEMP/emulator.pid")" || { echo "emulator exited"; exit 1; }
+            [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ] && break
+            sleep 3
+          done
+          [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
           adb shell input keyevent 82
+
+      - name: Emulator log
+        if: failure()
+        run: tail -n 150 "$RUNNER_TEMP/emulator.log" || true
 
       - name: Device tests (real WebView, screenshots, guards, crash recovery)
         run: ./gradlew --no-daemon connectedDebugAndroidTest

@@ -46,7 +46,10 @@ async function main() {
       postgresCheck(pool),
       redisCheck(redis),
       ...(media
-        ? [{ name: 'clamav', check: () => pingClamav(env.CLAMAV_HOST, env.CLAMAV_PORT) }]
+        ? [
+            { name: 'storage', check: () => media.storage.ping() },
+            { name: 'clamav', check: () => pingClamav(env.CLAMAV_HOST, env.CLAMAV_PORT) },
+          ]
         : []),
     ],
     services: {

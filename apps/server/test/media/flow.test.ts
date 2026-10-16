@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
+import { Storage } from '../../src/lib/storage.js';
 import { processMediaJob } from '../../src/worker/media-job.js';
 import {
   type Client,
@@ -61,6 +62,21 @@ describe.runIf(mediaIntegrationEnabled)('media upload pipeline (S3 + ClamAV + wo
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
+
+  it('readiness: storage answers, an unreachable store does not', async () => {
+    await setup();
+    await expect(h.storage!.ping()).resolves.toBeUndefined();
+    const unreachable = new Storage({
+      endpoint: 'http://127.0.0.1:1',
+      region: 'us-east-1',
+      accessKeyId: 'x',
+      secretAccessKey: 'y',
+      forcePathStyle: true,
+      quarantineBucket: 'q',
+      mediaBucket: 'm',
+    });
+    await expect(unreachable.ping()).rejects.toThrow();
+  });
 
   it('uploads, scans and sanitizes an image, then serves it with ranges', async () => {
     await setup();

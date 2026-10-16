@@ -57,6 +57,11 @@ export class Storage {
     });
   }
 
+  /** Readiness: the media bucket answers (throws otherwise). */
+  async ping(): Promise<void> {
+    await this.client.send(new HeadBucketCommand({ Bucket: this.config.mediaBucket }));
+  }
+
   /** Creates the buckets if missing (idempotent). */
   async ensureBuckets(): Promise<void> {
     for (const bucket of [this.config.quarantineBucket, this.config.mediaBucket]) {
