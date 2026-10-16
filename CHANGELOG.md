@@ -6,6 +6,11 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-16
+
+Sign-in through the organization (SSO) and content approval. Upgrading from 0.2: see
+[docs/UPGRADING.md](docs/UPGRADING.md#02--03) (usually nothing to do).
+
 ### Added
 
 - Content approval: when an organization turns it on, an editor's change to what screens
@@ -123,5 +128,6 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
+[0.3.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.3.0
 [0.2.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.2.0
 [0.1.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.1.0

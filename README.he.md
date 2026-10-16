@@ -149,14 +149,12 @@ curl -k https://localhost/health  # {"status":"ok"}
 - [שלב 6 — תזמון](docs/phases/06-scheduling.md) · [שלב 7 — תפעול](docs/phases/07-ops.md) · [שלב 8 — נגנים לכל מכשיר](docs/phases/08-wrappers.md) · [שלב 9 — הקשחה ושחרור](docs/phases/09-release.md) · [התקנת נגנים](docs/players.he.md) · [שדרוג התקנה קיימת](docs/UPGRADING.md)
 - [תרומה לפרויקט](CONTRIBUTING.md) · [אבטחה](SECURITY.md) · [רישוי](LICENSING.md)
 
-**עכשיו:** גרסה v0.2.0 ([תוכנית ותוצאות](docs/phases/10-v0.2-plan.md)). חדש בה:
+**עכשיו:** גרסה v0.3.0 ([תוכנית ותוצאות](docs/phases/11-next-plan.md)). חדש בה:
 
-- טבלאות נתונים מ-Google Sheets, ‏CSV ו-JSON.
-- התראות חירום.
-- ‏RLS ב-PostgreSQL.
-- ‏images ל-arm64.
+- התחברות דרך הארגון (SSO, ‏OpenID Connect).
+- ‏Workflow לאישור תוכן.
 
-**הבא:** התחברות דרך הארגון (SSO, ‏OIDC) ו-Workflow לאישור תוכן ([תוכנית](docs/phases/11-next-plan.md)).
+ב-0.2 נוספו טבלאות נתונים, התראות חירום, ‏RLS ב-PostgreSQL ו-images ל-arm64.
 
 ## רישיון
 

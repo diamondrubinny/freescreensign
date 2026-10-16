@@ -21,7 +21,7 @@ by the release workflow of this repository. To verify them before running:
 
 ```bash
 for image in server worker web; do
-  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.2.0" \
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.3.0" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@'
 done
@@ -29,6 +29,18 @@ done
 
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
+
+## 0.2 → 0.3
+
+- **Nothing to do for most installations:** the three new migrations (linked sign-in
+  identities and approval requests) run when the server starts.
+- **SSO is off** until `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET` are set (see
+  [OPERATIONS.md](OPERATIONS.md#sign-in-through-your-organization-sso)).
+- **Content approval is off** in every organization until an admin turns it on in the
+  organization settings.
+- **Database timeouts:** the server now waits at most 10 s for a database connection, and asks
+  PostgreSQL to end a transaction left idle for 60 s. A database proxy that does not pass
+  startup parameters (for example PgBouncer in transaction mode) ignores the second one.
 
 ## 0.1 → 0.2
 
