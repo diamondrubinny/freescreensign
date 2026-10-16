@@ -124,7 +124,7 @@ export function AppShell({ session }: { session: SessionInfo }) {
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 md:hidden dark:border-gray-600"
             >
               <Menu aria-hidden="true" className="size-5" />
-              {t('nav.menu')}
+              <span className="sr-only sm:not-sr-only">{t('nav.menu')}</span>
             </button>
             <Brand />
           </div>
@@ -163,7 +163,8 @@ export function AppShell({ session }: { session: SessionInfo }) {
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800"
             >
               <LogOut aria-hidden="true" className="size-4" />
-              {t('nav.logout')}
+              {/* Icon only on phones: the header stays one row. */}
+              <span className="sr-only sm:not-sr-only">{t('nav.logout')}</span>
             </button>
           </div>
         </div>

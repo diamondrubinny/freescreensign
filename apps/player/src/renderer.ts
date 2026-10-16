@@ -82,6 +82,7 @@ export class DomRenderer implements Renderer {
     this.clear();
     const panel = document.createElement('section');
     panel.className = 'message';
+    panel.append(brandMark());
     const title = document.createElement('h1');
     title.textContent = message.title;
     panel.append(title);
@@ -92,6 +93,16 @@ export class DomRenderer implements Renderer {
       code.setAttribute('data-testid', 'pairing-code');
       code.textContent = message.code;
       panel.append(code);
+      // Waiting for the code to be entered in the dashboard (decorative).
+      const waiting = document.createElement('div');
+      waiting.className = 'waiting';
+      waiting.setAttribute('aria-hidden', 'true');
+      waiting.append(
+        document.createElement('span'),
+        document.createElement('span'),
+        document.createElement('span'),
+      );
+      panel.append(waiting);
     }
     for (const line of message.lines) {
       const p = document.createElement('p');
@@ -286,4 +297,32 @@ export class DomRenderer implements Renderer {
     await done;
     if (isVideo) element.querySelector('video')?.pause();
   }
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+
+/** The Rubinny mark (the same drawing as the dashboard's icon) and name. */
+function brandMark(): HTMLElement {
+  const brand = document.createElement('div');
+  brand.className = 'brand';
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('viewBox', '0 0 64 64');
+  svg.setAttribute('aria-hidden', 'true');
+  const shapes: [number, number, number, number, number, string][] = [
+    [0, 0, 64, 64, 12, '#4f46e5'],
+    [12, 16, 40, 26, 3, '#fff'],
+    [28, 42, 8, 8, 0, '#fff'],
+    [20, 48, 24, 4, 2, '#fff'],
+  ];
+  for (const [x, y, width, height, radius, fill] of shapes) {
+    const rect = document.createElementNS(SVG, 'rect');
+    for (const [name, value] of Object.entries({ x, y, width, height, rx: radius, fill })) {
+      rect.setAttribute(name, String(value));
+    }
+    svg.append(rect);
+  }
+  const name = document.createElement('span');
+  name.textContent = 'Rubinny';
+  brand.append(svg, name);
+  return brand;
 }

@@ -248,7 +248,7 @@ export function ScreensPage() {
                         {screen.online ? t('screens.online') : t('screens.offline')}
                       </StatusPill>
                       {!screen.online && (
-                        <span className="block text-sm text-gray-700 dark:text-gray-300">
+                        <span className="mt-1 block text-sm whitespace-nowrap text-gray-700 dark:text-gray-300">
                           {screen.lastSeenAt
                             ? t('screens.lastSeen', {
                                 when: formatDateTime(screen.lastSeenAt, i18n.language),
@@ -273,6 +273,7 @@ export function ScreensPage() {
                         <div className="flex flex-wrap gap-2">
                           <Button
                             variant="secondary"
+                            size="sm"
                             onClick={() => {
                               update.reset();
                               setEditing(screen);
@@ -283,6 +284,7 @@ export function ScreensPage() {
                           </Button>
                           <Button
                             variant="secondary"
+                            size="sm"
                             loading={reload.isPending && reload.variables === screen.id}
                             onClick={() => {
                               reload.mutate(screen.id);
@@ -294,6 +296,7 @@ export function ScreensPage() {
                           {canRemove && (
                             <Button
                               variant="secondary"
+                              size="sm"
                               onClick={() => {
                                 setRemoving(screen);
                               }}

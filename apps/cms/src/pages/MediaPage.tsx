@@ -19,6 +19,7 @@ import { Card, SectionHeading } from '../components/ui';
 import { toFormErrors } from '../lib/api-errors';
 import { formatBytes, formatDuration } from '../lib/format-bytes';
 import { useFormErrors } from '../lib/use-form-errors';
+import { Upload } from 'lucide-react';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm';
 const PENDING: MediaStatus[] = ['uploading', 'queued', 'processing'];
@@ -217,9 +218,6 @@ export function MediaPage() {
               dragging ? 'border-brand-700 bg-brand-50 dark:bg-brand-950' : 'border-gray-400'
             }`}
           >
-            <label htmlFor={inputId} className="font-medium">
-              {t('media.chooseFiles')}
-            </label>
             <input
               ref={inputRef}
               id={inputId}
@@ -231,8 +229,16 @@ export function MediaPage() {
                 if (event.target.files) startUploads(event.target.files);
                 event.target.value = '';
               }}
-              className="max-w-full"
+              // Visually replaced by the label below (the browser's own control is not translated).
+              className="peer sr-only"
             />
+            <label
+              htmlFor={inputId}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-brand-700 px-4 py-2 font-medium text-white shadow-sm peer-focus-visible:outline-3 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-700 hover:bg-brand-800 dark:bg-brand-600 dark:hover:bg-brand-500 dark:peer-focus-visible:outline-brand-300"
+            >
+              <Upload aria-hidden="true" className="size-4" />
+              {t('media.chooseFiles')}
+            </label>
             <p id={`${inputId}-hint`} className="text-sm text-gray-700 dark:text-gray-300">
               {t('media.dropHint')}{' '}
               {usage.data &&
@@ -355,13 +361,13 @@ export function MediaPage() {
               key={item.id}
               className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
             >
-              <div className="flex aspect-video items-center justify-center bg-gray-100 dark:bg-gray-800">
+              <div className="relative flex aspect-video items-center justify-center bg-gray-100 dark:bg-gray-800">
                 {item.thumbnailUrl ? (
                   <img
                     src={item.thumbnailUrl}
                     alt=""
                     loading="lazy"
-                    className="h-full w-full object-contain"
+                    className="absolute inset-0 h-full w-full object-contain"
                   />
                 ) : (
                   <span aria-hidden="true" className="text-4xl">
@@ -396,16 +402,18 @@ export function MediaPage() {
                     {item.width && item.height && (
                       <>
                         <dt>{t('media.dimensions')}:</dt>
-                        <dd dir="ltr" className="text-start">
-                          {item.width}×{item.height}
+                        <dd>
+                          <bdi dir="ltr">
+                            {item.width}×{item.height}
+                          </bdi>
                         </dd>
                       </>
                     )}
                     {item.durationMs !== null && (
                       <>
                         <dt>{t('media.duration')}:</dt>
-                        <dd dir="ltr" className="text-start">
-                          {formatDuration(item.durationMs)}
+                        <dd>
+                          <bdi dir="ltr">{formatDuration(item.durationMs)}</bdi>
                         </dd>
                       </>
                     )}
@@ -415,6 +423,7 @@ export function MediaPage() {
                   {item.status === 'ready' && (
                     <Button
                       variant="secondary"
+                      size="sm"
                       onClick={() => {
                         setPreviewing(item);
                       }}
@@ -427,6 +436,7 @@ export function MediaPage() {
                     <>
                       <Button
                         variant="secondary"
+                        size="sm"
                         onClick={() => {
                           rename.reset();
                           setRenaming(item);
@@ -437,6 +447,7 @@ export function MediaPage() {
                       </Button>
                       <Button
                         variant="secondary"
+                        size="sm"
                         onClick={() => {
                           setDeleting(item);
                         }}

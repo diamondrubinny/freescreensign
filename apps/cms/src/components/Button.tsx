@@ -13,11 +13,14 @@ const STYLES: Record<Variant, string> = {
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
+  /** "sm" for rows of actions in cards and tables. */
+  size?: 'md' | 'sm';
   loading?: boolean;
 }
 
 export function Button({
   variant = 'primary',
+  size = 'md',
   loading = false,
   className = '',
   children,
@@ -30,7 +33,9 @@ export function Button({
   const base =
     variant === 'link'
       ? 'inline p-0'
-      : 'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-medium [&>svg]:size-4 [&>svg]:shrink-0';
+      : `inline-flex items-center justify-center gap-2 rounded-lg font-medium [&>svg]:size-4 [&>svg]:shrink-0 ${
+          size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2'
+        }`;
   return (
     <button
       type={type}

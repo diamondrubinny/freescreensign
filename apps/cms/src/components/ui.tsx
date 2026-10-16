@@ -99,7 +99,7 @@ export function StatusPill({
   } as const;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium ${tones[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium whitespace-nowrap ${tones[tone]}`}
     >
       <span aria-hidden="true" className={`size-2 rounded-full ${dots[tone]}`} />
       {children}

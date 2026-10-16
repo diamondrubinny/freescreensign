@@ -69,7 +69,7 @@ export function AccessibilityMenu() {
           <circle cx="12" cy="4" r="2" />
           <path d="M4 7.5 12 9l8-1.5.4 2L14 11v3l2.5 7-1.9.7L12 15.5l-2.6 6.2-1.9-.7L10 14v-3L3.6 9.5z" />
         </svg>
-        <span>{t('a11y.menu')}</span>
+        <span className="sr-only sm:not-sr-only">{t('a11y.menu')}</span>
       </button>
       {open && (
         <div

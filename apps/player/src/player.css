@@ -92,6 +92,9 @@ body,
 .message {
   position: absolute;
   inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgb(79 70 229 / 0.28), transparent 60%),
+    radial-gradient(ellipse at 50% 110%, rgb(250 204 21 / 0.08), transparent 55%), #05060f;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -108,11 +111,67 @@ body,
 }
 .message .code {
   margin: 2vh 0;
+  padding: 2.5vh 5vh;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 3vh;
+  background: rgb(255 255 255 / 0.05);
+  box-shadow: 0 2vh 8vh rgb(0 0 0 / 0.45);
   font-size: clamp(48px, 14vh, 220px);
   font-weight: 700;
   letter-spacing: 0.08em;
   font-family: ui-monospace, 'DejaVu Sans Mono', monospace;
   color: #facc15;
+}
+.message .brand {
+  position: absolute;
+  top: 5vh;
+  display: flex;
+  align-items: center;
+  gap: 1.2vh;
+  font-size: clamp(16px, 3vh, 44px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.92;
+}
+.message .brand svg {
+  width: 1.6em;
+  height: 1.6em;
+}
+.message .waiting {
+  display: flex;
+  gap: 1.2vh;
+  margin-bottom: 1vh;
+}
+.message .waiting span {
+  width: 1.2vh;
+  height: 1.2vh;
+  border-radius: 50%;
+  background: #a5b4fc;
+  animation: waiting 1.4s ease-in-out infinite;
+}
+.message .waiting span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.message .waiting span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes waiting {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .message .waiting span {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
 /* ---- Widgets (sizes relative to the zone) ----------------------------------
