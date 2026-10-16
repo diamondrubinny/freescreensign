@@ -661,49 +661,54 @@ test('teacher registers through the invitation and sees the organization', async
   await expectAccessible(page, 'dashboard (en)');
 });
 
-test("an editor's change waits for an admin's approval", async ({ page, browser }) => {
-  // The admin turns approval on.
+// One admin sign-in for both parts: two-factor checks are rate limited per user (10 per 15
+// minutes), and the journey signs the admin in many times.
+test("approval of an editor's change; the admin changes the role, reviews the audit log and legal pages", async ({
+  page,
+  browser,
+}) => {
   await signIn(page, ADMIN, true);
-  await mainNav(page).getByRole('link', { name: 'הגדרות ארגון', exact: true }).click();
-  await page.getByRole('checkbox', { name: 'אישור מנהל לשינויי תוכן' }).check();
-  await page.getByRole('button', { name: 'שמירה' }).click();
-  await expect(page.getByText('השינויים נשמרו.')).toBeVisible();
+  await test.step("an editor's change waits for an admin's approval", async () => {
+    // The admin turns approval on.
+    await mainNav(page).getByRole('link', { name: 'הגדרות ארגון', exact: true }).click();
+    await page.getByRole('checkbox', { name: 'אישור מנהל לשינויי תוכן' }).check();
+    await page.getByRole('button', { name: 'שמירה' }).click();
+    await expect(page.getByText('השינויים נשמרו.')).toBeVisible();
 
-  // The teacher (an editor) edits the announcements ticker, in her own browser.
-  const teacherContext = await browser.newContext({ ignoreHTTPSErrors: true });
-  const teacher = await teacherContext.newPage();
-  await signIn(teacher, TEACHER, false);
-  await mainNav(teacher).getByRole('link', { name: 'Widgets', exact: true }).click();
-  await teacher.getByRole('link', { name: 'עריכה הודעות' }).click();
-  await teacher.getByLabel(/^טקסט/).fill('מבחנים מחר בשמונה');
-  await teacher.getByRole('button', { name: 'שמירת ה-Widget' }).click();
-  // Information, not an error; nothing changed yet.
-  await expect(teacher.getByRole('status').filter({ hasText: 'נשלח לאישור מנהל' })).toBeVisible();
-  await teacher.reload();
-  await expect(teacher.getByLabel(/^טקסט/)).toHaveValue('ברוכים הבאים לבית הספר');
-  await mainNav(teacher).getByRole('link', { name: 'אישורים', exact: true }).click();
-  await expect(teacher.getByRole('button', { name: 'ביטול הבקשה: Widget: הודעות' })).toBeVisible();
+    // The teacher (an editor) edits the announcements ticker, in her own browser.
+    const teacherContext = await browser.newContext({ ignoreHTTPSErrors: true });
+    const teacher = await teacherContext.newPage();
+    await signIn(teacher, TEACHER, false);
+    await mainNav(teacher).getByRole('link', { name: 'Widgets', exact: true }).click();
+    await teacher.getByRole('link', { name: 'עריכה הודעות' }).click();
+    await teacher.getByLabel(/^טקסט/).fill('מבחנים מחר בשמונה');
+    await teacher.getByRole('button', { name: 'שמירת ה-Widget' }).click();
+    // Information, not an error; nothing changed yet.
+    await expect(teacher.getByRole('status').filter({ hasText: 'נשלח לאישור מנהל' })).toBeVisible();
+    await teacher.reload();
+    await expect(teacher.getByLabel(/^טקסט/)).toHaveValue('ברוכים הבאים לבית הספר');
+    await mainNav(teacher).getByRole('link', { name: 'אישורים', exact: true }).click();
+    await expect(
+      teacher.getByRole('button', { name: 'ביטול הבקשה: Widget: הודעות' }),
+    ).toBeVisible();
 
-  // The admin approves; the change is live.
-  await mainNav(page).getByRole('link', { name: 'אישורים', exact: true }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'ממתין לאישור' })).toBeVisible();
-  await expectAccessible(page, 'approvals');
-  await page.getByRole('button', { name: 'אישור: Widget: הודעות' }).click();
-  await expect(page.getByText('השינוי אושר ועלה למסכים.')).toBeVisible();
-  await teacher.goto(page.url().replace(/approvals$/, 'widgets'));
-  await teacher.getByRole('link', { name: 'עריכה הודעות' }).click();
-  await expect(teacher.getByLabel(/^טקסט/)).toHaveValue('מבחנים מחר בשמונה');
-  await teacherContext.close();
+    // The admin approves; the change is live.
+    await mainNav(page).getByRole('link', { name: 'אישורים', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'ממתין לאישור' })).toBeVisible();
+    await expectAccessible(page, 'approvals');
+    await page.getByRole('button', { name: 'אישור: Widget: הודעות' }).click();
+    await expect(page.getByText('השינוי אושר ועלה למסכים.')).toBeVisible();
+    await teacher.goto(page.url().replace(/approvals$/, 'widgets'));
+    await teacher.getByRole('link', { name: 'עריכה הודעות' }).click();
+    await expect(teacher.getByLabel(/^טקסט/)).toHaveValue('מבחנים מחר בשמונה');
+    await teacherContext.close();
 
-  // Back to direct changes for the rest of the journey.
-  await mainNav(page).getByRole('link', { name: 'הגדרות ארגון', exact: true }).click();
-  await page.getByRole('checkbox', { name: 'אישור מנהל לשינויי תוכן' }).uncheck();
-  await page.getByRole('button', { name: 'שמירה' }).click();
-  await expect(page.getByText('השינויים נשמרו.')).toBeVisible();
-});
-
-test('admin changes the role, reviews the audit log and legal pages', async ({ page }) => {
-  await signIn(page, ADMIN, true);
+    // Back to direct changes for the rest of the journey.
+    await mainNav(page).getByRole('link', { name: 'הגדרות ארגון', exact: true }).click();
+    await page.getByRole('checkbox', { name: 'אישור מנהל לשינויי תוכן' }).uncheck();
+    await page.getByRole('button', { name: 'שמירה' }).click();
+    await expect(page.getByText('השינויים נשמרו.')).toBeVisible();
+  });
   await mainNav(page).getByRole('link', { name: 'חברים', exact: true }).click();
   await page
     .getByRole('combobox', { name: `שינוי תפקיד עבור ${TEACHER.name}` })
