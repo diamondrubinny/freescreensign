@@ -148,6 +148,20 @@
 | **9e — מסמכים**            | טיוטות מדיניות הפרטיות, הצהרת הנגישות, טבלת המידע האישי ורשימת העוגיות עודכנו לפי הקוד בפועל                                                                                                                                                        | ב-PLAN.md היו עוגיית CSRF שלא קיימת, ואחסון שגוי לצילומי מסך                                                                                                                                                                                |
 | **9f — שחרור**             | ‏`release.yml`: ‏images חתומים ב-cosign עם provenance, קובצי התקנה, ‏SBOM, ‏`SHA256SUMS` ו-Release כטיוטה. ‏`CHANGELOG.md`, ‏`PRODUCTION-CHECKLIST.md`, ‏`OPERATIONS.md`; ‏compose יכול להריץ images שפורסמו (`RUBINNY_IMAGES`, ‏`RUBINNY_VERSION`) | —                                                                                                                                                                                                                                           |
 
+**‏ZAP baseline ב-CI (הריצה המלאה הראשונה):**
+
+- **סיכום:** 60 בדיקות עברו, 0 נכשלו, ו-7 אזהרות ברמה נמוכה או מידע בלבד.
+- **‏Cross-Origin-Resource-Policy:** נוסף (בידוד מפני Spectre).
+- **מה נשאר, ולמה זה בסדר:**
+  - **‏HSTS כבוי:** רק בבדיקה (`HSTS_MAX_AGE=0`). בפרודקשן הערך הוא שנה.
+  - **שמירה במטמון:** ‏assets עם hash בשם הקובץ.
+  - **"הערות חשודות":** בתוך ספריות צד שלישי.
+
+**‏Release dry run** (`workflow_dispatch`):
+
+- **נבנו:** גרסה, ‏images (סריקה ו-SBOM), קובצי התקנה ל-Windows ול-Linux, ‏APK, ‏SHA256SUMS ו-release notes מתוך ה-CHANGELOG.
+- **תוצאה:** 11 קבצים. **לא פורסם דבר**, כמתוכנן.
+
 **פתוח:**
 
 - **ריצת ניסיון:** ריצת dry run של `release.yml`.

@@ -14,6 +14,8 @@
 		Referrer-Policy "no-referrer"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 		Cross-Origin-Opener-Policy "same-origin"
+		# Other sites may not load these resources (Spectre-style cross-origin reads).
+		Cross-Origin-Resource-Policy "same-origin"
 		-Server
 		-Via
 	}

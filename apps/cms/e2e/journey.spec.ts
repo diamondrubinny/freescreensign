@@ -670,6 +670,8 @@ test('security headers are present on the CMS', async ({ request }) => {
   expect(csp).toContain("frame-ancestors 'none'");
   expect(res.headers()['x-content-type-options']).toBe('nosniff');
   expect(res.headers()['cache-control']).toBe('no-cache');
+  expect(res.headers()['cross-origin-opener-policy']).toBe('same-origin');
+  expect(res.headers()['cross-origin-resource-policy']).toBe('same-origin');
 });
 
 /** Main pages: navigation link and page heading (null: any level-1 heading). */
