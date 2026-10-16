@@ -70,6 +70,12 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+          # The emulator's QEMU links the PulseAudio client library, even with -no-audio.
+          sudo apt-get install -y -q libpulse0 > /dev/null
+          # avdmanager and the emulator must look for the AVD in the same folder.
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo "ANDROID_AVD_HOME=$ANDROID_AVD_HOME" >> "$GITHUB_ENV"
           yes | sdkmanager --install emulator platform-tools "$SYSTEM_IMAGE" | grep -v '^\[' || true
           ls "$ANDROID_HOME/system-images/android-$API_LEVEL/google_apis/x86_64/system.img"
           emulator -version | head -1
