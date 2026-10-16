@@ -7,9 +7,9 @@ Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-> **Status: early development** — phase 7 of 9 complete (media, playlists, screens, offline
-> player, layouts, widgets, a free-form designer, a free image library, scheduling and
-> operations). Not ready for production yet.
+> **Status: early development** — phase 8 of 9 complete (media, playlists, screens, offline
+> player, layouts, widgets, a free-form designer, a free image library, scheduling, operations,
+> and players for Windows, Linux, Raspberry Pi and Android). Not ready for production yet.
 
 ![A screen running the "Lobby" kit: main content with a blurred backdrop, a clock with the Hebrew date, and an updates ticker](docs/screenshots/screen-lobby.png)
 
@@ -20,6 +20,10 @@ Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
 - **Offline-first web player** (PWA at `/player/`): pair with a 6-character code, then it keeps
   playing from a verified (sha256) local cache through network outages and reboots.
 - **Live updates** over WebSocket — changes reach screens in seconds.
+- **Players for every device** ([install guide](docs/players.md)): any browser, a desktop app
+  for Windows and Linux, a Raspberry Pi kiosk installer, and an Android / Android TV app. The
+  desktop and Android apps start with the device, stay full screen, recover from crashes, and
+  send **real remote screenshots** to the dashboard.
 - **Layouts with zones**: each zone plays its own playlist (e.g. video + clock + ticker).
 - **Built-in widgets**: clock with the Hebrew date, text, ticker (RTL-aware), QR code, RSS
   news, weather (opt-in), web page, countdown, and **free-form designs**.
@@ -110,18 +114,20 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 
 ## Repository layout
 
-| Path                  | What                                                                                           | License  |
-| --------------------- | ---------------------------------------------------------------------------------------------- | -------- |
-| `apps/server`         | API server + media worker (Fastify, PostgreSQL, Valkey/BullMQ, sharp, ffmpeg, ClamAV)          | AGPL-3.0 |
-| `apps/cms`            | Management dashboard (React, RTL-first, WCAG 2.1 AA target)                                    | AGPL-3.0 |
-| `apps/player`         | Offline-first web player (PWA): pairing, verified media cache, zones, widgets, WebSocket       | AGPL-3.0 |
-| `packages/shared`     | Shared schemas: player manifest, layouts, widgets, designs, pairing codes, roles, Hebrew dates | MIT      |
-| `packages/widget-sdk` | SDK for community widgets (the built-in widgets use it too)                                    | MIT      |
-| `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV                              | AGPL-3.0 |
-| `docs/`               | Specification, phase plans and results, screenshots                                            | —        |
+| Path                  | What                                                                                            | License  |
+| --------------------- | ----------------------------------------------------------------------------------------------- | -------- |
+| `apps/server`         | API server + media worker (Fastify, PostgreSQL, Valkey/BullMQ, sharp, ffmpeg, ClamAV)           | AGPL-3.0 |
+| `apps/cms`            | Management dashboard (React, RTL-first, WCAG 2.1 AA target)                                     | AGPL-3.0 |
+| `apps/player`         | Offline-first web player (PWA): pairing, verified media cache, zones, widgets, WebSocket        | AGPL-3.0 |
+| `apps/desktop`        | Desktop player app for Windows and Linux (Electron)                                             | AGPL-3.0 |
+| `apps/android`        | Android / Android TV player app (WebView)                                                       | AGPL-3.0 |
+| `packages/shared`     | Shared schemas: player manifest, layouts, widgets, designs, pairing codes, roles, Hebrew dates  | MIT      |
+| `packages/widget-sdk` | SDK for community widgets (the built-in widgets use it too)                                     | MIT      |
+| `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
+| `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-Coming next: player wrappers for each platform (Raspberry Pi kiosk image, Electron, Android),
-which also bring real remote screenshots. See the [roadmap](docs/PLAN.md).
+Coming next: hardening and the first release (internal penetration test, manual accessibility
+testing, production checklist, v0.1.0). See the [roadmap](docs/PLAN.md).
 
 ## Development
 

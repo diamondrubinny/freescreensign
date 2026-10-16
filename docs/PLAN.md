@@ -251,7 +251,7 @@ flowchart LR
 | UI            | Radix UI + Tailwind (עם logical properties ל-RTL)                   | רכיבים נגישים                                                                     | MUI, Mantine                                                       | —                                                                                             |
 | i18n          | i18next                                                             | ICU, RTL, pluralization                                                           | FormatJS                                                           | —                                                                                             |
 | Player        | PWA (Vite + TS, ללא framework כבד) + Service Worker + IndexedDB     | רץ בכל דפדפן מודרני                                                               | React                                                              | הגבלות Autoplay/Storage בדפדפנים                                                              |
-| עטיפות Player | Chromium kiosk (Pi/Linux), Electron (Win), Capacitor (Android)      | שימוש חוזר בקוד ה-Web                                                             | נייטיב מלא                                                         | לכל עטיפה עלות תחזוקה                                                                         |
+| עטיפות Player | Chromium kiosk (Pi), Electron (Win/Linux), Android WebView (Java)   | שימוש חוזר בקוד ה-Web                                                             | נייטיב מלא                                                         | לכל עטיפה עלות תחזוקה                                                                         |
 | Auth          | מימוש מבוסס ספריות מוכרות: Argon2id, sessions ב-DB, `otplib` ל-TOTP | שליטה מלאה ב-Self-hosted                                                          | Lucia (deprecated כספרייה — **דורש אימות**), Better-Auth, Keycloak | אחריות אבטחה עלינו → בדיקות + PenTest                                                         |
 | בדיקות        | Vitest, Playwright, axe-core                                        | —                                                                                 | Jest, Cypress                                                      | —                                                                                             |
 | CI            | GitHub Actions + CodeQL + Dependabot + Trivy                        | חינמי לקוד פתוח                                                                   | —                                                                  | —                                                                                             |
@@ -377,22 +377,21 @@ rubinny/
 │  │  └─ prisma/
 │  ├─ worker/          # BullMQ media pipeline (scan, thumbnails, transcode)
 │  ├─ cms/             # React admin
-│  └─ player/          # PWA player
+│  ├─ player/          # PWA player
+│  ├─ desktop/         # Electron wrapper (Windows, Linux)
+│  └─ android/         # Android / Android TV WebView app (Java)
 ├─ packages/
 │  ├─ shared/          # Zod schemas, types, manifest spec
 │  ├─ widget-sdk/      # API for community widgets (MIT)
 │  ├─ widgets/         # Built-in widgets (clock, rss, weather, ...)
 │  ├─ ui/              # Accessible RTL-ready components
 │  └─ i18n/            # he, en locales
-├─ wrappers/
-│  ├─ pi-os/           # Raspberry Pi kiosk image scripts
-│  ├─ electron/
-│  └─ android/         # Capacitor
 ├─ deploy/
 │  ├─ docker-compose.yml
 │  ├─ Caddyfile        # auto HTTPS + security headers
 │  ├─ generate-env.sh  # creates .env with random secrets
 │  ├─ seaweedfs/       # S3 storage entrypoint
+│  ├─ kiosk/raspberry-pi/  # Raspberry Pi kiosk installer (cage + Chromium)
 │  └─ .env.example
 ├─ docs/               # PLAN.md, ARCHITECTURE.md, SECURITY.md, legal drafts
 ├─ .github/            # CI, issue templates, CODEOWNERS
@@ -471,20 +470,20 @@ rubinny/
 
 ## 15. תוכנית עבודה בשלבים
 
-| שלב                         | תוצר                                                                                                                                            | הערות                              |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **0**                       | אפיון (מסמך זה) + החלטות רישיון                                                                                                                 | ✅                                 |
-| **1 — Foundation**          | Monorepo, CI (lint/typecheck/test/CodeQL), Docker Compose (Postgres, Valkey, SeaweedFS, ClamAV, Caddy), README, CONTRIBUTING, SECURITY, LICENSE | ✅                                 |
-| **2 — Auth & Orgs**         | הרשמה/התחברות/איפוס/אימות אימייל/MFA, ארגונים, תפקידים, Audit, Rate limit                                                                       | ✅ שרת + CMS · בדיקות חוצות-Tenant |
-| **3 — Media**               | Streaming upload, Quarantine, ClamAV, Thumbnails, ספריית מדיה ב-CMS                                                                             | ✅                                 |
-| **4 — Player Core**         | Pairing, Manifest spec, Offline cache, ניגון תמונה/וידאו מסך מלא, Heartbeat, WS                                                                 | ✅ נקודת "Demo" ראשונה             |
-| **5 — Content**             | Playlists, Layouts+Zones Designer, Widgets מובנים + Widget SDK                                                                                  | ✅                                 |
-| **6 — Scheduling**          | מנוע תזמון (ימים, שעות, תאריכים, עדיפויות, אזורי זמן), תצוגת Timeline                                                                           | ✅ RRULE מלא וחגים — Roadmap       |
-| **7 — Ops**                 | Proof-of-Play, Uptime, צילום מסך, Reload מרחוק, התראות Offline במייל                                                                            | ✅ צילום מסך אמיתי — שלב 8         |
-| **8 — Wrappers**            | Raspberry Pi kiosk image, Electron, Android                                                                                                     |                                    |
-| **9 — Hardening & Release** | PenTest פנימי, בדיקות נגישות, טיוטות משפטיות, תיעוד, v0.1.0                                                                                     | Checklist פרודקשן                  |
-| **10 — Signage OS**         | Samsung Tizen, LG webOS                                                                                                                         | אחרי v0.1                          |
-| **11+**                     | Roadmap D5                                                                                                                                      |                                    |
+| שלב                         | תוצר                                                                                                                                            | הערות                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **0**                       | אפיון (מסמך זה) + החלטות רישיון                                                                                                                 | ✅                                                     |
+| **1 — Foundation**          | Monorepo, CI (lint/typecheck/test/CodeQL), Docker Compose (Postgres, Valkey, SeaweedFS, ClamAV, Caddy), README, CONTRIBUTING, SECURITY, LICENSE | ✅                                                     |
+| **2 — Auth & Orgs**         | הרשמה/התחברות/איפוס/אימות אימייל/MFA, ארגונים, תפקידים, Audit, Rate limit                                                                       | ✅ שרת + CMS · בדיקות חוצות-Tenant                     |
+| **3 — Media**               | Streaming upload, Quarantine, ClamAV, Thumbnails, ספריית מדיה ב-CMS                                                                             | ✅                                                     |
+| **4 — Player Core**         | Pairing, Manifest spec, Offline cache, ניגון תמונה/וידאו מסך מלא, Heartbeat, WS                                                                 | ✅ נקודת "Demo" ראשונה                                 |
+| **5 — Content**             | Playlists, Layouts+Zones Designer, Widgets מובנים + Widget SDK                                                                                  | ✅                                                     |
+| **6 — Scheduling**          | מנוע תזמון (ימים, שעות, תאריכים, עדיפויות, אזורי זמן), תצוגת Timeline                                                                           | ✅ RRULE מלא וחגים — Roadmap                           |
+| **7 — Ops**                 | Proof-of-Play, Uptime, צילום מסך, Reload מרחוק, התראות Offline במייל                                                                            | ✅ צילום מסך אמיתי — שלב 8                             |
+| **8 — Wrappers**            | Electron (Windows/Linux), Raspberry Pi kiosk, Android / Android TV, צילום מסך מרחוק                                                             | ✅ סקריפט התקנה ל-Pi במקום תמונת מערכת · בלי חתימת קוד |
+| **9 — Hardening & Release** | PenTest פנימי, בדיקות נגישות, טיוטות משפטיות, תיעוד, v0.1.0                                                                                     | Checklist פרודקשן                                      |
+| **10 — Signage OS**         | Samsung Tizen, LG webOS                                                                                                                         | אחרי v0.1                                              |
+| **11+**                     | Roadmap D5                                                                                                                                      |                                                        |
 
 ---
 
@@ -501,10 +500,13 @@ rubinny/
 
 ## 17. הצעד הבא המומלץ
 
-**שלב 8 — Wrappers:**
+**שלב 9 — Hardening & Release:**
 
-- תמונת Raspberry Pi מוכנה למצב קיוסק.
-- עטיפת Electron למחשבי Windows ו-Linux.
-- אפליקציית Android ו-Android TV.
+- **בדיקת חדירות פנימית:** לכל ה-API, הנגן והעטיפות.
+- **בדיקות נגישות ידניות:** קורא מסך, מקלדת וזום 200%.
+- **צ'קליסט פרודקשן:** כולל טבלת המידע האישי, רשימת העוגיות וטיוטות המסמכים המשפטיים.
+- **תיעוד ושחרור v0.1.0:**
+  - **חתימה:** אפשרות לחתימת קוד לעטיפות, אם יהיה מפתח מפרסם.
+  - **ארטיפקטים:** פרסום של קובצי ההתקנה כ-Release.
 
-בעטיפות אפשר לממש צילום מסך מרחוק אמיתי, הפעלה אוטומטית ושליטה בחומרה. תוכנית מפורטת תיכתב ב-`docs/phases/08-wrappers.md` לפני תחילת הפיתוח.
+תוכנית מפורטת תיכתב ב-`docs/phases/09-release.md` לפני תחילת הפיתוח.

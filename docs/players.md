@@ -7,11 +7,12 @@ Every Rubinny player shows the same web player, served by **your** server at
 wrappers below only add what a browser cannot do on its own: starting with the device, staying
 full screen and awake, recovering from crashes, and (where noted) remote screenshots.
 
-| Device                      | Use                                       | Remote screenshots |
-| --------------------------- | ----------------------------------------- | :----------------: |
-| Any modern browser          | [Browser](#browser)                       |         —          |
-| Windows / Linux PC, mini-PC | [Desktop app](#desktop-app-windows-linux) |         ✓          |
-| Raspberry Pi 4 / 5          | [Raspberry Pi kiosk](#raspberry-pi)       |         —          |
+| Device                            | Use                                       | Remote screenshots |
+| --------------------------------- | ----------------------------------------- | :----------------: |
+| Any modern browser                | [Browser](#browser)                       |         —          |
+| Windows / Linux PC, mini-PC       | [Desktop app](#desktop-app-windows-linux) |         ✓          |
+| Raspberry Pi 4 / 5                | [Raspberry Pi kiosk](#raspberry-pi)       |         —          |
+| Android 8.0+, Android TV, tablets | [Android app](#android-and-android-tv)    |         ✓          |
 
 **Pairing is the same everywhere:** the screen shows a 6-character code; in the dashboard go to
 **Screens › Add screen** and enter it. The screen then keeps a device token and needs no
@@ -94,3 +95,31 @@ ever stops.
 - **Tested** with ShellCheck, a real install/uninstall in a Debian container, `systemd-analyze
 verify`, and the launcher running in a real cage with Chromium. Testing on Raspberry Pi
   hardware is still to be done (see [phase 8 results](phases/08-wrappers.md)).
+
+## Android and Android TV
+
+The **Rubinny Player** Android app (`apps/android`) shows the player full screen on Android
+8.0 or newer — TV boxes, smart TVs with Android TV / Google TV, tablets and phones. It keeps the
+screen on, recovers from crashes, and can send a real screenshot to the dashboard.
+
+1. Get the APK: until a signed release is published, CI builds a debug APK on every change of
+   the app (GitHub › Actions › Android › the latest run › _Artifacts_ ›
+   `rubinny-player-android-debug`).
+2. Install it: allow installing apps from unknown sources for your file manager or browser, or
+   from a computer with `adb install app-debug.apk`.
+3. Open **Rubinny Player**, enter your server address, and pair the screen.
+
+**Starting with the device** (Android 10 and newer restrict apps that open by themselves):
+
+- **Best:** make Rubinny Player the **home app** (Settings › Apps › Default apps › Home app).
+  The device then always opens the player, also after Home is pressed.
+- **Or:** on the setup page, tap **Allow display over other apps**; the player then opens
+  after a restart. Many TV devices do not have this setting — use the home app there.
+
+- **Admin access:** press **Back five times quickly** to return to the setup page (Back never
+  leaves the player otherwise).
+- **Security:** the app only shows pages of your server (other sites inside a web page widget
+  are allowed in their frame, but never get the screenshot channel), refuses every permission,
+  and its data (the device token) is excluded from backups and device transfers.
+- **Debug build:** the APK from CI is signed with a debug key and allows inspecting the page
+  over USB debugging. A signed release build for stores is not part of this phase.
