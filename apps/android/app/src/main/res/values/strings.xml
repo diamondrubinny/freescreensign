@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rubinny Player</string>
+    <string name="setup_title">Connect this screen</string>
+    <string name="setup_intro">Enter the address of your Rubinny server. The screen then shows a code: enter it in Rubinny under Screens › Add screen.</string>
+    <string name="setup_label">Server address</string>
+    <string name="setup_hint">https://signage.example.com</string>
+    <string name="setup_connect">Connect</string>
+    <string name="setup_invalid">Enter the full https address of your server, for example https://signage.example.com</string>
+    <string name="setup_boot_title">Start with the device</string>
+    <string name="setup_boot_intro">On Android 10 and newer, the player can open by itself after a restart only if you allow “Display over other apps”, or if you choose Rubinny Player as the home app.</string>
+    <string name="setup_boot_allow">Allow display over other apps</string>
+    <string name="setup_boot_unavailable">This device has no such setting. Choose Rubinny Player as the home app instead (Settings › Apps › Default apps › Home app).</string>
+    <string name="setup_boot_ready">The player will open by itself after a restart.</string>
+    <string name="setup_admin_hint">To return to this page from the player, press Back five times quickly.</string>
+</resources>
