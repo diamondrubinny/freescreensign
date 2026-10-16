@@ -61,12 +61,14 @@
 ## 5. Raspberry Pi
 
 - **‏`install.sh`:**
-  - **התקנה:** ‏`cage` (קומפוזיטור Wayland לקיוסק), ‏`chromium-browser`, ‏`seatd`.
-  - **משתמש:** יוצר משתמש `rubinny` בלי סיסמה, ובלי הרשאת sudo.
-  - **שירות:** ‏`rubinny-kiosk.service`, שמפעיל `cage -- chromium --kiosk <URL>` עם `Restart=always`.
-  - **מסך:** מבטל כיבוי מסך.
+  - **התקנה:** ‏`cage` (קומפוזיטור Wayland לקיוסק), ‏Chromium (`chromium`, או `chromium-browser` בגרסאות ישנות) וגופנים.
+  - **משתמש:** יוצר משתמש `rubinny` בלי סיסמה, בלי shell ובלי sudo.
+  - **שירות:** ‏`rubinny-kiosk.service` על tty1 (סשן PAM/logind משלו), שמפעיל `cage -- chromium --kiosk <URL>/player/` עם `Restart=always`.
+  - **מסך:** מבטל כיבוי מסך (`consoleblank=0`).
   - **ריצה חוזרת:** בטוחה (idempotent).
-  - **פרמטרים:** ‏`--url`, ‏`--rotate` ו-`--uninstall`.
+  - **פרמטרים:** ‏`--url`, ‏`--auto-updates`, ‏`--watchdog`, ‏`--dry-run` ו-`--uninstall`.
+  - **סיבוב מסך:** **לא בסקריפט.** הנגן כבר מסובב את התוכן לפי כיוון המסך שהוגדר ב-CMS, בכל הפלטפורמות.
+    - **הסיבה:** בבדיקה עם cage אמיתי, סיבוב התצוגה בזמן ריצה דרך `wlr-randr` גרם לקריסה של cage (assertion ב-wlroots).
 - **אבטחה:**
   - **הגבלת הדפדפן:** ‏Chromium רץ בלי הרשאות מנהל, עם פרופיל ייעודי.
   - **ניהול מרחוק:** מומלץ להפעיל SSH רק עם מפתחות.

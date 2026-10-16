@@ -115,6 +115,27 @@ jobs:
           cp .env.example .env
           docker compose config --quiet
 
+  kiosk:
+    name: Raspberry Pi kiosk installer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: ShellCheck
+        run: shellcheck deploy/kiosk/raspberry-pi/install.sh deploy/kiosk/raspberry-pi/test/in-container.sh
+      - name: Install and uninstall in Debian
+        run: docker run --rm -v "$PWD/deploy/kiosk/raspberry-pi:/src:ro" debian:trixie /src/test/in-container.sh
+      - name: Verify the systemd unit
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends cage
+          deploy/kiosk/raspberry-pi/install.sh --url https://signage.example.com --dry-run \
+            | awk '/^\[dry-run\] write \/etc\/systemd\/system\/rubinny-kiosk.service/ { f = 1; next }
+                   /^\[dry-run\]|==>/ { f = 0 } f' > "$RUNNER_TEMP/rubinny-kiosk.service"
+          grep -q '^ExecStart=/usr/bin/cage' "$RUNNER_TEMP/rubinny-kiosk.service"
+          systemd-analyze verify "$RUNNER_TEMP/rubinny-kiosk.service"
+
   desktop:
     name: Desktop app (Electron, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}

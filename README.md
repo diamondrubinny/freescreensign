@@ -97,7 +97,9 @@ Open https://localhost and complete the first-run setup with the `SETUP_TOKEN` f
 `deploy/.env`. Without SMTP settings, invitation links are shown to the admin to share.
 
 To turn any device with a modern browser into a screen, open `https://<your-domain>/player/`
-in full-screen/kiosk mode and enter the code it shows under **Screens › Add screen**.
+in full-screen/kiosk mode and enter the code it shows under **Screens › Add screen**. For
+dedicated screens, install a player: the desktop app for Windows and Linux, or the Raspberry Pi
+kiosk — see [docs/players.md](docs/players.md).
 
 Set `RUBINNY_DOMAIN` in `deploy/.env` to a real domain to get an automatic Let's Encrypt
 certificate, and set `HSTS_MAX_AGE=31536000` in production. Optional features (weather, the

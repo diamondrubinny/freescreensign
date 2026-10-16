@@ -119,6 +119,7 @@ curl -k https://localhost/health  # {"status":"ok"}
 
 1. **הגדרה ראשונה:** פותחים את https://localhost ומשלימים את ההגדרה עם ה-`SETUP_TOKEN` שבקובץ `deploy/.env`.
 2. **חיבור מסך:** בכל מכשיר עם דפדפן פותחים את `https://<הדומיין>/player/` במסך מלא, ומזינים את הקוד שמופיע ב-**מסכים › הוספת מסך**.
+   - **למסכים קבועים:** מתקינים נגן. יש אפליקציית מחשב ל-Windows ול-Linux, וקיוסק ל-Raspberry Pi. ההוראות ב-[docs/players.he.md](docs/players.he.md).
 3. **פרודקשן:** מגדירים ב-`RUBINNY_DOMAIN` דומיין אמיתי, כדי לקבל תעודת Let's Encrypt אוטומטית.
 
 פיצ'רים אופציונליים, כמו מזג אוויר ומאגר התמונות, מתוארים ב-[`deploy/.env.example`](deploy/.env.example).
