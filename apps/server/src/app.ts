@@ -24,6 +24,7 @@ import { screenRoutes } from './modules/screens/routes.js';
 import { setupRoutes } from './modules/setup/routes.js';
 import { layoutRoutes } from './modules/layouts/routes.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
+import { opsRoutes } from './modules/ops/routes.js';
 import { widgetRoutes } from './modules/widgets/routes.js';
 import { kitRoutes } from './modules/kits/routes.js';
 import { stockRoutes } from './modules/stock/routes.js';
@@ -125,6 +126,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     widgetRoutes(app, ctx);
     layoutRoutes(app, ctx);
     scheduleRoutes(app, ctx);
+    opsRoutes(app, ctx);
     kitRoutes(app, ctx);
     if (ctx.media) {
       await app.register(multipart, {

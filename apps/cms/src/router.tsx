@@ -54,6 +54,10 @@ export const routes: RouteObject[] = [
             ...lazyPage(() => import('./pages/ScreensPage'), 'ScreensPage'),
           },
           {
+            path: 'orgs/:orgId/screens/:screenId',
+            ...lazyPage(() => import('./pages/ScreenDetailPage'), 'ScreenDetailPage'),
+          },
+          {
             path: 'orgs/:orgId/playlists',
             ...lazyPage(() => import('./pages/PlaylistsPage'), 'PlaylistsPage'),
           },

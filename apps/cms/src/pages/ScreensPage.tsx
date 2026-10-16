@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router';
-import { hasRole } from '@rubinny/shared';
+import { Link, useParams } from 'react-router';
+import { CLOCK_WARNING_MS, hasRole } from '@rubinny/shared';
 import { del, get, patch, post } from '../api/client';
 import { useSession } from '../api/session';
 import type {
@@ -19,7 +19,7 @@ import { Field } from '../components/Field';
 import { Form, value } from '../components/Form';
 import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
-import { StatusPill } from '../components/ui';
+import { StatusPill, linkClass } from '../components/ui';
 import { formatDateTime } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
 
@@ -231,7 +231,15 @@ export function ScreensPage() {
               {screens.data.screens.map((screen) => (
                 <tr key={screen.id}>
                   <th scope="row" className="text-start font-semibold" dir="auto">
-                    {screen.name}
+                    <Link to={`/orgs/${orgId}/screens/${screen.id}`} className={linkClass}>
+                      {screen.name}
+                    </Link>
+                    {screen.clockOffsetMs !== null &&
+                      Math.abs(screen.clockOffsetMs) > CLOCK_WARNING_MS && (
+                        <span className="mt-1 block">
+                          <StatusPill tone="amber">{t('screens.clockWarning')}</StatusPill>
+                        </span>
+                      )}
                   </th>
                   <td>
                     <StatusPill tone={screen.online ? 'green' : 'gray'}>

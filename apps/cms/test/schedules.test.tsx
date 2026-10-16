@@ -81,10 +81,21 @@ describe('schedule editor', () => {
         },
       }),
       [`GET /api/v1/orgs/${ORG}/playlists`]: () => ({ status: 200, body: { playlists: [] } }),
-      [`PATCH /api/v1/orgs/${ORG}/schedules/${SCHEDULE}`]: (body) => ({
-        status: 200,
-        body: { schedule: { ...schedule, updatedAt: '2026-10-15T09:31:00Z', ...(body as object) } },
-      }),
+      // Like the server: saved entries come back with new ids.
+      [`PATCH /api/v1/orgs/${ORG}/schedules/${SCHEDULE}`]: (body) => {
+        const { name, entries } = body as { name: string; entries: Record<string, unknown>[] };
+        return {
+          status: 200,
+          body: {
+            schedule: {
+              ...schedule,
+              name,
+              updatedAt: '2026-10-15T09:31:00Z',
+              entries: entries.map((e) => entry(e)),
+            },
+          },
+        };
+      },
     });
     renderRoutes(
       [{ path: '/orgs/:orgId/schedules/:scheduleId', element: <ScheduleEditorPage /> }],

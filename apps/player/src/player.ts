@@ -1,4 +1,4 @@
-import type { ManifestV1 } from '@rubinny/shared';
+import type { ManifestV1, NowPlayingItem } from '@rubinny/shared';
 import { PairingExpiredError, UnauthorizedError, type PlayerApi } from './api';
 import type { MediaCache } from './media-cache';
 import { wait, type Renderer } from './renderer';
@@ -9,7 +9,10 @@ import type { store as defaultStore } from './store';
 export interface PlayerDeps {
   api: PlayerApi;
   renderer: Renderer;
-  store: Pick<typeof defaultStore, 'token' | 'setToken' | 'manifest' | 'setManifest' | 'clear'>;
+  store: Pick<
+    typeof defaultStore,
+    'token' | 'setToken' | 'manifest' | 'setManifest' | 'clear' | 'clockOffset' | 'setClockOffset'
+  >;
   createCache: (token: string) => MediaCache;
   createSocket: (
     token: string,
@@ -32,6 +35,8 @@ export const PAIR_POLL_MS = 3000;
 const EMPTY_RETRY_MS = 10_000;
 /** How often the schedule is re-evaluated (layout switches by time of day). */
 export const SCHEDULE_CHECK_MS = 30_000;
+/** Clock samples with a slower round trip are too imprecise to use. */
+const MAX_CLOCK_RTT_MS = 10_000;
 
 const PAIRING_LINES = (host: string) => [
   `כדי להוסיף את המסך: היכנסו ל-Rubinny (${host}) › מסכים › הוספת מסך, והזינו את הקוד.`,
@@ -56,7 +61,19 @@ export class Player {
   #abort = new AbortController();
   offline = false;
 
-  constructor(private readonly deps: PlayerDeps) {}
+  /** Device clock minus server clock (ms). */
+  #clockOffset: number;
+  /** What each zone shows right now (reported in the heartbeat). */
+  #playing = new Map<string, NowPlayingItem>();
+
+  constructor(private readonly deps: PlayerDeps) {
+    this.#clockOffset = deps.store.clockOffset();
+  }
+
+  /** The current time on the server's clock (corrects a wrong device clock). */
+  now(): Date {
+    return new Date(this.deps.now().getTime() - this.#clockOffset);
+  }
 
   get manifest() {
     return this.#manifest;
@@ -199,18 +216,29 @@ export class Player {
   #checkSchedule() {
     const manifest = this.#manifest;
     if (!manifest) return;
-    const layout = activeLayout(manifest, this.deps.now());
+    const layout = activeLayout(manifest, this.now());
     if ((layout?.id ?? null) !== this.#layoutId) this.#restart();
   }
 
   async #heartbeat() {
     if (!this.#token) return;
     try {
-      await this.deps.api.heartbeat(this.#token, {
+      const sent = this.deps.now().getTime();
+      const result = await this.deps.api.heartbeat(this.#token, {
         manifestVersion: this.#manifest?.version ?? null,
         playerVersion: this.deps.version,
         resolution: this.deps.resolution(),
+        clockOffsetMs: Math.round(this.#clockOffset),
+        layoutId: this.#layoutId,
+        nowPlaying: [...this.#playing.entries()].map(([zoneId, item]) => ({ ...item, zoneId })),
       });
+      const received = this.deps.now().getTime();
+      const server = result ? Date.parse(result.serverTime) : Number.NaN;
+      // The server stamped its time about halfway through the round trip.
+      if (Number.isFinite(server) && received - sent <= MAX_CLOCK_RTT_MS) {
+        this.#clockOffset = Math.round((sent + received) / 2 - server);
+        this.deps.store.setClockOffset(this.#clockOffset);
+      }
     } catch (error) {
       if (error instanceof UnauthorizedError) await this.#unpair();
     }
@@ -227,7 +255,7 @@ export class Player {
   async #playLoop() {
     while (!this.#isStopped()) {
       const manifest = this.#manifest;
-      const layout = manifest ? activeLayout(manifest, this.deps.now()) : null;
+      const layout = manifest ? activeLayout(manifest, this.now()) : null;
       const zones = (layout?.zones ?? []).map((zone) => ({
         id: zone.id,
         items: manifest ? flattenPlaylist(manifest, zone.playlistId) : [],
@@ -249,6 +277,7 @@ export class Player {
       }
       this.#changed = false;
       const signal = this.#abort.signal;
+      this.#playing.clear();
       this.deps.renderer.mountLayout(layout);
       // Every zone plays its own playlist until the content or the schedule changes.
       await Promise.all(zones.map((zone) => this.#runZone(zone.id, zone.items, signal)));
@@ -270,6 +299,11 @@ export class Player {
           url = (await this.#cache?.objectUrl(item.media)) ?? null;
           if (!url) continue; // not cached (yet): skip
         }
+        this.#playing.set(zoneId, {
+          zoneId,
+          kind: item.kind,
+          ref: item.kind === 'media' ? item.media.id : item.widget.id,
+        });
         await this.deps.renderer.play(zoneId, item, url, signal);
         played++;
       }

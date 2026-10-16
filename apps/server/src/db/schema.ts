@@ -1,5 +1,5 @@
 import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
-import type { Role } from '@rubinny/shared';
+import type { NowPlayingItem, Role } from '@rubinny/shared';
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 type NullableTimestamp = ColumnType<
@@ -64,6 +64,8 @@ export interface OrganizationsTable {
   id: Generated<string>;
   name: string;
   require_admin_mfa: Generated<boolean>;
+  offline_alerts: Generated<boolean>;
+  offline_alert_minutes: Generated<number>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: NullableTimestamp;
@@ -201,6 +203,11 @@ export interface ScreensTable {
   player_version: string | null;
   resolution: string | null;
   manifest_version: string | null;
+  /** Device clock minus server clock, as last measured by the player. */
+  clock_offset_ms: number | null;
+  current_layout_id: string | null;
+  now_playing: ColumnType<NowPlayingItem[] | null, string | null | undefined, string | null>;
+  offline_alerted_at: NullableTimestamp;
   created_by: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
@@ -231,6 +238,26 @@ export interface ScheduleEntriesTable {
   enabled: Generated<boolean>;
 }
 
+export interface ScreenUptimeDaysTable {
+  screen_id: string;
+  day: string;
+  slots: Generated<string>;
+}
+
+export interface PlayEventsTable {
+  id: string;
+  org_id: string;
+  screen_id: string;
+  media_id: string | null;
+  widget_id: string | null;
+  content_kind: 'media' | 'widget';
+  content_name: string;
+  zone_id: string;
+  started_at: Timestamp;
+  duration_ms: number;
+  received_at: Generated<Date>;
+}
+
 export interface PairingCodesTable {
   code_hash: string;
   poll_token_hash: string;
@@ -259,6 +286,8 @@ export interface Database {
   layout_zones: LayoutZonesTable;
   schedules: SchedulesTable;
   schedule_entries: ScheduleEntriesTable;
+  screen_uptime_days: ScreenUptimeDaysTable;
+  play_events: PlayEventsTable;
 }
 
 export type User = Selectable<UsersTable>;

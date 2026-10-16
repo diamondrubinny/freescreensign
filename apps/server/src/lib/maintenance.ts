@@ -8,7 +8,11 @@ export interface MaintenanceResult {
   tokens: number;
   invitations: number;
   auditLogs: number;
+  uptimeDays: number;
 }
+
+/** Uptime history kept per screen. */
+export const UPTIME_RETENTION_DAYS = 90;
 
 /** Enforces retention: removes expired credentials and old audit entries. */
 export async function runMaintenance(
@@ -38,7 +42,16 @@ export async function runMaintenance(
     .deleteFrom('audit_logs')
     .where('created_at', '<', new Date(now.getTime() - auditRetentionDays * DAY_MS))
     .executeTakeFirst();
+  const uptimeDays = await db
+    .deleteFrom('screen_uptime_days')
+    .where(
+      'day',
+      '<',
+      new Date(now.getTime() - UPTIME_RETENTION_DAYS * DAY_MS).toISOString().slice(0, 10),
+    )
+    .executeTakeFirst();
   return {
+    uptimeDays: Number(uptimeDays.numDeletedRows),
     sessions: Number(sessions.numDeletedRows),
     tokens: Number(tokens.numDeletedRows),
     invitations: Number(invitations.numDeletedRows),

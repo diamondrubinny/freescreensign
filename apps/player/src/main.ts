@@ -35,7 +35,8 @@ const widgets = new WidgetRuntime({
   fetchData: (widgetId) => widgetData.get(widgetId),
   mediaUrl: (mediaId) => player?.mediaUrl(mediaId) ?? Promise.resolve(null),
   timezone: () => player?.manifest?.screen.timezone ?? 'Asia/Jerusalem',
-  now: () => new Date(),
+  // Widgets (clock, countdown) show the server-corrected time.
+  now: () => player?.now() ?? new Date(),
   reducedMotion: () => reducedMotion?.matches ?? false,
 });
 

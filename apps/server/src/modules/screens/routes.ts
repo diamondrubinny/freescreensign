@@ -46,6 +46,7 @@ export function screenDto(
     playerVersion: screen.player_version,
     resolution: screen.resolution,
     manifestVersion: screen.manifest_version,
+    clockOffsetMs: screen.clock_offset_ms,
     createdAt: screen.created_at.toISOString(),
   };
 }

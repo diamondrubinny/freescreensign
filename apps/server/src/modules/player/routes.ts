@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type {} from '@fastify/websocket';
 import type { WebSocket } from 'ws';
 import { z } from 'zod';
-import { formatPairingCode, generatePairingCode } from '@rubinny/shared';
+import { formatPairingCode, generatePairingCode, heartbeatSchema } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import { randomToken, sha256Hex } from '../../lib/crypto.js';
 import { HttpError } from '../../lib/http-error.js';
@@ -14,6 +14,7 @@ import { clientIp } from '../auth/sessions.js';
 import { findScreenByToken, requireScreen } from './auth.js';
 import { buildManifest } from './manifest.js';
 import { getWidgetData } from '../widgets/data.js';
+import { recordUptime } from '../ops/uptime.js';
 
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
 const WS_AUTH_TIMEOUT_MS = 5000;
@@ -145,17 +146,7 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
   // -------------------------------------------------------------- heartbeat
   app.post('/player/v1/heartbeat', async (request) => {
     const screen = await requireScreen(ctx, request);
-    const body = parse(
-      z.object({
-        manifestVersion: z.string().max(128).nullable().optional(),
-        playerVersion: z.string().max(40).optional(),
-        resolution: z
-          .string()
-          .regex(/^\d{2,5}x\d{2,5}$/)
-          .optional(),
-      }),
-      request.body,
-    );
+    const body = parse(heartbeatSchema, request.body);
     await ctx.db
       .updateTable('screens')
       .set({
@@ -163,9 +154,13 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
         ...(body.manifestVersion !== undefined ? { manifest_version: body.manifestVersion } : {}),
         ...(body.playerVersion ? { player_version: body.playerVersion } : {}),
         ...(body.resolution ? { resolution: body.resolution } : {}),
+        ...(body.clockOffsetMs !== undefined ? { clock_offset_ms: body.clockOffsetMs } : {}),
+        ...(body.layoutId !== undefined ? { current_layout_id: body.layoutId } : {}),
+        ...(body.nowPlaying !== undefined ? { now_playing: JSON.stringify(body.nowPlaying) } : {}),
       })
       .where('id', '=', screen.id)
       .execute();
+    await recordUptime(ctx.db, screen.id);
     return { serverTime: new Date().toISOString() };
   });
 

@@ -110,6 +110,8 @@ export interface ScreenItem {
   lastSeenAt: string | null;
   playerVersion: string | null;
   resolution: string | null;
+  /** Device clock minus server clock (ms), as last measured by the player. */
+  clockOffsetMs: number | null;
 }
 
 export interface PlaylistSummary {
@@ -238,4 +240,25 @@ export interface ScheduleDetail {
   updatedAt: string;
   screens: { id: string; name: string; timezone: string }[];
   entries: ScheduleEntry[];
+}
+
+export type NowPlayingEntry =
+  | {
+      zoneId: string;
+      kind: 'media';
+      id: string;
+      name: string;
+      mediaKind: 'image' | 'video';
+      thumbnailUrl: string | null;
+    }
+  | { zoneId: string; kind: 'widget'; id: string; name: string; widgetType: string };
+
+export interface ScreenStatus {
+  online: boolean;
+  lastSeenAt: string | null;
+  clockOffsetMs: number | null;
+  clockOk: boolean | null;
+  uptime: { day: number | null; week: number | null; hours: (number | null)[] };
+  layout: { kind: 'layout' | 'playlist' | 'default'; name: string | null } | null;
+  nowPlaying: NowPlayingEntry[];
 }

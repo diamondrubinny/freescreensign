@@ -7,6 +7,7 @@ import { parseManifest, type ManifestV1 } from '@rubinny/shared';
 const TOKEN_KEY = 'rubinny.player.token';
 const MANIFEST_KEY = 'rubinny.player.manifest';
 const WIDGET_DATA_PREFIX = 'rubinny.player.widget-data.';
+const CLOCK_OFFSET_KEY = 'rubinny.player.clock-offset';
 
 function read(key: string): string | null {
   try {
@@ -43,6 +44,14 @@ export const store = {
   setManifest: (manifest: ManifestV1 | null) => {
     write(MANIFEST_KEY, manifest ? JSON.stringify(manifest) : null);
   },
+  /** Device clock minus server clock (ms), kept for offline restarts. */
+  clockOffset(): number {
+    const value = Number(read(CLOCK_OFFSET_KEY));
+    return Number.isFinite(value) ? value : 0;
+  },
+  setClockOffset: (offsetMs: number) => {
+    write(CLOCK_OFFSET_KEY, String(Math.round(offsetMs)));
+  },
   /** Last known server data of a widget (RSS, weather), for offline playback. */
   widgetData(widgetId: string): unknown {
     const raw = read(WIDGET_DATA_PREFIX + widgetId);
@@ -73,6 +82,7 @@ export const store = {
   clear() {
     write(TOKEN_KEY, null);
     write(MANIFEST_KEY, null);
+    write(CLOCK_OFFSET_KEY, null);
     this.pruneWidgetData([]);
   },
 };

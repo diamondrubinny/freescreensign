@@ -18,10 +18,17 @@ async function realManifest(version = 'v1'): Promise<ManifestV1> {
   return m;
 }
 
-function memoryStore(initial: { token?: string; manifest?: ManifestV1 } = {}) {
+function memoryStore(
+  initial: { token?: string; manifest?: ManifestV1; clockOffset?: number } = {},
+) {
   let token = initial.token ?? null;
   let saved: ManifestV1 | null = initial.manifest ?? null;
+  let offset = initial.clockOffset ?? 0;
   return {
+    clockOffset: () => offset,
+    setClockOffset: (value: number) => {
+      offset = value;
+    },
     token: () => token,
     setToken: (t: string | null) => {
       token = t;
@@ -41,6 +48,7 @@ function setup(options: {
   api: Partial<PlayerApi>;
   store: ReturnType<typeof memoryStore>;
   stopAfterPlays?: number;
+  now?: () => Date;
   blobStore?: MemoryBlobStore;
   download?: () => Promise<Blob>;
 }) {
@@ -79,7 +87,7 @@ function setup(options: {
       return { start: vi.fn(), stop: vi.fn() };
     },
     sleep: () => new Promise((resolve) => setTimeout(resolve, 0)),
-    now: () => new Date('2026-10-15T10:00:00Z'),
+    now: options.now ?? (() => new Date('2026-10-15T10:00:00Z')),
     reload,
     resolution: () => '1920x1080',
     host: 'signage.example.com',
@@ -228,5 +236,53 @@ describe('Player', () => {
     await ctx.player.start();
     expect(new Set(ctx.zonesPlayed)).toEqual(new Set(['main', 'ticker']));
     expect(ctx.played.filter((p) => p.kind === 'widget').map(idOf)).toContain('w-ticker');
+  });
+
+  it('corrects a wrong device clock with the server time, also for the schedule', async () => {
+    const m = await realManifest();
+    m.screen.timezone = 'UTC';
+    const main = m.layouts[0]!;
+    m.layouts.push({ ...main, id: 'morning', zones: [{ ...main.zones[0]!, id: 'm-zone' }] });
+    // Active on the server clock (09:15), not on the device clock (10:00).
+    m.schedule.entries = [
+      { id: 'e', layoutId: 'morning', priority: 1, timeFrom: '09:00', timeTo: '09:30' },
+    ];
+    const heartbeat = vi.fn().mockResolvedValue({ serverTime: '2026-10-15T09:15:00Z' });
+    const store = memoryStore({ token: 't' });
+    const ctx = setup({
+      store,
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat },
+      stopAfterPlays: 30,
+    });
+    await ctx.player.start();
+    expect(store.clockOffset()).toBe(45 * 60 * 1000);
+    expect(ctx.player.now().toISOString()).toBe('2026-10-15T09:15:00.000Z');
+    expect(ctx.zonesPlayed).toContain('m-zone');
+    // The heartbeat reports the offset, the layout and what each zone shows.
+    expect(heartbeat.mock.calls.at(-1)?.[1]).toMatchObject({
+      clockOffsetMs: 45 * 60 * 1000,
+      layoutId: 'morning',
+      nowPlaying: [{ zoneId: 'm-zone', kind: 'media' }],
+    });
+  });
+
+  it('keeps the stored offset across restarts and ignores slow clock samples', async () => {
+    const m = await realManifest();
+    const store = memoryStore({ token: 't', clockOffset: 5000 });
+    let tick = Date.parse('2026-10-15T10:00:00Z');
+    const ctx = setup({
+      store,
+      api: {
+        manifest: vi.fn().mockResolvedValue(m),
+        // Each heartbeat takes 20 s (simulated), too slow to measure the clock.
+        heartbeat: vi.fn(() => {
+          tick += 20_000;
+          return Promise.resolve({ serverTime: '2026-10-15T00:00:00Z' });
+        }),
+      },
+      now: () => new Date(tick),
+    });
+    await ctx.player.start();
+    expect(store.clockOffset()).toBe(5000);
   });
 });

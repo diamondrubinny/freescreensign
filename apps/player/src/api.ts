@@ -1,4 +1,4 @@
-import { parseManifest, type ManifestV1 } from '@rubinny/shared';
+import { parseManifest, type HeartbeatInput, type ManifestV1 } from '@rubinny/shared';
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -98,10 +98,8 @@ export class PlayerApi {
     return body.data;
   }
 
-  async heartbeat(
-    token: string,
-    body: { manifestVersion: string | null; playerVersion: string; resolution: string },
-  ): Promise<void> {
+  /** Reports status; returns the server time (for clock correction), or null. */
+  async heartbeat(token: string, body: HeartbeatInput): Promise<{ serverTime: string } | null> {
     const res = await this.fetcher(`${this.base}/heartbeat`, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -109,5 +107,12 @@ export class PlayerApi {
       credentials: 'omit',
     });
     if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) return null;
+    try {
+      const data = (await res.json()) as { serverTime?: unknown };
+      return typeof data.serverTime === 'string' ? { serverTime: data.serverTime } : null;
+    } catch {
+      return null;
+    }
   }
 }
