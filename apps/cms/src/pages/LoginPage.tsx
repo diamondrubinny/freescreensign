@@ -1,8 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { KeyRound } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
-import { ApiError, post } from '../api/client';
+import { ApiError, get, post } from '../api/client';
 import { sessionKey, useSession, useSetupStatus } from '../api/session';
 import type { LoginResult, SessionInfo } from '../api/types';
 import { Alert } from '../components/Alert';
@@ -21,9 +22,19 @@ export function LoginPage() {
   const queryClient = useQueryClient();
   const session = useSession();
   const setupStatus = useSetupStatus();
-  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  // After an SSO sign-in that needs the second factor, the server sends the challenge in the
+  // URL fragment (never sent to servers); it is read once and removed from the address bar.
+  const [ssoMfa] = useState(readSsoMfa);
+  const [mfaToken, setMfaToken] = useState<string | null>(ssoMfa?.token ?? null);
   const [email, setEmail] = useState('');
-  const next = safeNextPath(params.get('next'));
+  const next = safeNextPath(ssoMfa?.returnTo ?? params.get('next'));
+  const ssoError = params.get('sso');
+  const providers = useQuery({
+    queryKey: ['auth-providers'],
+    queryFn: () => get<{ oidc: { name: string } | null }>('/api/v1/auth/providers'),
+    staleTime: Infinity,
+  });
+  const oidc = providers.data?.oidc;
 
   const finish = (info: SessionInfo) => {
     queryClient.setQueryData(sessionKey, info);
@@ -63,6 +74,27 @@ export function LoginPage() {
   return (
     <>
       <PageHeading title={t('login.title')} />
+      {ssoError && (
+        <div className="mb-4">
+          <Alert variant="error">{t(`login.sso.${ssoErrorKey(ssoError)}`)}</Alert>
+        </div>
+      )}
+      {oidc && (
+        <div className="mb-6 flex flex-col gap-4">
+          <a
+            href={`/api/v1/auth/oidc/start?returnTo=${encodeURIComponent(next)}`}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-900 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+          >
+            <KeyRound aria-hidden="true" className="size-4" />
+            {t('login.sso.button', { name: oidc.name })}
+          </a>
+          <p className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+            <span aria-hidden="true" className="h-px flex-1 bg-gray-300 dark:bg-gray-700" />
+            {t('login.sso.or')}
+            <span aria-hidden="true" className="h-px flex-1 bg-gray-300 dark:bg-gray-700" />
+          </p>
+        </div>
+      )}
       <Form
         errors={errors}
         onSubmit={(data) => {
@@ -118,6 +150,30 @@ export function LoginPage() {
       </div>
     </>
   );
+}
+
+const SSO_ERRORS = [
+  'unavailable',
+  'expired',
+  'cancelled',
+  'failed',
+  'unverified_email',
+  'domain',
+  'not_invited',
+] as const;
+
+function ssoErrorKey(code: string): (typeof SSO_ERRORS)[number] {
+  return (SSO_ERRORS as readonly string[]).includes(code)
+    ? (code as (typeof SSO_ERRORS)[number])
+    : 'failed';
+}
+
+function readSsoMfa(): { token: string; returnTo: string | null } | null {
+  const fragment = new URLSearchParams(window.location.hash.slice(1));
+  const token = fragment.get('mfa');
+  if (!token || !/^[A-Za-z0-9_-]{20,100}$/.test(token)) return null;
+  window.history.replaceState(null, '', window.location.pathname);
+  return { token, returnTo: fragment.get('returnTo') };
 }
 
 function MfaStep({

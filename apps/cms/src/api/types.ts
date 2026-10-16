@@ -7,7 +7,17 @@ export interface User {
   locale: Locale;
   emailVerified: boolean;
   mfaEnabled: boolean;
+  /** False for accounts created through SSO that have not set a password. */
+  hasPassword: boolean;
   createdAt: string;
+}
+
+export interface LinkedIdentity {
+  id: string;
+  issuer: string;
+  email: string;
+  createdAt: string;
+  lastUsedAt: string;
 }
 
 export interface MembershipSummary {

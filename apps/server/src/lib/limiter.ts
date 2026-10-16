@@ -100,4 +100,6 @@ export const LIMITS = {
   stockSearchUser: { name: 'stock-search-user', max: 120, windowSeconds: 3600 },
   stockImportUser: { name: 'stock-import-user', max: 60, windowSeconds: 3600 },
   alertStartOrg: { name: 'alert-start-org', max: 10, windowSeconds: 60 },
+  /** SSO starts and callbacks per address. */
+  oidcIp: { name: 'oidc-ip', max: 30, windowSeconds: 600 },
 } as const satisfies Record<string, LimitRule>;

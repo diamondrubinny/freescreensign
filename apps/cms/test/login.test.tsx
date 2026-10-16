@@ -161,4 +161,55 @@ describe('LoginPage MFA errors', () => {
     await user.click(screen.getByRole('button', { name: 'אימות' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('קוד האימות שגוי');
   });
+
+  it('offers the organization sign-in and explains SSO errors', async () => {
+    mockApi({
+      ...base,
+      'GET /api/v1/auth/providers': () => ({ status: 200, body: { oidc: { name: 'Google' } } }),
+    });
+    renderRoutes(routes, '/login?sso=not_invited&next=/orgs/x');
+    const link = await screen.findByRole('link', { name: 'התחברות עם Google' });
+    expect(link).toHaveAttribute('href', '/api/v1/auth/oidc/start?returnTo=%2Forgs%2Fx');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'אין לחשבון הזה גישה עדיין. בקשו ממנהל הארגון הזמנה לכתובת האימייל שלכם.',
+    );
+  });
+
+  it('shows no organization sign-in when the server has none, and hides unknown codes', async () => {
+    mockApi({
+      ...base,
+      'GET /api/v1/auth/providers': () => ({ status: 200, body: { oidc: null } }),
+    });
+    renderRoutes(routes, '/login?sso=<script>');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ההתחברות דרך הארגון נכשלה. נסו שוב.',
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: /התחברות עם/ })).toBeNull();
+    });
+  });
+
+  it('continues with the second factor after an SSO sign-in (token in the fragment)', async () => {
+    const token = 'A'.repeat(43);
+    const calls = mockApi({
+      ...base,
+      'GET /api/v1/auth/providers': () => ({ status: 200, body: { oidc: { name: 'Google' } } }),
+      'POST /api/v1/auth/mfa/verify': () => ({
+        status: 200,
+        body: { mfaRequired: false, ...session },
+      }),
+    });
+    window.history.replaceState(null, '', `/login#mfa=${token}&returnTo=%2Forgs%2Fx`);
+    renderRoutes(routes, '/login');
+    const code = await screen.findByLabelText(/קוד/);
+    // The token is not left in the address bar.
+    expect(window.location.hash).toBe('');
+    await userEvent.type(code, '123456');
+    await userEvent.click(screen.getByRole('button', { name: 'אימות' }));
+    expect(await screen.findByText('orgs page')).toBeInTheDocument();
+    expect(calls.find((c) => c.key === 'POST /api/v1/auth/mfa/verify')?.body).toEqual({
+      mfaToken: token,
+      code: '123456',
+    });
+  });
 });

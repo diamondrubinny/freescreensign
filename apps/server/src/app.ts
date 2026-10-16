@@ -19,6 +19,7 @@ import {
 import { registerErrorHandling } from './plugins/errors.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './modules/auth/routes.js';
+import { oidcRoutes } from './modules/auth/oidc.js';
 import { assertOrgRouteGuarded, registerAuth } from './modules/auth/guards.js';
 import { sessionCookieName } from './modules/auth/sessions.js';
 import { rateLimitKey, type CredentialCheck } from './lib/rate-limit-key.js';
@@ -82,6 +83,18 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
         : {
             level: env.LOG_LEVEL,
             redact: { paths: LOG_REDACT_PATHS, censor: '[REDACTED]' },
+            serializers: {
+              // The SSO callback carries a one-time authorization code: log the path only.
+              req: (request) => ({
+                method: request.method,
+                url: request.url.startsWith('/api/v1/auth/oidc/')
+                  ? (request.url.split('?')[0] ?? '')
+                  : request.url,
+                hostname: request.hostname,
+                remoteAddress: request.ip,
+                remotePort: request.socket.remotePort ?? 0,
+              }),
+            },
           },
     trustProxy: env.TRUST_PROXY,
     bodyLimit: env.BODY_LIMIT_BYTES,
@@ -195,6 +208,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     registerAuth(app, ctx);
     setupRoutes(app, ctx);
     authRoutes(app, ctx);
+    oidcRoutes(app, ctx);
     meRoutes(app, ctx);
     orgRoutes(app, ctx);
     await app.register(websocket, { options: { maxPayload: 4096 } });

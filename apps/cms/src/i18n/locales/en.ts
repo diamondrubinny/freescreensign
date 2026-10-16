@@ -131,6 +131,20 @@ export const en: Messages = {
     resendVerification: 'Resend verification link',
     verificationSent:
       'If the account exists and is not verified yet, a verification link was sent.',
+    sso: {
+      button: 'Sign in with {{name}}',
+      or: 'or with e-mail and password',
+      unavailable:
+        "The organization's sign-in service is not available right now. Try again in a few minutes, or sign in with a password.",
+      expired: 'The sign-in expired or was started in another browser. Please try again.',
+      cancelled: 'The sign-in was cancelled.',
+      failed: 'Signing in through the organization failed. Please try again.',
+      unverified_email:
+        'The sign-in service did not confirm the e-mail address, so the account cannot be identified.',
+      domain: 'This e-mail address may not sign in to this server.',
+      not_invited:
+        'This account has no access yet. Ask an organization admin to invite your e-mail address.',
+    },
   },
   register: {
     title: 'Register',
@@ -271,7 +285,20 @@ export const en: Messages = {
     deleteHint:
       'Your account will be permanently deleted and personal data removed. This cannot be undone.',
     deleteConfirm: 'Enter your password to confirm permanent deletion.',
+    deleteConfirmSso:
+      'Delete the account permanently? To confirm, you must have signed in within the last 15 minutes.',
+    deleteReauth:
+      'For your protection, sign out and sign in again through your organization, then delete the account within 15 minutes.',
     unknownDevice: 'Unknown device',
+    identities: 'Sign-in through your organization',
+    identitiesHint: 'Organization accounts linked to this account.',
+    identityLastUsed: 'Last used: {{when}}',
+    identityUnlink: 'Unlink',
+    identityLast:
+      'This is the only way to sign in to this account. Set a password before unlinking it.',
+    noPassword:
+      'This account signs in through your organization and has no password. Two-factor authentication is managed by the organization.',
+    setPassword: 'Set a password (through "forgot password")',
   },
   a11y: {
     menu: 'Accessibility options',

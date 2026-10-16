@@ -26,6 +26,7 @@ import {
 import { clearSessionCookie, clientIp, createSession, revokeUserSessions } from './sessions.js';
 import { appLink, consumeToken, issueToken } from './tokens.js';
 import { findValidInvitation, acceptInvitation } from '../orgs/invitations.js';
+import { oidcEnabled } from './oidc.js';
 
 const asLocale = (value: string): Locale => (value === 'en' ? 'en' : 'he');
 
@@ -324,6 +325,12 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
     return startSession(request, reply, user);
   });
 
+  // -------------------------------------------------------------- providers
+  /** Sign-in methods besides e-mail and password (shown on the sign-in page). */
+  app.get('/api/v1/auth/providers', () => ({
+    oidc: oidcEnabled(ctx.env) ? { name: ctx.env.OIDC_NAME } : null,
+  }));
+
   // ------------------------------------------------------- session / logout
   app.get('/api/v1/auth/session', async (request) => {
     const { user } = requireAuth(request);
@@ -393,6 +400,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
       .updateTable('users')
       .set({
         password_hash: await hashPassword(body.password),
+        password_login: true,
         // Receiving the reset email proves ownership of the address.
         email_verified_at: user.email_verified_at ?? new Date(),
         updated_at: new Date(),

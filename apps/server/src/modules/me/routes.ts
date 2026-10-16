@@ -15,6 +15,8 @@ import { clearSessionCookie } from '../auth/sessions.js';
 
 /** Public, non-secret identifier for a session (prefix of the token hash). */
 const sessionPublicId = (idHash: string) => idHash.slice(0, 16);
+/** An SSO account without a password confirms account deletion by a recent sign-in. */
+const REAUTH_WINDOW_MS = 15 * 60 * 1000;
 
 export function meRoutes(app: FastifyInstance, ctx: AppContext) {
   app.get('/api/v1/me', (request) => ({ user: publicUser(requireAuth(request).user) }));
@@ -78,10 +80,56 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
     return reply.status(204).send();
   });
 
+  // ------------------------------------------------- linked SSO identities
+  app.get('/api/v1/me/identities', async (request) => {
+    const { user } = requireAuth(request);
+    const rows = await ctx.db
+      .selectFrom('user_identities')
+      .select(['id', 'issuer', 'email', 'created_at', 'last_used_at'])
+      .where('user_id', '=', user.id)
+      .orderBy('created_at')
+      .execute();
+    return {
+      identities: rows.map((row) => ({
+        id: row.id,
+        issuer: row.issuer,
+        email: row.email,
+        createdAt: row.created_at.toISOString(),
+        lastUsedAt: row.last_used_at.toISOString(),
+      })),
+    };
+  });
+
+  app.delete('/api/v1/me/identities/:identityId', async (request, reply) => {
+    const { user } = requireAuth(request);
+    const { identityId } = parse(z.object({ identityId: z.uuid() }), request.params);
+    const identities = await ctx.db
+      .selectFrom('user_identities')
+      .select('id')
+      .where('user_id', '=', user.id)
+      .execute();
+    if (!identities.some((row) => row.id === identityId)) {
+      throw new HttpError(404, 'NOT_FOUND', 'Resource not found');
+    }
+    // Never lock the user out: keep at least one way to sign in.
+    if (!user.password_login && identities.length === 1) {
+      throw new HttpError(409, 'CONFLICT', 'Set a password before unlinking your only sign-in', [
+        { path: 'identityId', reason: 'last_sign_in_method' },
+      ]);
+    }
+    await ctx.db
+      .deleteFrom('user_identities')
+      .where('id', '=', identityId)
+      .where('user_id', '=', user.id)
+      .execute();
+    await audit(ctx.db, { action: 'user.identity_unlinked', actorUserId: user.id });
+    return reply.status(204).send();
+  });
+
   /** Right of access / data portability: everything we hold about the caller. */
   app.get('/api/v1/me/export', async (request, reply) => {
     const { user } = requireAuth(request);
-    const [memberships, sessions, events] = await Promise.all([
+    const [memberships, sessions, events, identities] = await Promise.all([
       listMemberships(ctx, user.id),
       ctx.db
         .selectFrom('sessions')
@@ -95,6 +143,11 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
         .orderBy('id', 'desc')
         .limit(10_000)
         .execute(),
+      ctx.db
+        .selectFrom('user_identities')
+        .select(['issuer', 'subject', 'email', 'created_at', 'last_used_at'])
+        .where('user_id', '=', user.id)
+        .execute(),
     ]);
     await audit(ctx.db, { action: 'user.exported', actorUserId: user.id });
     void reply.header('content-disposition', 'attachment; filename="rubinny-my-data.json"');
@@ -103,17 +156,32 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
       profile: { ...publicUser(user), updatedAt: user.updated_at.toISOString() },
       memberships,
       sessions,
+      identities,
       activity: events,
     };
   });
 
   /** Right to erasure: anonymizes the account and removes credentials. */
   app.delete('/api/v1/me', async (request, reply) => {
-    const { user } = requireAuth(request);
+    const { user, sessionIdHash } = requireAuth(request);
     await ctx.limiter.hit(LIMITS.passwordChangeUser, user.id);
-    const { password } = parse(z.object({ password: passwordSchema }), request.body);
-    if (!(await verifyPassword(user.password_hash, password))) {
-      throw new HttpError(401, 'INVALID_CREDENTIALS', 'Password is incorrect');
+    if (user.password_login) {
+      const { password } = parse(z.object({ password: passwordSchema }), request.body);
+      if (!(await verifyPassword(user.password_hash, password))) {
+        throw new HttpError(401, 'INVALID_CREDENTIALS', 'Password is incorrect');
+      }
+    } else {
+      // No password (an SSO account): a sign-in within the last minutes confirms it is them.
+      const session = await ctx.db
+        .selectFrom('sessions')
+        .select('created_at')
+        .where('id_hash', '=', sessionIdHash)
+        .executeTakeFirst();
+      if (!session || Date.now() - session.created_at.getTime() > REAUTH_WINDOW_MS) {
+        throw new HttpError(401, 'INVALID_CREDENTIALS', 'Sign in again to confirm', [
+          { path: 'session', reason: 'reauthenticate' },
+        ]);
+      }
     }
 
     const owned = await ctx.db
@@ -165,6 +233,7 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
       await trx.deleteFrom('sessions').where('user_id', '=', user.id).execute();
       await trx.deleteFrom('user_tokens').where('user_id', '=', user.id).execute();
       await trx.deleteFrom('recovery_codes').where('user_id', '=', user.id).execute();
+      await trx.deleteFrom('user_identities').where('user_id', '=', user.id).execute();
       await trx
         .updateTable('users')
         .set({

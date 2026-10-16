@@ -4,6 +4,8 @@ import type { Redis } from 'ioredis';
 export interface KvCache {
   get(key: string): Promise<string | null>;
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
+  /** Reads and removes a value atomically (one-time values such as sign-in state). */
+  take(key: string): Promise<string | null>;
 }
 
 /** Valkey/Redis cache. Fails open: errors behave like a cache miss. */
@@ -19,6 +21,10 @@ export class RedisKvCache implements KvCache {
 
   async set(key: string, value: string, ttlSeconds: number): Promise<void> {
     await this.redis.set(this.prefix + key, value, 'EX', ttlSeconds).catch(() => undefined);
+  }
+
+  async take(key: string): Promise<string | null> {
+    return this.redis.getdel(this.prefix + key).catch(() => null);
   }
 }
 
@@ -38,5 +44,11 @@ export class MemoryKvCache implements KvCache {
   set(key: string, value: string, ttlSeconds: number): Promise<void> {
     this.#entries.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
     return Promise.resolve();
+  }
+
+  async take(key: string): Promise<string | null> {
+    const value = await this.get(key);
+    this.#entries.delete(key);
+    return value;
   }
 }

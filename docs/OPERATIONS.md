@@ -73,6 +73,31 @@ cd deploy
 - **Audit log:** sign-ins, failed sign-ins, role changes, deletions and admin actions are in
   the organization's audit log (kept one year).
 
+## Sign-in through your organization (SSO)
+
+Users can sign in with their organization account through any OpenID Connect provider (Google
+Workspace, Microsoft Entra ID, Keycloak and others).
+
+1. **At the provider:** create an OAuth/OIDC web application with the redirect URI
+   `https://<your domain>/api/v1/auth/oidc/callback` and the scopes `openid email profile`.
+2. **In `.env`:** set `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` and the button
+   text `OIDC_NAME`. Optionally limit the e-mail domains with `OIDC_ALLOWED_DOMAINS`.
+3. **Restart:** `docker compose up -d`. A "Sign in with …" button appears on the sign-in page.
+
+How accounts are matched:
+
+- **Existing users** are linked the first time by their e-mail address, **only if the
+  provider marks it verified** (`email_verified`), and from then on by the provider's
+  permanent subject identifier.
+- **New users** follow `REGISTRATION_MODE`: with `invite` (the default) only people with a
+  pending invitation get an account, and they join the inviting organization.
+- **Two-factor authentication** of a user is still asked after the provider.
+
+Provider specifics (for example whether Microsoft Entra ID sends `email_verified`, or the
+exact issuer URL for your tenant) require verification against the provider's
+documentation. Without a verified e-mail address, existing accounts are not linked
+automatically; invite the address instead.
+
 ## Database isolation (row-level security)
 
 Since 0.2, every request to an organization's data runs in a database transaction as the

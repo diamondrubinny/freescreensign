@@ -24,6 +24,8 @@ export interface UsersTable {
     number | string | null | undefined,
     number | string | null
   >;
+  /** False for accounts created through SSO until a password is set. */
+  password_login: Generated<boolean>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: NullableTimestamp;
@@ -256,6 +258,16 @@ export interface ScreenScreenshotsTable {
   taken_at: Generated<Date>;
 }
 
+export interface UserIdentitiesTable {
+  id: Generated<string>;
+  user_id: string;
+  issuer: string;
+  subject: string;
+  email: string;
+  created_at: Generated<Date>;
+  last_used_at: Generated<Date>;
+}
+
 export interface AlertsTable {
   id: Generated<string>;
   org_id: string;
@@ -317,6 +329,7 @@ export interface Database {
   play_events: PlayEventsTable;
   screen_screenshots: ScreenScreenshotsTable;
   alerts: AlertsTable;
+  user_identities: UserIdentitiesTable;
 }
 
 export type User = Selectable<UsersTable>;

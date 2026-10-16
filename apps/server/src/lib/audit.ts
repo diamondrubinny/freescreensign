@@ -20,6 +20,7 @@ export type AuditAction =
   | 'user.deleted'
   | 'user.exported'
   | 'user.session_revoked'
+  | 'user.identity_unlinked'
   | 'org.created'
   | 'org.updated'
   | 'member.role_changed'

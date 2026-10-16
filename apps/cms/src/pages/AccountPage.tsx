@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { SUPPORTED_LOCALES, type Locale } from '@rubinny/shared';
-import { del, get, patch, post } from '../api/client';
+import { ApiError, del, get, patch, post } from '../api/client';
 import { sessionKey, useRefreshSession, useSession } from '../api/session';
-import type { User, UserSession } from '../api/types';
+import type { LinkedIdentity, User, UserSession } from '../api/types';
 import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { Dialog } from '../components/Dialog';
@@ -29,10 +29,27 @@ export function AccountPage() {
       <PageHeading title={t('account.title')} />
       <ProfileSection user={user} />
       <h2 className="mb-4 text-2xl font-bold">{t('account.security')}</h2>
-      <MfaSection user={user} />
-      <PasswordSection />
+      <IdentitiesSection user={user} />
+      {user.hasPassword ? (
+        <>
+          <MfaSection user={user} />
+          <PasswordSection />
+        </>
+      ) : (
+        <section aria-labelledby="password-heading" className={sectionClass}>
+          <h3 id="password-heading" className={h2Class}>
+            {t('account.changePassword')}
+          </h3>
+          <p>
+            {t('account.noPassword')}{' '}
+            <Link to="/forgot-password" className="text-brand-700 underline dark:text-brand-300">
+              {t('account.setPassword')}
+            </Link>
+          </p>
+        </section>
+      )}
       <SessionsSection />
-      <DataSection />
+      <DataSection user={user} />
     </>
   );
 }
@@ -420,20 +437,94 @@ function SessionsSection() {
   );
 }
 
-function DataSection() {
+function IdentitiesSection({ user }: { user: User }) {
+  const { t, i18n } = useTranslation();
+  const identities = useQuery({
+    queryKey: ['me', 'identities'],
+    queryFn: () => get<{ identities: LinkedIdentity[] }>('/api/v1/me/identities'),
+  });
+  const unlink = useMutation({
+    mutationFn: (id: string) => del(`/api/v1/me/identities/${id}`),
+    onSuccess: () => identities.refetch(),
+  });
+  const errors = useFormErrors(unlink.error);
+  const list = identities.data?.identities ?? [];
+  if (list.length === 0) return null;
+  return (
+    <section aria-labelledby="identities-heading" className={sectionClass}>
+      <h3 id="identities-heading" className={h2Class}>
+        {t('account.identities')}
+      </h3>
+      <p className="mb-3">{t('account.identitiesHint')}</p>
+      {errors.form && (
+        <div className="mb-3">
+          <Alert variant="error">
+            {unlink.error instanceof ApiError && unlink.error.code === 'CONFLICT'
+              ? t('account.identityLast')
+              : errors.form}
+          </Alert>
+        </div>
+      )}
+      <ul className="flex flex-col gap-3">
+        {list.map((identity) => (
+          <li
+            key={identity.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800"
+          >
+            <div>
+              <p className="font-medium">
+                <bdi>{identity.email}</bdi>
+              </p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <bdi dir="ltr">{new URL(identity.issuer).host}</bdi> ·{' '}
+                {t('account.identityLastUsed', {
+                  when: formatDateTime(identity.lastUsedAt, i18n.language),
+                })}
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={unlink.isPending && unlink.variables === identity.id}
+              disabled={!user.hasPassword && list.length === 1}
+              aria-label={`${t('account.identityUnlink')}: ${identity.email}`}
+              onClick={() => {
+                unlink.mutate(identity.id);
+              }}
+            >
+              {t('account.identityUnlink')}
+            </Button>
+          </li>
+        ))}
+      </ul>
+      {!user.hasPassword && list.length === 1 && (
+        <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{t('account.identityLast')}</p>
+      )}
+    </section>
+  );
+}
+
+function DataSection({ user }: { user: User }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const remove = useMutation({
-    mutationFn: (password: string) => del('/api/v1/me', { password }),
+    mutationFn: (password: string) => del('/api/v1/me', user.hasPassword ? { password } : {}),
     onSuccess: () => {
       queryClient.setQueryData(sessionKey, null);
       queryClient.clear();
       void navigate('/login');
     },
   });
-  const errors = useFormErrors(remove.error);
+  const baseErrors = useFormErrors(remove.error);
+  // Accounts without a password confirm by a recent sign-in instead.
+  const errors =
+    !user.hasPassword &&
+    remove.error instanceof ApiError &&
+    remove.error.code === 'INVALID_CREDENTIALS'
+      ? { ...baseErrors, form: t('account.deleteReauth') }
+      : baseErrors;
   return (
     <section aria-labelledby="data-heading" className={sectionClass}>
       <h2 id="data-heading" className={h2Class}>
@@ -471,15 +562,17 @@ function DataSection() {
             remove.mutate(rawValue(data, 'password'));
           }}
         >
-          <p>{t('account.deleteConfirm')}</p>
-          <Field
-            label={t('fields.password')}
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            error={errors.fields.password}
-          />
+          <p>{user.hasPassword ? t('account.deleteConfirm') : t('account.deleteConfirmSso')}</p>
+          {user.hasPassword && (
+            <Field
+              label={t('fields.password')}
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+              error={errors.fields.password}
+            />
+          )}
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               variant="secondary"

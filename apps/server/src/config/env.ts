@@ -117,6 +117,23 @@ export const envSchema = z
     /** Lets widget fetches reach private addresses. Tests only; refused in production. */
     WIDGET_FETCH_ALLOW_PRIVATE: booleanString.default(false),
 
+    // --- Sign-in through an OpenID Connect provider (SSO). Disabled unless OIDC_ISSUER is set.
+    OIDC_ISSUER: z.url({ protocol: /^https?$/ }).optional(),
+    OIDC_CLIENT_ID: z.string().min(1).max(500).optional(),
+    OIDC_CLIENT_SECRET: z.string().min(1).max(2000).optional(),
+    /** Shown on the sign-in button, e.g. "Google" or "the school account". */
+    OIDC_NAME: z.string().trim().min(1).max(60).default('SSO'),
+    /** Comma-separated e-mail domains accepted from the provider. Empty: any domain. */
+    OIDC_ALLOWED_DOMAINS: z
+      .string()
+      .default('')
+      .transform((value) =>
+        value
+          .split(',')
+          .map((domain) => domain.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+
     MAIL_TRANSPORT: z.enum(['smtp', 'console', 'disabled']).default('disabled'),
     SMTP_URL: z.url({ protocol: /^smtps?$/ }).optional(),
     MAIL_FROM: z.string().min(3).optional(),
@@ -152,6 +169,20 @@ export const envSchema = z
         code: 'custom',
         path: ['WIDGET_FETCH_ALLOW_PRIVATE'],
         message: 'must not be enabled in production (it disables SSRF protection)',
+      });
+    }
+    if (env.OIDC_ISSUER && (!env.OIDC_CLIENT_ID || !env.OIDC_CLIENT_SECRET)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OIDC_CLIENT_ID'],
+        message: 'and OIDC_CLIENT_SECRET are required when OIDC_ISSUER is set',
+      });
+    }
+    if (env.NODE_ENV === 'production' && env.OIDC_ISSUER?.startsWith('http://')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OIDC_ISSUER'],
+        message: 'must use https:// in production',
       });
     }
     if (env.MAIL_TRANSPORT === 'smtp' && (!env.SMTP_URL || !env.MAIL_FROM)) {

@@ -6,6 +6,14 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Sign-in through the organization (SSO, OpenID Connect): Google Workspace, Microsoft Entra
+  ID, Keycloak or any OIDC provider, configured with `OIDC_*` in `.env`. Authorization Code
+  with PKCE, users matched by the provider's subject or once by a verified e-mail address,
+  invitations respected, local two-factor authentication still applies. Linked accounts are
+  listed (and can be unlinked) on the account page. See docs/OPERATIONS.md (SSO).
+
 ## [0.2.0] - 2026-10-16
 
 Data tables, emergency alerts, row-level security and arm64 images. Upgrading from 0.1: see
