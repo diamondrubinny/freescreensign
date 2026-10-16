@@ -34,6 +34,8 @@ android {
 dependencies {
     // Origin-restricted message channel between the page and the app (no addJavascriptInterface).
     implementation("androidx.webkit:webkit:1.12.1")
+    // Back handling that also works with predictive back (Android 13+).
+    implementation("androidx.activity:activity:1.9.3")
 
     testImplementation("junit:junit:4.13.2")
 

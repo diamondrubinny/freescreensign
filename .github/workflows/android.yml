@@ -53,6 +53,10 @@ jobs:
       - name: Lint, unit tests, build
         run: ./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug assembleDebugAndroidTest
 
+      - name: Show the lint report
+        if: failure()
+        run: cat app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt || true
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rubinny-player-android-debug

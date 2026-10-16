@@ -1,6 +1,5 @@
 package net.rubinny.player;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -29,7 +28,8 @@ import android.webkit.WebViewClient;
 import android.webkit.WebViewRenderProcess;
 import android.webkit.WebViewRenderProcessClient;
 import android.widget.FrameLayout;
-import android.window.OnBackInvokedDispatcher;
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
 import androidx.webkit.JavaScriptReplyProxy;
 import androidx.webkit.WebMessageCompat;
 import androidx.webkit.WebViewCompat;
@@ -46,7 +46,7 @@ import org.json.JSONObject;
  * recovers from renderer crashes and hangs, and answers screenshot requests of the player
  * page. See docs/phases/08-wrappers.md.
  */
-public final class MainActivity extends Activity {
+public final class MainActivity extends ComponentActivity {
     /** Name of the message channel the WebView injects into pages of the server only. */
     static final String CHANNEL = "RubinnyAndroid";
 
@@ -83,18 +83,15 @@ public final class MainActivity extends Activity {
         setContentView(root);
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         createWebView();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            getOnBackInvokedDispatcher()
-                    .registerOnBackInvokedCallback(
-                            OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::onAdminBack);
-        }
-    }
-
-    /** Before Android 13 (newer versions use the callback registered in onCreate). */
-    @Override
-    @SuppressWarnings("deprecation")
-    public void onBackPressed() {
-        onAdminBack();
+        getOnBackPressedDispatcher()
+                .addCallback(
+                        this,
+                        new OnBackPressedCallback(true) {
+                            @Override
+                            public void handleOnBackPressed() {
+                                onAdminBack();
+                            }
+                        });
     }
 
     /** Back never leaves the kiosk; pressed five times quickly, it opens the setup page. */
