@@ -187,7 +187,8 @@ services:
   # outbound access to download signature updates (freshclam).
   clamav:
     <<: *hardening
-    image: clamav/clamav:stable
+    # The default image is amd64 only. On arm64 servers set CLAMAV_IMAGE=clamav/clamav-debian:stable.
+    image: ${CLAMAV_IMAGE:-clamav/clamav:stable}
     environment:
       # Default stream limit is 25 MB; allow scanning videos up to the upload limit.
       CLAMD_CONF_StreamMaxLength: 1024M

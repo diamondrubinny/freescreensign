@@ -8,6 +8,9 @@ All notable changes to Rubinny. The format follows
 
 ### Added
 
+- Images for arm64 as well as amd64 (Raspberry Pi 5, Apple Silicon, ARM cloud servers): built,
+  scanned and signed for both; checked in CI under emulation. On arm64, set
+  `CLAMAV_IMAGE=clamav/clamav-debian:stable` (the default ClamAV image is amd64 only).
 - Emergency alerts: one click shows an emergency or urgent notice over everything on all or
   chosen screens within seconds (before any media download), until ended or for a set time,
   also offline; ready templates (evacuation, shelter, lockdown), confirmation, audit log

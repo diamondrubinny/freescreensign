@@ -90,7 +90,8 @@ weather and stock images, and no analytics or third-party trackers. See [SECURIT
 
 ## Quick start (Docker)
 
-Requirements: Docker with Compose v2, ~3 GB RAM (ClamAV alone uses ~1.5–2 GB).
+Requirements: Docker with Compose v2, ~3 GB RAM (ClamAV alone uses ~1.5–2 GB), an amd64 or
+arm64 server (on arm64, set `CLAMAV_IMAGE` as explained in `deploy/.env.example`).
 
 ```bash
 git clone https://github.com/diamondrubinny/freescreensign.git rubinny

@@ -108,7 +108,7 @@
 
 ## התקנה מהירה (Docker)
 
-דרישות: Docker עם Compose v2, ובערך 3GB זיכרון. ‏ClamAV לבדו צורך כ-1.5–2GB.
+דרישות: Docker עם Compose v2, ובערך 3GB זיכרון (‏ClamAV לבדו צורך כ-1.5–2GB). השרת יכול להיות amd64 או arm64. ב-arm64 צריך להגדיר את `CLAMAV_IMAGE`, כמו שמוסבר ב-`deploy/.env.example`.
 
 </div>
 

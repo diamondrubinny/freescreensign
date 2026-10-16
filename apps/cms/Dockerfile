@@ -10,9 +10,12 @@ ARG GO_IMAGE=golang:1.27-alpine
 # Caddy from its official source, built with a patched Go toolchain and x/net. The binary
 # in the official image can lag behind Go security releases, and this is the public edge.
 # Same program as upstream's cmd/caddy (standard modules only).
-FROM ${GO_IMAGE} AS caddy
+# Cross-compiled on the build machine (fast; no emulation for arm64 images).
+FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS caddy
 ARG CADDY_VERSION=v2.11.7
 ARG X_NET_VERSION=v0.60.0
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /src
 RUN printf '%s\n' 'package main' '' 'import (' \
       '	caddycmd "github.com/caddyserver/caddy/v2/cmd"' \
@@ -21,10 +24,10 @@ RUN printf '%s\n' 'package main' '' 'import (' \
  && go mod init rubinny.local/caddy \
  && go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}" "golang.org/x/net@${X_NET_VERSION}" \
  && go mod tidy \
- && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /caddy . \
- && /caddy version
+ && CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath -ldflags "-s -w" -o /caddy .
 
-FROM ${NODE_IMAGE} AS build
+# Static files are the same for every architecture: built once, on the build machine.
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS build
 RUN npm install -g pnpm@10.28.0
 WORKDIR /repo
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
@@ -44,7 +47,7 @@ RUN pnpm --filter @rubinny/shared build \
 
 FROM ${CADDY_IMAGE} AS runtime
 COPY --from=caddy /caddy /usr/bin/caddy
-RUN setcap cap_net_bind_service=+ep /usr/bin/caddy
+RUN setcap cap_net_bind_service=+ep /usr/bin/caddy && caddy version
 COPY --from=build /repo/apps/cms/dist /srv/cms
 COPY --from=build /repo/apps/player/dist /srv/player
 COPY deploy/Caddyfile /etc/caddy/Caddyfile

@@ -54,7 +54,7 @@ jobs:
     name: Images (scan, SBOM, publish and sign)
     needs: version
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 120
     permissions:
       contents: read
       packages: write
@@ -65,6 +65,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Install Trivy and cosign
         # Built from source at fixed versions; the Go checksum database verifies the code.
@@ -72,22 +75,31 @@ jobs:
           go install github.com/aquasecurity/trivy/cmd/trivy@v0.75.0
           go install github.com/sigstore/cosign/v3/cmd/cosign@v3.1.3
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-      - name: Build
+      - name: Build (amd64 and arm64)
+        # Each architecture is loaded and checked on its own; the publish step below reuses
+        # the build cache to push both as one multi-architecture image.
         run: |
-          docker buildx build --load -f apps/server/Dockerfile --target server -t "rubinny/server:$VERSION" .
-          docker buildx build --load -f apps/server/Dockerfile --target worker -t "rubinny/worker:$VERSION" .
-          docker buildx build --load -f apps/cms/Dockerfile -t "rubinny/web:$VERSION" .
+          for arch in amd64 arm64; do
+            docker buildx build --platform "linux/$arch" --load -f apps/server/Dockerfile --target server -t "rubinny/server:$VERSION-$arch" .
+            docker buildx build --platform "linux/$arch" --load -f apps/server/Dockerfile --target worker -t "rubinny/worker:$VERSION-$arch" .
+            docker buildx build --platform "linux/$arch" --load -f apps/cms/Dockerfile -t "rubinny/web:$VERSION-$arch" .
+          done
       - name: Scan (fail on fixable HIGH/CRITICAL)
         run: |
-          for image in server worker web; do
-            trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
-              --ignorefile .trivyignore.yaml "rubinny/$image:$VERSION"
+          for arch in amd64 arm64; do
+            for image in server worker web; do
+              trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+                --ignorefile .trivyignore.yaml "rubinny/$image:$VERSION-$arch"
+            done
           done
       - name: SBOMs (CycloneDX)
         run: |
           mkdir -p sbom
-          for image in server worker web; do
-            trivy image --skip-db-update --format cyclonedx -o "sbom/rubinny-$image-$VERSION.cdx.json" "rubinny/$image:$VERSION"
+          for arch in amd64 arm64; do
+            for image in server worker web; do
+              trivy image --skip-db-update --format cyclonedx \
+                -o "sbom/rubinny-$image-$VERSION-$arch.cdx.json" "rubinny/$image:$VERSION-$arch"
+            done
           done
           trivy fs --skip-db-update --format cyclonedx --include-dev-deps --skip-dirs node_modules \
             -o "sbom/rubinny-source-$VERSION.cdx.json" .
@@ -105,10 +117,12 @@ jobs:
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           for target in server worker web; do
             if [ "$target" = web ]; then args=(-f apps/cms/Dockerfile); else args=(-f apps/server/Dockerfile --target "$target"); fi
-            docker buildx build "${args[@]}" --push --provenance=mode=max --sbom=true \
+            docker buildx build "${args[@]}" --platform linux/amd64,linux/arm64 --push \
+              --provenance=mode=max --sbom=true \
               --metadata-file "meta-$target.json" -t "$REGISTRY/$target:$VERSION" .
             digest="$(node -p "require('./meta-$target.json')['containerimage.digest']")"
-            cosign sign --yes "$REGISTRY/$target@$digest"
+            # The multi-architecture index and each architecture's image are signed.
+            cosign sign --yes --recursive "$REGISTRY/$target@$digest"
             echo "$REGISTRY/$target:$VERSION@$digest" >> images.txt
           done
           cat images.txt
