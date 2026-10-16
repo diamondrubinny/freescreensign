@@ -3,4 +3,11 @@ packages:
   - 'packages/*'
 
 # Only allow install scripts from packages we explicitly trust.
-onlyBuiltDependencies: []
+onlyBuiltDependencies:
+  # Downloads the Electron runtime (apps/desktop), verified against its published checksums.
+  - electron
+
+# One Node.js type package for the whole workspace (Electron asks for a newer major,
+# which would otherwise duplicate vitest's types and break test matchers).
+overrides:
+  '@types/node': 22.20.5

@@ -9,3 +9,5 @@ coverage/
 .DS_Store
 test-results/
 playwright-report/
+# Desktop app packages
+apps/desktop/release/

@@ -54,6 +54,15 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser } },
   },
   {
+    // Desktop: the preload and the bundled setup page run in the browser context.
+    files: [
+      'apps/desktop/src/preload.cts',
+      'apps/desktop/static/**/*.js',
+      'apps/desktop/e2e/**/*.ts',
+    ],
+    languageOptions: { globals: { ...globals.browser } },
+  },
+  {
     files: ['**/*.js', '**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
