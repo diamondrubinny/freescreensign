@@ -10,6 +10,9 @@ import { store } from './store';
 import { WidgetDataClient } from './widget-data';
 import { BUILT_IN_WIDGETS } from './widgets';
 import { WidgetRuntime } from './widgets/runtime';
+import { enableStrictCspValidation } from '@rubinny/shared';
+
+enableStrictCspValidation();
 
 const root = document.getElementById('app');
 if (!root) throw new Error('missing #app');

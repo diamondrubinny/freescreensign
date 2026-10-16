@@ -7,6 +7,9 @@ import { setupI18n } from './i18n';
 import { applyA11yPrefs, loadA11yPrefs } from './lib/a11y-prefs';
 import { createRouter } from './router';
 import './styles/app.css';
+import { enableStrictCspValidation } from '@rubinny/shared';
+
+enableStrictCspValidation();
 
 applyA11yPrefs(loadA11yPrefs());
 

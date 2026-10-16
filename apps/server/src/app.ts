@@ -14,6 +14,8 @@ import { registerErrorHandling } from './plugins/errors.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { assertOrgRouteGuarded, registerAuth } from './modules/auth/guards.js';
+import { sessionCookieName } from './modules/auth/sessions.js';
+import { rateLimitKey, type CredentialCheck } from './lib/rate-limit-key.js';
 import { meRoutes } from './modules/me/routes.js';
 import { orgRoutes } from './modules/orgs/routes.js';
 import { mediaRoutes } from './modules/media/routes.js';
@@ -95,6 +97,26 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     crossOriginResourcePolicy: { policy: 'same-site' },
   });
 
+  const db = options.services?.db;
+  const credentialCheck: CredentialCheck | undefined = db
+    ? async (kind, hash) => {
+        const row =
+          kind === 'device'
+            ? await db
+                .selectFrom('screens')
+                .select('id')
+                .where('token_hash', '=', hash)
+                .executeTakeFirst()
+            : await db
+                .selectFrom('sessions')
+                .select('id_hash')
+                .where('id_hash', '=', hash)
+                .where('expires_at', '>', new Date())
+                .executeTakeFirst();
+        return row !== undefined;
+      }
+    : undefined;
+
   await app.register(rateLimit, {
     global: true,
     max: env.RATE_LIMIT_MAX,
@@ -104,7 +126,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     // (auth, pairing) will add their own fail-closed limits.
     skipOnError: true,
     // request.ip can be missing (e.g. Unix sockets, injected upgrades); never crash on it.
-    keyGenerator: (request) => request.ip || 'unknown',
+    // Per verified screen or session, otherwise per IP (see rate-limit-key.ts).
+    keyGenerator: (request) => rateLimitKey(request, sessionCookieName(env), credentialCheck),
     errorResponseBuilder: () =>
       new HttpError(429, 'RATE_LIMITED', 'Too many requests, please try again later'),
   });

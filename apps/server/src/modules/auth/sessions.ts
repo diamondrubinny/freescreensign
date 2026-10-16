@@ -4,6 +4,7 @@ import type { Env } from '../../config/env.js';
 import type { AppContext } from '../../context.js';
 import type { User } from '../../db/schema.js';
 import { randomToken, sha256Hex } from '../../lib/crypto.js';
+import { sessionCredential, verifiedCredentials } from '../../lib/rate-limit-key.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Avoid a DB write on every request: refresh sliding expiry at most this often. */
@@ -33,10 +34,11 @@ export async function createSession(
   const now = Date.now();
   const absolute = new Date(now + ctx.env.SESSION_ABSOLUTE_DAYS * DAY_MS);
   const expires = new Date(Math.min(now + ctx.env.SESSION_TTL_DAYS * DAY_MS, absolute.getTime()));
+  const idHash = sha256Hex(token);
   await ctx.db
     .insertInto('sessions')
     .values({
-      id_hash: sha256Hex(token),
+      id_hash: idHash,
       user_id: userId,
       expires_at: expires,
       absolute_expires_at: absolute,
@@ -45,6 +47,7 @@ export async function createSession(
       user_agent: request.headers['user-agent']?.slice(0, 200) ?? null,
     })
     .execute();
+  verifiedCredentials.remember(sessionCredential(idHash));
   reply.setCookie(sessionCookieName(ctx.env), token, {
     path: '/',
     httpOnly: true,
@@ -82,6 +85,8 @@ export async function resolveSession(ctx: AppContext, token: string): Promise<Au
     .where('users.deleted_at', 'is', null)
     .executeTakeFirst();
   if (!row) return null;
+  // From now on this session has its own rate-limit budget (not its network's).
+  verifiedCredentials.remember(sessionCredential(idHash));
 
   const { session_last_seen_at: lastSeen, session_absolute_expires_at: absolute, ...user } = row;
   if (now.getTime() - lastSeen.getTime() > TOUCH_INTERVAL_MS) {

@@ -16,6 +16,7 @@ import { buildManifest } from './manifest.js';
 import { getWidgetData } from '../widgets/data.js';
 import { reportScreenBack } from '../ops/alerts.js';
 import { recordUptime } from '../ops/uptime.js';
+import { deviceCredential, verifiedCredentials } from '../../lib/rate-limit-key.js';
 
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
 const WS_AUTH_TIMEOUT_MS = 5000;
@@ -75,6 +76,7 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
       .executeTakeFirst();
     if (claimed?.device_token_enc && claimed.screen_id) {
       const deviceToken = ctx.keys.decrypt(claimed.device_token_enc, pairingAad(claimed.code_hash));
+      verifiedCredentials.remember(deviceCredential(sha256Hex(deviceToken)));
       return { status: 'paired' as const, deviceToken, screenId: claimed.screen_id };
     }
     const pending = await ctx.db

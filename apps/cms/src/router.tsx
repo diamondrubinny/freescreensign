@@ -6,13 +6,6 @@ import { ErrorPage } from './pages/ErrorPage';
 import { Loading } from './components/Loading';
 import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
-import { RegisterPage } from './pages/RegisterPage';
-import {
-  AcceptInvitationPage,
-  ForgotPasswordPage,
-  ResetPasswordPage,
-  VerifyEmailPage,
-} from './pages/TokenPages';
 
 /** Heavier, less frequently used pages are code-split and loaded on demand. */
 const lazyPage = <K extends string>(
@@ -112,11 +105,23 @@ export const routes: RouteObject[] = [
         children: [
           { path: 'setup', ...lazyPage(() => import('./pages/SetupPage'), 'SetupPage') },
           { path: 'login', element: <LoginPage /> },
-          { path: 'register', element: <RegisterPage /> },
-          { path: 'verify-email', element: <VerifyEmailPage /> },
-          { path: 'forgot-password', element: <ForgotPasswordPage /> },
-          { path: 'reset-password', element: <ResetPasswordPage /> },
-          { path: 'accept-invitation', element: <AcceptInvitationPage /> },
+          { path: 'register', ...lazyPage(() => import('./pages/RegisterPage'), 'RegisterPage') },
+          {
+            path: 'verify-email',
+            ...lazyPage(() => import('./pages/TokenPages'), 'VerifyEmailPage'),
+          },
+          {
+            path: 'forgot-password',
+            ...lazyPage(() => import('./pages/TokenPages'), 'ForgotPasswordPage'),
+          },
+          {
+            path: 'reset-password',
+            ...lazyPage(() => import('./pages/TokenPages'), 'ResetPasswordPage'),
+          },
+          {
+            path: 'accept-invitation',
+            ...lazyPage(() => import('./pages/TokenPages'), 'AcceptInvitationPage'),
+          },
           { path: 'accessibility', ...legal('accessibility') },
           { path: 'privacy', ...legal('privacy') },
           { path: 'cookies', ...legal('cookies') },
