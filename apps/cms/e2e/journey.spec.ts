@@ -67,6 +67,7 @@ test('first-run setup creates the administrator (RTL, accessible)', async ({ pag
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('html')).toHaveAttribute('lang', 'he');
   await expect(page.getByTestId('powered-by')).toContainText('Powered by Rubinny');
+  await expect(page.getByTestId('created-by')).toHaveText('נוצר על ידי Diamond Rubinny');
   await expectAccessible(page, 'setup');
 
   await page.getByLabel(/קוד הגדרה/).fill(SETUP_TOKEN);

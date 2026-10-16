@@ -47,7 +47,8 @@ export function Footer() {
           · AGPL-3.0 ·{' '}
           <a href={SOURCE_URL} className="underline hover:no-underline" rel="noopener noreferrer">
             {t('footer.sourceCode')}
-          </a>
+          </a>{' '}
+          · <span data-testid="created-by">{t('footer.createdBy')}</span>
         </p>
       </div>
     </footer>

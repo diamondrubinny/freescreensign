@@ -4,7 +4,7 @@
   "private": true,
   "description": "Rubinny desktop player: the web player in a kiosk window for Windows and Linux (Electron).",
   "license": "AGPL-3.0-only",
-  "author": "The Rubinny Authors",
+  "author": "Diamond Rubinny",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
@@ -32,7 +32,7 @@
     },
     "linux": {
       "category": "Utility",
-      "maintainer": "The Rubinny Authors",
+      "maintainer": "Diamond Rubinny",
       "icon": "build/icon.png",
       "syncDesktopName": true,
       "executableName": "rubinny-player"

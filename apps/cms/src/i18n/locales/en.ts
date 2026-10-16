@@ -44,6 +44,7 @@ export const en: Messages = {
   footer: {
     poweredBy: 'Powered by Rubinny',
     sourceCode: 'Source code',
+    createdBy: 'Created by Diamond Rubinny',
     accessibility: 'Accessibility statement',
     privacy: 'Privacy policy',
     cookies: 'Cookie policy',

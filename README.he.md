@@ -156,4 +156,6 @@ curl -k https://localhost/health  # {"status":"ok"}
 
 ‏AGPL-3.0, עם חובה לשמור את הקרדיט "Powered by Rubinny". חבילות ה-SDK ברישיון MIT.
 
+נוצר על ידי **Diamond Rubinny**. ראו [AUTHORS.md](AUTHORS.md).
+
 </div>

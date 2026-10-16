@@ -152,4 +152,4 @@ the end-to-end/accessibility suite.
 Rubinny is free software under the **GNU AGPL-3.0** with attribution terms; SDK packages
 are **MIT**. See [LICENSING.md](LICENSING.md) and [TRADEMARKS.md](TRADEMARKS.md).
 
-Copyright © 2026 The Rubinny Authors.
+Created by **Diamond Rubinny**. Copyright © 2026 The Rubinny Authors (see [AUTHORS.md](AUTHORS.md)).

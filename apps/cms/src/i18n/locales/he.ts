@@ -43,6 +43,7 @@ export const he = {
   footer: {
     poweredBy: 'Powered by Rubinny',
     sourceCode: 'קוד המקור',
+    createdBy: 'נוצר על ידי Diamond Rubinny',
     accessibility: 'הצהרת נגישות',
     privacy: 'מדיניות פרטיות',
     cookies: 'מדיניות עוגיות',
