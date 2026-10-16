@@ -30,6 +30,7 @@ import android.webkit.WebViewRenderProcessClient;
 import android.widget.FrameLayout;
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.RequiresApi;
 import androidx.webkit.JavaScriptReplyProxy;
 import androidx.webkit.WebMessageCompat;
 import androidx.webkit.WebViewCompat;
@@ -255,6 +256,7 @@ public final class MainActivity extends ComponentActivity {
     }
 
     /** A renderer that stays unresponsive is killed (and then rebuilt, see onRenderProcessGone). */
+    @RequiresApi(Build.VERSION_CODES.Q)
     private final class HangWatch extends WebViewRenderProcessClient {
         private Runnable kill;
 
@@ -368,6 +370,8 @@ public final class MainActivity extends ComponentActivity {
     }
 
     private void answer(JavaScriptReplyProxy reply, int id, String jpeg, String error) {
+        // Always true here (the channel exists only with this feature); checked for clarity.
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return;
         try {
             JSONObject answer = new JSONObject().put("id", id);
             if (jpeg != null) answer.put("jpeg", jpeg);
