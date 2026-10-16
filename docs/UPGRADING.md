@@ -21,7 +21,7 @@ by the release workflow of this repository. To verify them before running:
 
 ```bash
 for image in server worker web; do
-  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.1.0" \
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.2.0" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@'
 done
@@ -29,6 +29,20 @@ done
 
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
+
+## 0.1 → 0.2
+
+- **Nothing to do for most installations:** the two new migrations (emergency alerts,
+  row-level security) run when the server starts.
+- **Row-level security** needs a database user that may create roles. The bundled PostgreSQL
+  container has it. On a managed database without that permission the server logs
+  `Row-level security is not active` and works as in 0.1 (see
+  [OPERATIONS.md](OPERATIONS.md#database-isolation-row-level-security)).
+- **arm64 servers** (Raspberry Pi 5, Apple Silicon, ARM cloud servers): set
+  `CLAMAV_IMAGE=clamav/clamav-debian:stable` in `.env`; the default ClamAV image is amd64 only.
+- **Screens** keep working with their current player. The alert layer needs the 0.2 player:
+  web players update when the page reloads, the desktop and Android apps load the player from
+  the server, so they update too.
 
 ## PostgreSQL 17 → 18 (Docker Compose deployments)
 

@@ -6,24 +6,42 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-16
+
+Data tables, emergency alerts, row-level security and arm64 images. Upgrading from 0.1: see
+[docs/UPGRADING.md](docs/UPGRADING.md#01--02) (usually nothing to do).
+
 ### Added
 
-- Row-level security in PostgreSQL: requests to an organization's data run as a restricted
-  role that only sees and changes that organization's rows, even if a query forgets to filter.
-  Screen notifications and worker jobs are sent only after the change is committed. See
-  docs/OPERATIONS.md (database isolation).
-- Images for arm64 as well as amd64 (Raspberry Pi 5, Apple Silicon, ARM cloud servers): built,
-  scanned and signed for both; checked in CI under emulation. On arm64, set
-  `CLAMAV_IMAGE=clamav/clamav-debian:stable` (the default ClamAV image is amd64 only).
+- Data table widget: menus, price lists and timetables from Google Sheets, CSV or JSON,
+  fetched by the server (SSRF-safe), cached, paged on the screen and refreshed on their own
+  (see docs/phases/10a-data-table.md).
 - Emergency alerts: one click shows an emergency or urgent notice over everything on all or
   chosen screens within seconds (before any media download), until ended or for a set time,
   also offline; ready templates (evacuation, shelter, lockdown), confirmation, audit log
   (see docs/phases/10b-emergency-alerts.md).
-- Data table widget: menus, price lists and timetables from Google Sheets, CSV or JSON,
-  fetched by the server (SSRF-safe), cached, paged on the screen and refreshed on their own
-  (see docs/phases/10a-data-table.md).
+- Row-level security in PostgreSQL: requests to an organization's data run as a restricted
+  role that only sees and changes that organization's rows, even if a query forgets to filter
+  (see docs/OPERATIONS.md, database isolation).
+- Images for arm64 as well as amd64 (Raspberry Pi 5, Apple Silicon, ARM cloud servers): built,
+  scanned and signed for both; checked in CI under emulation.
 - Credit: "Created by Diamond Rubinny" in the dashboard footer, README, NOTICE, a new
   AUTHORS.md, and the desktop app's author and package maintainer.
+
+### Changed
+
+- Screen notifications and worker jobs are sent only after the change is saved, so a screen
+  never fetches content before it is visible.
+- The server keeps up to 20 database connections by default (`DATABASE_POOL_MAX`, was 10).
+- `CLAMAV_IMAGE` selects the ClamAV image (on arm64: `clamav/clamav-debian:stable`).
+
+### Known limitations
+
+- Installers are not code-signed (Windows SmartScreen warns; the Android APK is a debug build).
+- Not tested yet on physical Raspberry Pi, Android TV, Windows or ARM server hardware, nor
+  against a real Google Sheet.
+- Organization routes of the dashboard serve 20–30% fewer requests per second with row-level
+  security (measured; screens are not affected).
 
 ## [0.1.0] - 2026-10-16
 
@@ -75,4 +93,5 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
+[0.2.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.2.0
 [0.1.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.1.0

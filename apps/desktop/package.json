@@ -1,6 +1,6 @@
 {
   "name": "@rubinny/desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Rubinny desktop player: the web player in a kiosk window for Windows and Linux (Electron).",
   "license": "AGPL-3.0-only",

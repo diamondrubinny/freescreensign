@@ -137,9 +137,10 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-Now: phase 9, hardening and the first release (v0.1.0): secret, dependency and image scans,
-SBOMs, a dynamic scan, signed images, backups, tenant isolation checks and accessibility tests
-are in place ([plan and results](docs/phases/09-release.md)). See the [roadmap](docs/PLAN.md).
+Now: v0.2.0, with data tables (Google Sheets, CSV, JSON), emergency alerts, row-level security
+in PostgreSQL and arm64 images ([plan and results](docs/phases/10-v0.2-plan.md)). Next: sign-in
+through the organization (SSO, OIDC) and content approval ([plan](docs/phases/11-next-plan.md)).
+See the [roadmap](docs/PLAN.md).
 
 ## Development
 
