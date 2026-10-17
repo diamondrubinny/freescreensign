@@ -1,5 +1,5 @@
 import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
-import type { NowPlayingItem, PlayerCapability, PlayerPlatform, Role } from '@rubinny/shared';
+import type { NowPlayingItem, PlayerCapability, PlayerPlatform, Role, Wall } from '@rubinny/shared';
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 type NullableTimestamp = ColumnType<
@@ -219,6 +219,8 @@ export interface ScreensTable {
   capabilities: Generated<PlayerCapability[]>;
   screenshot_request_id: string | null;
   screenshot_requested_at: NullableTimestamp;
+  /** Video wall placement (shared `wallSchema`), or null. */
+  wall: ColumnType<Wall | null, string | null | undefined, string | null>;
   created_by: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;

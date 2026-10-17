@@ -15,6 +15,32 @@ const offset = z
   .min(0)
   .max(LAYOUT_LIMITS.maxCanvas - 1);
 
+/** Video walls (docs/phases/12-touch-wall-ai.md): limits of the grid and the bezel. */
+export const WALL_LIMITS = { maxColumns: 8, maxRows: 8, maxBezelPx: 500 } as const;
+
+/**
+ * A screen's place in a video wall: the grid, its cell (0-based, from the top left as seen
+ * by viewers) and the gap between neighbouring pictures (frames), in the screen's pixels.
+ */
+export const wallSchema = z
+  .object({
+    columns: z.number().int().min(1).max(WALL_LIMITS.maxColumns),
+    rows: z.number().int().min(1).max(WALL_LIMITS.maxRows),
+    column: z.number().int().min(0),
+    row: z.number().int().min(0),
+    bezelX: z.number().int().min(0).max(WALL_LIMITS.maxBezelPx).default(0),
+    bezelY: z.number().int().min(0).max(WALL_LIMITS.maxBezelPx).default(0),
+  })
+  .superRefine((wall, ctx) => {
+    if (wall.column >= wall.columns) {
+      ctx.addIssue({ code: 'custom', message: 'Column outside the wall', path: ['column'] });
+    }
+    if (wall.row >= wall.rows) {
+      ctx.addIssue({ code: 'custom', message: 'Row outside the wall', path: ['row'] });
+    }
+  });
+export type Wall = z.infer<typeof wallSchema>;
+
 /** Touch screens (docs/phases/12-touch-wall-ai.md). */
 export const TOUCH_LIMITS = {
   minIdleSeconds: 10,

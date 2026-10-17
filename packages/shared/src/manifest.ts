@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { wallSchema } from './layouts.js';
 import { localDateSchema, localTime, ruleActiveAt } from './schedule.js';
 
 /**
@@ -171,6 +172,8 @@ export const manifestV1Schema = z
       name: z.string().min(1).max(200),
       timezone: z.string().min(1).max(64),
       orientation: z.enum(['landscape', 'portrait', 'landscape-flipped', 'portrait-flipped']),
+      /** Part of a video wall; optional so older players ignore it. */
+      wall: wallSchema.optional(),
     }),
     media: z.array(mediaSchema).max(10000),
     widgets: z.array(widgetSchema).max(1000),

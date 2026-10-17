@@ -12,7 +12,7 @@ import type { MediaCache } from './media-cache';
 import { captureBytes } from './native';
 import type { PlayLog } from './play-log';
 import { wait, type Renderer } from './renderer';
-import { activeLayout, flattenPlaylist, type PlayableItem } from './sequence';
+import { activeLayout, flattenPlaylist, syncedPosition, type PlayableItem } from './sequence';
 import type { ServerEvent } from './socket';
 import type { store as defaultStore } from './store';
 
@@ -395,7 +395,10 @@ export class Player {
         items: manifest ? flattenPlaylist(manifest, zone.playlistId) : [],
       }));
       this.#layoutId = layout?.id ?? null;
-      if (manifest) this.deps.renderer.setOrientation(manifest.screen.orientation);
+      if (manifest) {
+        this.deps.renderer.setOrientation(manifest.screen.orientation);
+        this.deps.renderer.setWall(manifest.screen.wall ?? null);
+      }
       if (!manifest || !layout || zones.every((zone) => zone.items.length === 0)) {
         if (manifest) {
           this.deps.renderer.showMessage({
@@ -421,7 +424,58 @@ export class Player {
         },
       });
       // Every zone plays its own playlist until the content or the schedule changes.
-      await Promise.all(zones.map((zone) => this.#runZone(zone.id, zone.items, signal)));
+      const synced = Boolean(manifest.screen.wall);
+      await Promise.all(
+        zones.map((zone) =>
+          synced
+            ? this.#runSyncedZone(zone.id, zone.items, signal)
+            : this.#runZone(zone.id, zone.items, signal),
+        ),
+      );
+    }
+  }
+
+  /**
+   * Video walls: what plays is a function of the server's clock, so every screen of the wall
+   * shows the same item at the same moment; each item ends on the clock (no drift builds up).
+   */
+  async #runSyncedZone(zoneId: string, items: PlayableItem[], signal: AbortSignal) {
+    const active = () => !signal.aborted && !this.#isStopped() && !this.#hasChanged();
+    if (items.length === 0) {
+      await wait(2 ** 31 - 1, signal);
+      return;
+    }
+    while (active()) {
+      const { index, offsetMs } = syncedPosition(items, this.now().getTime());
+      const item = items[index];
+      if (!item) return;
+      const remaining = item.durationMs - offsetMs;
+      const url =
+        item.kind === 'media' ? ((await this.#cache?.objectUrl(item.media)) ?? null) : null;
+      if (item.kind === 'media' && !url) {
+        await wait(remaining, signal); // not cached (yet): keep the place in the loop
+        continue;
+      }
+      const ref = item.kind === 'media' ? item.media.id : item.widget.id;
+      this.#playing.set(zoneId, { zoneId, kind: item.kind, ref });
+      const started = this.now();
+      const timed: PlayableItem =
+        item.kind === 'media'
+          ? { ...item, durationMs: remaining, startAtMs: offsetMs }
+          : { ...item, durationMs: remaining };
+      await this.deps.renderer.play(zoneId, timed, url, signal);
+      const durationMs = this.now().getTime() - started.getTime();
+      // Ended early (e.g. a video failed): keep the slot instead of retrying in a loop.
+      if (remaining - durationMs > 50) await wait(remaining - durationMs, signal);
+      if (durationMs >= MIN_PLAY_MS) {
+        this.deps.playLog.add({
+          zoneId,
+          kind: item.kind,
+          ref,
+          startedAt: started.toISOString(),
+          durationMs: Math.min(durationMs, 86_400_000),
+        });
+      }
     }
   }
 

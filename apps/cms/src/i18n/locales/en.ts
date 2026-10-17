@@ -383,6 +383,18 @@ export const en: Messages = {
     title: 'Screens',
     nav: 'Screens',
     add: 'Add screen',
+    wall: {
+      title: 'Video wall',
+      badge: 'Video wall {{columns}}×{{rows}}: column {{column}}, row {{row}}',
+      enabled: 'This screen is part of a video wall',
+      hint: 'All screens of the wall show one layout over the whole area, in sync by the clock. Columns are counted from the left and rows from the top, as viewers see them.',
+      columns: 'Columns in the wall',
+      rows: 'Rows in the wall',
+      column: "This screen's column",
+      row: "This screen's row",
+      bezelX: 'Frame between screens, horizontal (pixels)',
+      bezelY: 'Frame between screens, vertical (pixels)',
+    },
     pairEmptyForApproval:
       'The screen is added without content. Afterwards, choose its content by editing the screen; the change is sent to an admin for approval.',
     addIntro: 'Open the player on the new screen (/player) and enter the code it shows.',

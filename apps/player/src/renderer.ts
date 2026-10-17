@@ -1,9 +1,11 @@
-import type { ManifestAlert, ManifestLayout, ManifestZoneAction } from '@rubinny/shared';
+import type { ManifestAlert, ManifestLayout, ManifestZoneAction, Wall } from '@rubinny/shared';
 import { itemKey, type PlayableItem } from './sequence';
 import type { WidgetRuntime } from './widgets/runtime';
 
 export interface Renderer {
   setOrientation(orientation: string): void;
+  /** Video walls: this screen shows its part of a layout spread over the whole wall. */
+  setWall(wall: Wall | null): void;
   showMessage(message: { title: string; lines: string[]; code?: string }): void;
   /** Shows an alert over everything (content keeps playing underneath), or removes it. */
   showAlert(alert: ManifestAlert | null): void;
@@ -74,6 +76,7 @@ export class DomRenderer implements Renderer {
   readonly #root: HTMLElement;
   #alertLayer: HTMLElement | null = null;
   #touch: TouchHandlers | null = null;
+  #wall: Wall | null = null;
 
   constructor(
     root: HTMLElement,
@@ -96,6 +99,12 @@ export class DomRenderer implements Renderer {
     if (this.#stage.dataset.orientation === orientation) return;
     this.#stage.dataset.orientation = orientation;
     if (this.#alertLayer) this.#alertLayer.dataset.orientation = orientation;
+    this.#resize();
+  }
+
+  setWall(wall: Wall | null) {
+    if (JSON.stringify(wall) === JSON.stringify(this.#wall)) return;
+    this.#wall = wall;
     this.#resize();
   }
 
@@ -249,14 +258,19 @@ export class DomRenderer implements Renderer {
     if (!layout || !canvas) return;
     const stageWidth = this.#stage.clientWidth;
     const stageHeight = this.#stage.clientHeight;
-    const scale = Math.min(stageWidth / layout.width, stageHeight / layout.height) || 0;
+    // A video wall is one big area of columns × rows screens with frames between them; this
+    // screen is a window onto its cell. A single screen is a wall of one.
+    const wall = this.#wall ?? { columns: 1, rows: 1, column: 0, row: 0, bezelX: 0, bezelY: 0 };
+    const areaWidth = stageWidth * wall.columns + wall.bezelX * (wall.columns - 1);
+    const areaHeight = stageHeight * wall.rows + wall.bezelY * (wall.rows - 1);
+    const scale = Math.min(areaWidth / layout.width, areaHeight / layout.height) || 0;
     const width = layout.width * scale;
     const height = layout.height * scale;
     Object.assign(canvas.style, {
       width: px(width),
       height: px(height),
-      left: px((stageWidth - width) / 2),
-      top: px((stageHeight - height) / 2),
+      left: px((areaWidth - width) / 2 - wall.column * (stageWidth + wall.bezelX)),
+      top: px((areaHeight - height) / 2 - wall.row * (stageHeight + wall.bezelY)),
     });
     for (const spec of layout.zones) {
       const zone = this.#zones.get(spec.id);
@@ -317,6 +331,17 @@ export class DomRenderer implements Renderer {
       video.preload = 'auto';
       video.src = url;
       video.setAttribute('aria-hidden', 'true');
+      const startAt = item.startAtMs;
+      if (startAt !== undefined && startAt > 0) {
+        // Join the wall mid-video at the same point as the other screens.
+        video.addEventListener(
+          'loadedmetadata',
+          () => {
+            if (startAt / 1000 < video.duration) video.currentTime = startAt / 1000;
+          },
+          { once: true },
+        );
+      }
       element.append(video);
       lifetime.signal.addEventListener('abort', () => {
         video.pause();
@@ -333,7 +358,8 @@ export class DomRenderer implements Renderer {
         setTimeout(() => {
           if (!started) finish();
         }, VIDEO_START_TIMEOUT_MS);
-        setTimeout(finish, item.durationMs + 2000);
+        // In a wall the next item starts on the clock, so no slack.
+        setTimeout(finish, item.durationMs + (startAt === undefined ? 2000 : 0));
         signal.addEventListener('abort', finish, { once: true });
       });
       void video.play().catch(() => undefined);

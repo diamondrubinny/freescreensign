@@ -129,6 +129,17 @@ export interface ScreenItem {
   resolution: string | null;
   /** Device clock minus server clock (ms), as last measured by the player. */
   clockOffsetMs: number | null;
+  /** Place in a video wall (0-based cell), or null. */
+  wall: ScreenWall | null;
+}
+
+export interface ScreenWall {
+  columns: number;
+  rows: number;
+  column: number;
+  row: number;
+  bezelX: number;
+  bezelY: number;
 }
 
 export interface PlaylistSummary {

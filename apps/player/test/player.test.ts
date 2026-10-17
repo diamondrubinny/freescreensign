@@ -64,6 +64,7 @@ function setup(options: {
 }) {
   let touch: TouchHandlers | undefined;
   const mounted: string[] = [];
+  const walls: unknown[] = [];
   const played: PlayableItem[] = [];
   const zonesPlayed: string[] = [];
   const messages: { title: string; code?: string }[] = [];
@@ -72,6 +73,7 @@ function setup(options: {
   const ref: { player?: Player } = {};
   const renderer: Renderer = {
     setOrientation: vi.fn(),
+    setWall: (wall) => walls.push(wall),
     showMessage: (m) => messages.push(m),
     showAlert: (a) => alerts.push(a),
     clear: vi.fn(),
@@ -117,6 +119,7 @@ function setup(options: {
   ref.player = player;
   return {
     player,
+    walls,
     mounted,
     played,
     zonesPlayed,
@@ -358,6 +361,28 @@ describe('Player', () => {
     expect(mounted).toEqual(['home', 'map', 'home', 'map', 'home']);
     expect(['map-zone', 'back']).toContain(ctx.zonesPlayed[26]);
     expect(ctx.zonesPlayed.at(-1)).toBe('go');
+  });
+
+  it('plays a wall zone on the clock: every screen picks the same item and point', async () => {
+    const m = await realManifest();
+    m.screen.wall = { columns: 2, rows: 1, column: 1, row: 0, bezelX: 0, bezelY: 0 };
+    const items = m.playlists.find((p) => p.id === 'p1')!.items;
+    const total = items.reduce((sum, item) => sum + item.durationMs, 0);
+    // 1.5 s into the second item of a loop.
+    const first = items[0]!.durationMs;
+    const clock = Date.UTC(2026, 9, 15) - (Date.UTC(2026, 9, 15) % total) + first + 1500;
+    const ctx = setup({
+      store: memoryStore({ token: 't' }),
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat: vi.fn() },
+      now: () => new Date(clock),
+      stopAfterPlays: 1,
+    });
+    await ctx.player.start();
+    expect(ctx.walls).toContainEqual(m.screen.wall);
+    const played = ctx.played[0]!;
+    expect(idOf(played)).toBe(items[1]!.ref);
+    expect(played.durationMs).toBe(items[1]!.durationMs - 1500);
+    expect(played.kind === 'media' && played.startAtMs).toBe(1500);
   });
 
   it('corrects a wrong device clock with the server time, also for the schedule', async () => {

@@ -365,6 +365,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
       name: screen.name,
       timezone: screen.timezone,
       orientation: screen.orientation,
+      ...(screen.wall ? { wall: screen.wall } : {}),
     },
     media: [...media.values()],
     widgets: [...widgets.values()],

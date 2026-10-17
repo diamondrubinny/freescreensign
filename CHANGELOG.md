@@ -13,6 +13,10 @@ All notable changes to Rubinny. The format follows
   touch the screen returns to its scheduled content. No touches are recorded. Tapped zones
   are named buttons for screen readers, with a visible focus ring. See
   docs/phases/12-touch-wall-ai.md.
+- Video walls: screens marked as a wall (columns × rows, their cell and the frame width)
+  show one layout over the whole wall, each its own part; what plays is computed from the
+  corrected server clock, so all screens switch together and videos join mid-way in step.
+  Accuracy on real hardware still needs testing (no frame-exact sync).
 
 ## [0.3.0] - 2026-10-16
 

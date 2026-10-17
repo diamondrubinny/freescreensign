@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { hasRole, normalizePairingCode } from '@rubinny/shared';
+import { hasRole, normalizePairingCode, wallSchema } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import type { Screen } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
@@ -48,6 +48,7 @@ export function screenDto(
     resolution: screen.resolution,
     manifestVersion: screen.manifest_version,
     clockOffsetMs: screen.clock_offset_ms,
+    wall: screen.wall,
     createdAt: screen.created_at.toISOString(),
   };
 }
@@ -236,6 +237,7 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
           layoutId: z.uuid().nullable().optional(),
           scheduleId: z.uuid().nullable().optional(),
           orientation: z.enum(ORIENTATIONS).optional(),
+          wall: wallSchema.nullable().optional(),
         })
         .refine((v) => Object.keys(v).length > 0, { message: 'Nothing to update' }),
       request.body,
@@ -252,6 +254,9 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
         ...(body.layoutId !== undefined ? { layout_id: body.layoutId } : {}),
         ...(body.scheduleId !== undefined ? { schedule_id: body.scheduleId } : {}),
         ...(body.orientation !== undefined ? { orientation: body.orientation } : {}),
+        ...(body.wall !== undefined
+          ? { wall: body.wall === null ? null : JSON.stringify(body.wall) }
+          : {}),
         updated_at: new Date(),
       })
       .where('id', '=', screenId)

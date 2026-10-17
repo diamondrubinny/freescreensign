@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { activeLayoutId, entryActive, localTime } from '../src/schedule';
-import { flattenPlaylist, activeLayout } from '../src/sequence';
+import { flattenPlaylist, activeLayout, syncedPosition } from '../src/sequence';
 import { manifest } from './fixtures';
 
 describe('localTime', () => {
@@ -140,5 +140,22 @@ describe('flattenPlaylist', () => {
     expect(
       activeLayout({ ...m, schedule: { defaultLayoutId: null, entries: [] } }, new Date()),
     ).toBeNull();
+  });
+});
+
+describe('syncedPosition (video walls)', () => {
+  const items = [{ durationMs: 10_000 }, { durationMs: 5_000 }, { durationMs: 1_000 }];
+
+  it('loops the items from the epoch, so any screen at the same time agrees', () => {
+    expect(syncedPosition(items, 0)).toEqual({ index: 0, offsetMs: 0 });
+    expect(syncedPosition(items, 9_999)).toEqual({ index: 0, offsetMs: 9_999 });
+    expect(syncedPosition(items, 10_000)).toEqual({ index: 1, offsetMs: 0 });
+    expect(syncedPosition(items, 15_500)).toEqual({ index: 2, offsetMs: 500 });
+    expect(syncedPosition(items, 16_000 * 1000 + 12_000)).toEqual({ index: 1, offsetMs: 2_000 });
+  });
+
+  it('copes with empty lists and times before the epoch', () => {
+    expect(syncedPosition([], 123)).toEqual({ index: 0, offsetMs: 0 });
+    expect(syncedPosition(items, -1)).toEqual({ index: 2, offsetMs: 999 });
   });
 });

@@ -437,6 +437,23 @@ describe('DomRenderer', () => {
     expect(ticker.style.zIndex).toBe('1');
   });
 
+  it('shows only its own part of a layout spread over a video wall', () => {
+    const { r, root } = renderer();
+    // Two screens side by side (stage 1000x750 each, 20 px of frames), this is the right one.
+    r.setWall({ columns: 2, rows: 1, column: 1, row: 0, bezelX: 20, bezelY: 0 });
+    r.mountLayout({ ...layout, width: 3840, height: 1080 });
+    const canvas = root.querySelector<HTMLElement>('.canvas')!;
+    // The wall is 2020x750; the layout fills its width: 2020 wide, 568.13 high, centred.
+    expect(canvas.style.width).toBe('2020px');
+    expect(canvas.style.height).toBe('568.13px');
+    expect(canvas.style.left).toBe('-1020px');
+    expect(canvas.style.top).toBe('90.94px');
+    // Leaving the wall: the whole layout on this screen again.
+    r.setWall(null);
+    expect(canvas.style.left).toBe('0px');
+    expect(canvas.style.width).toBe('1000px');
+  });
+
   it('makes zones with an action buttons: named, focusable, tap and Enter/Space', () => {
     const { r, root } = renderer();
     const onAction = vi.fn();

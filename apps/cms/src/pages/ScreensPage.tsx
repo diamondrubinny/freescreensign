@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
-import { CLOCK_WARNING_MS, hasRole } from '@rubinny/shared';
+import { CLOCK_WARNING_MS, WALL_LIMITS, hasRole } from '@rubinny/shared';
 import { del, get, patch, post } from '../api/client';
 import { useSession } from '../api/session';
 import type {
@@ -11,6 +11,7 @@ import type {
   PlaylistSummary,
   ScheduleSummary,
   ScreenItem,
+  ScreenWall,
 } from '../api/types';
 import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
@@ -76,6 +77,114 @@ function ContentSelect({
   );
 }
 
+/** The wall fields of the edit form; cells are 1-based for people, 0-based in the API. */
+function readWall(data: FormData): ScreenWall | null {
+  if (data.get('wallEnabled') !== 'on') return null;
+  const number = (name: string) => Number(value(data, name));
+  return {
+    columns: number('wallColumns'),
+    rows: number('wallRows'),
+    column: number('wallColumn') - 1,
+    row: number('wallRow') - 1,
+    bezelX: number('wallBezelX'),
+    bezelY: number('wallBezelY'),
+  };
+}
+
+function WallFields({
+  wall,
+  errors,
+}: {
+  wall: ScreenWall | null;
+  errors: Record<string, string | undefined>;
+}) {
+  const { t } = useTranslation();
+  const [enabled, setEnabled] = useState(wall !== null);
+  const numberProps = { type: 'number', inputMode: 'numeric', step: 1, dir: 'ltr' } as const;
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-lg border border-gray-300 p-3 dark:border-gray-700">
+      <legend className="px-1 font-medium">{t('screens.wall.title')}</legend>
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          name="wallEnabled"
+          checked={enabled}
+          onChange={(event) => {
+            setEnabled(event.target.checked);
+          }}
+          className="size-4"
+        />
+        {t('screens.wall.enabled')}
+      </label>
+      {enabled && (
+        <>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{t('screens.wall.hint')}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              {...numberProps}
+              label={t('screens.wall.columns')}
+              name="wallColumns"
+              min={1}
+              max={WALL_LIMITS.maxColumns}
+              required
+              defaultValue={wall?.columns ?? 2}
+              error={errors['wall.columns']}
+            />
+            <Field
+              {...numberProps}
+              label={t('screens.wall.rows')}
+              name="wallRows"
+              min={1}
+              max={WALL_LIMITS.maxRows}
+              required
+              defaultValue={wall?.rows ?? 1}
+              error={errors['wall.rows']}
+            />
+            <Field
+              {...numberProps}
+              label={t('screens.wall.column')}
+              name="wallColumn"
+              min={1}
+              max={WALL_LIMITS.maxColumns}
+              required
+              defaultValue={(wall?.column ?? 0) + 1}
+              error={errors['wall.column']}
+            />
+            <Field
+              {...numberProps}
+              label={t('screens.wall.row')}
+              name="wallRow"
+              min={1}
+              max={WALL_LIMITS.maxRows}
+              required
+              defaultValue={(wall?.row ?? 0) + 1}
+              error={errors['wall.row']}
+            />
+            <Field
+              {...numberProps}
+              label={t('screens.wall.bezelX')}
+              name="wallBezelX"
+              min={0}
+              max={WALL_LIMITS.maxBezelPx}
+              defaultValue={wall?.bezelX ?? 0}
+              error={errors['wall.bezelX']}
+            />
+            <Field
+              {...numberProps}
+              label={t('screens.wall.bezelY')}
+              name="wallBezelY"
+              min={0}
+              max={WALL_LIMITS.maxBezelPx}
+              defaultValue={wall?.bezelY ?? 0}
+              error={errors['wall.bezelY']}
+            />
+          </div>
+        </>
+      )}
+    </fieldset>
+  );
+}
+
 export function ScreensPage() {
   const { t, i18n } = useTranslation();
   const { orgId = '' } = useParams();
@@ -124,6 +233,7 @@ export function ScreensPage() {
       layoutId: string | null;
       scheduleId: string | null;
       orientation: Orientation;
+      wall: ScreenWall | null;
     }) => patch(`/api/v1/orgs/${orgId}/screens/${id}`, body),
     onSuccess: async () => {
       setEditing(null);
@@ -273,6 +383,16 @@ export function ScreensPage() {
                           {t('screens.scheduleContent', { name: screen.scheduleName })}
                         </span>
                       )}
+                      {screen.wall && (
+                        <span className="block text-sm text-gray-700 dark:text-gray-300">
+                          {t('screens.wall.badge', {
+                            column: screen.wall.column + 1,
+                            row: screen.wall.row + 1,
+                            columns: screen.wall.columns,
+                            rows: screen.wall.rows,
+                          })}
+                        </span>
+                      )}
                     </td>
                     <td dir="ltr">{screen.resolution ?? '—'}</td>
                     {canEdit && (
@@ -347,6 +467,7 @@ export function ScreensPage() {
                 layoutId: value(data, 'layoutId') || null,
                 scheduleId: value(data, 'scheduleId') || null,
                 orientation: value(data, 'orientation') as Orientation,
+                wall: readWall(data),
               });
             }}
           >
@@ -400,6 +521,7 @@ export function ScreensPage() {
                 ))}
               </select>
             </div>
+            <WallFields wall={editing.wall} errors={editErrors.fields} />
             <div className="flex flex-wrap justify-end gap-2">
               <Button
                 variant="secondary"

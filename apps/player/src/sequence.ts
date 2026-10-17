@@ -17,6 +17,8 @@ export type PlayableItem =
       durationMs: number;
       transition: Transition;
       fit?: Fit;
+      /** Video walls: start a video this far in (to join the other screens in sync). */
+      startAtMs?: number;
     }
   | { kind: 'widget'; widget: ManifestWidget; durationMs: number; transition: Transition };
 
@@ -69,4 +71,23 @@ export function itemKey(item: PlayableItem): string {
   return item.kind === 'media'
     ? `media:${item.media.id}:${item.media.sha256}:${item.fit ?? 'contain'}`
     : `widget:${item.widget.id}:${JSON.stringify(item.widget.config)}`;
+}
+
+/**
+ * Video walls: every screen loops a zone's items from the same moment (the Unix epoch on the
+ * server's clock), so at any time all of them show the same item at the same point in it.
+ * Returns the item to show at `nowMs` and how far into it that is.
+ */
+export function syncedPosition(
+  items: readonly { durationMs: number }[],
+  nowMs: number,
+): { index: number; offsetMs: number } {
+  const total = items.reduce((sum, item) => sum + item.durationMs, 0);
+  if (items.length === 0 || total <= 0) return { index: 0, offsetMs: 0 };
+  let position = ((nowMs % total) + total) % total;
+  for (const [index, item] of items.entries()) {
+    if (position < item.durationMs) return { index, offsetMs: position };
+    position -= item.durationMs;
+  }
+  return { index: 0, offsetMs: 0 };
 }
