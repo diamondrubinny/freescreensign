@@ -20,6 +20,27 @@ describe('layout templates', () => {
     }
   });
 
+  it('defaults touch fields and validates tap actions', () => {
+    const base = { name: 'L', width: 1920, height: 1080 };
+    const zone = { name: 'Z', x: 0, y: 0, w: 100, h: 100 };
+    const parsed = layoutInputSchema.parse({ ...base, zones: [zone] });
+    expect(parsed.idleSeconds).toBe(60);
+    expect(parsed.zones[0]).toMatchObject({ action: null, label: null });
+    const back = layoutInputSchema.parse({
+      ...base,
+      zones: [{ ...zone, action: { type: 'back' } }],
+    });
+    expect(back.zones[0]?.action).toEqual({ type: 'back' });
+    for (const action of [{ type: 'layout', layoutId: 'not-a-uuid' }, { type: 'url' }]) {
+      expect(layoutInputSchema.safeParse({ ...base, zones: [{ ...zone, action }] }).success).toBe(
+        false,
+      );
+    }
+    expect(layoutInputSchema.safeParse({ ...base, idleSeconds: 601, zones: [zone] }).success).toBe(
+      false,
+    );
+  });
+
   it('validates zones against the canvas with a specific reason', () => {
     const result = layoutInputSchema.safeParse({
       name: 'x',

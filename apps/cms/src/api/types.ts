@@ -243,7 +243,12 @@ export interface LayoutZone {
   z: number;
   playlistId: string | null;
   playlistName?: string | null;
+  action?: ZoneAction | null;
+  label?: string | null;
 }
+
+/** Touch screens: what a tap on a zone does. */
+export type ZoneAction = { type: 'layout'; layoutId: string } | { type: 'back' };
 
 export interface LayoutDetail {
   id: string;
@@ -251,6 +256,7 @@ export interface LayoutDetail {
   width: number;
   height: number;
   background: string;
+  idleSeconds: number;
   updatedAt: string;
   screens: { id: string; name: string }[];
   zones: LayoutZone[];

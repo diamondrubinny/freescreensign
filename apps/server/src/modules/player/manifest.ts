@@ -4,6 +4,7 @@ import {
   designMediaIds,
   manifestV1Schema,
   parseWidgetConfig,
+  TOUCH_LIMITS,
   type DesignConfig,
   type ManifestV1,
 } from '@rubinny/shared';
@@ -12,6 +13,7 @@ import type { Db } from '../../db/database.js';
 import type { Screen } from '../../db/schema.js';
 import { ACCEPTED_TYPES } from '../../media/types.js';
 import { alertForScreen } from '../alerts/active.js';
+import { zoneAction } from '../layouts/routes.js';
 
 export const DEFAULT_IMAGE_DURATION_MS = 10_000;
 export const DEFAULT_WIDGET_DURATION_MS = 15_000;
@@ -30,6 +32,8 @@ export function defaultWidgetDurationMs(type: string, config: Record<string, unk
   }
   return DEFAULT_WIDGET_DURATION_MS;
 }
+
+const MAX_MANIFEST_LAYOUTS = 500;
 
 const CANVAS = {
   landscape: { width: 1920, height: 1080 },
@@ -97,15 +101,20 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
             width: row.width,
             height: row.height,
             background: row.background,
-            zones: zones.map((zone) => ({
-              id: zone.id,
-              x: zone.x,
-              y: zone.y,
-              w: zone.w,
-              h: zone.h,
-              z: zone.z,
-              playlistId: zone.playlist_id,
-            })),
+            idleSeconds: row.idle_seconds,
+            zones: zones.map((zone) => {
+              const action = zoneAction(zone.action_type, zone.action_layout_id);
+              return {
+                id: zone.id,
+                x: zone.x,
+                y: zone.y,
+                w: zone.w,
+                h: zone.h,
+                z: zone.z,
+                playlistId: zone.playlist_id,
+                ...(action ? { action, label: (zone.label ?? zone.name).slice(0, 100) } : {}),
+              };
+            }),
           }
         : null;
     layoutCache.set(layoutId, layout);
@@ -149,6 +158,36 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
 
   const layoutsById = new Map<string, ManifestLayoutInput>([[defaultLayout.id, defaultLayout]]);
   for (const { layout } of scheduled) layoutsById.set(layout.id, layout);
+
+  // Touch screens: layouts a tap can open, a few taps deep (same organization only).
+  let frontier = [...layoutsById.values()];
+  for (let depth = 0; depth < TOUCH_LIMITS.maxDepth && frontier.length > 0; depth++) {
+    const next: ManifestLayoutInput[] = [];
+    for (const layout of frontier) {
+      for (const zone of layout.zones) {
+        if (zone.action?.type !== 'layout' || layoutsById.has(zone.action.layoutId)) continue;
+        const target = await loadLayout(zone.action.layoutId);
+        if (target && layoutsById.size < MAX_MANIFEST_LAYOUTS) {
+          layoutsById.set(target.id, target);
+          next.push(target);
+        }
+      }
+    }
+    frontier = next;
+  }
+  // A tap to a layout that is not in the manifest (deeper, deleted, other org) does nothing.
+  for (const [id, layout] of layoutsById) {
+    layoutsById.set(id, {
+      ...layout,
+      zones: layout.zones.map((zone) => {
+        if (zone.action?.type !== 'layout' || layoutsById.has(zone.action.layoutId)) return zone;
+        const rest = { ...zone };
+        delete rest.action;
+        delete rest.label;
+        return rest;
+      }),
+    });
+  }
 
   const playlistIds = [
     ...new Set(

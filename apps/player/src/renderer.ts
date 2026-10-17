@@ -1,4 +1,4 @@
-import type { ManifestAlert, ManifestLayout } from '@rubinny/shared';
+import type { ManifestAlert, ManifestLayout, ManifestZoneAction } from '@rubinny/shared';
 import { itemKey, type PlayableItem } from './sequence';
 import type { WidgetRuntime } from './widgets/runtime';
 
@@ -7,11 +7,20 @@ export interface Renderer {
   showMessage(message: { title: string; lines: string[]; code?: string }): void;
   /** Shows an alert over everything (content keeps playing underneath), or removes it. */
   showAlert(alert: ManifestAlert | null): void;
-  /** Prepares the stage for a layout. Zones that did not change keep their content. */
-  mountLayout(layout: ManifestLayout): void;
+  /**
+   * Prepares the stage for a layout. Zones that did not change keep their content. Zones with
+   * an action react to taps (and Enter/Space) through `touch`.
+   */
+  mountLayout(layout: ManifestLayout, touch?: TouchHandlers): void;
   /** Shows one item in a zone; resolves when it should be replaced. `url` is set for media. */
   play(zoneId: string, item: PlayableItem, url: string | null, signal: AbortSignal): Promise<void>;
   clear(): void;
+}
+
+/** Touch screens: a zone's action was triggered; any touch or key counts as activity. */
+export interface TouchHandlers {
+  onAction(action: ManifestZoneAction): void;
+  onActivity(): void;
 }
 
 const VIDEO_START_TIMEOUT_MS = 10_000;
@@ -49,6 +58,7 @@ interface Zone {
   element: HTMLElement;
   geometry: string;
   current: Layer | null;
+  action: ManifestZoneAction | null;
 }
 
 /**
@@ -63,6 +73,7 @@ export class DomRenderer implements Renderer {
   #message: HTMLElement | null = null;
   readonly #root: HTMLElement;
   #alertLayer: HTMLElement | null = null;
+  #touch: TouchHandlers | null = null;
 
   constructor(
     root: HTMLElement,
@@ -72,6 +83,10 @@ export class DomRenderer implements Renderer {
     this.#stage = document.createElement('div');
     this.#stage.className = 'stage';
     root.replaceChildren(this.#stage);
+    // Any touch or key resets the idle timer of a layout opened by a tap.
+    for (const type of ['pointerdown', 'keydown'] as const) {
+      root.addEventListener(type, () => this.#touch?.onActivity(), { passive: true });
+    }
     window.addEventListener('resize', () => {
       this.#resize();
     });
@@ -156,8 +171,9 @@ export class DomRenderer implements Renderer {
     this.#stage.replaceChildren();
   }
 
-  mountLayout(layout: ManifestLayout) {
+  mountLayout(layout: ManifestLayout, touch?: TouchHandlers) {
     if (this.#message) this.clear();
+    this.#touch = touch ?? null;
     if (!this.#canvas) {
       this.#canvas = document.createElement('div');
       this.#canvas.className = 'canvas';
@@ -177,7 +193,10 @@ export class DomRenderer implements Renderer {
     for (const spec of layout.zones) {
       const geometry = [spec.x, spec.y, spec.w, spec.h, spec.z, layout.width, layout.height].join();
       const existing = this.#zones.get(spec.id);
-      if (existing?.geometry === geometry) continue;
+      if (existing?.geometry === geometry) {
+        this.#applyAction(existing, spec);
+        continue;
+      }
       if (existing) {
         existing.current?.lifetime.abort();
         existing.element.remove();
@@ -186,10 +205,41 @@ export class DomRenderer implements Renderer {
       element.className = 'zone';
       element.dataset.zone = spec.id;
       element.style.zIndex = String(spec.z);
+      const zone: Zone = { element, geometry, current: null, action: null };
+      element.addEventListener('click', () => {
+        this.#activate(zone);
+      });
+      element.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        this.#activate(zone);
+      });
+      this.#applyAction(zone, spec);
       this.#canvas.append(element);
-      this.#zones.set(spec.id, { element, geometry, current: null });
+      this.#zones.set(spec.id, zone);
     }
     this.#resize();
+  }
+
+  /** A zone with an action is a button: focusable, named, and activated by tap or key. */
+  #applyAction(zone: Zone, spec: ManifestLayout['zones'][number]) {
+    const action = spec.action ?? null;
+    zone.action = action;
+    const { element } = zone;
+    element.classList.toggle('touch', action !== null);
+    if (action) {
+      element.setAttribute('role', 'button');
+      element.tabIndex = 0;
+      element.setAttribute('aria-label', spec.label ?? '');
+    } else {
+      element.removeAttribute('role');
+      element.removeAttribute('tabindex');
+      element.removeAttribute('aria-label');
+    }
+  }
+
+  #activate(zone: Zone) {
+    if (zone.action) this.#touch?.onAction(zone.action);
   }
 
   /** Scales the canvas into the stage and positions zones in pixels. */

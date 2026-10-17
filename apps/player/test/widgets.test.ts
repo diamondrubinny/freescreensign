@@ -437,6 +437,47 @@ describe('DomRenderer', () => {
     expect(ticker.style.zIndex).toBe('1');
   });
 
+  it('makes zones with an action buttons: named, focusable, tap and Enter/Space', () => {
+    const { r, root } = renderer();
+    const onAction = vi.fn();
+    const onActivity = vi.fn();
+    r.mountLayout(
+      {
+        ...layout,
+        zones: [
+          { ...layout.zones[0]!, action: { type: 'layout', layoutId: 'map' }, label: 'מפה' },
+          layout.zones[1]!,
+        ],
+      },
+      { onAction, onActivity },
+    );
+    const main = root.querySelector<HTMLElement>('[data-zone="main"]')!;
+    const ticker = root.querySelector<HTMLElement>('[data-zone="ticker"]')!;
+    expect(main.getAttribute('role')).toBe('button');
+    expect(main.getAttribute('aria-label')).toBe('מפה');
+    expect(main.tabIndex).toBe(0);
+    expect(main.classList.contains('touch')).toBe(true);
+    expect(ticker.hasAttribute('role')).toBe(false);
+
+    main.click();
+    main.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    main.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    main.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    ticker.click();
+    expect(onAction).toHaveBeenCalledTimes(3);
+    expect(onAction).toHaveBeenCalledWith({ type: 'layout', layoutId: 'map' });
+    // Any touch or key anywhere counts as activity.
+    ticker.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(onActivity).toHaveBeenCalled();
+
+    // The same zone without an action (content changed): no longer a button.
+    r.mountLayout(layout, { onAction, onActivity });
+    expect(main.hasAttribute('role')).toBe(false);
+    expect(main.hasAttribute('tabindex')).toBe(false);
+    main.click();
+    expect(onAction).toHaveBeenCalledTimes(3);
+  });
+
   it('keeps an unchanged widget on screen instead of re-rendering it', async () => {
     const { r, root } = renderer();
     r.mountLayout(layout);

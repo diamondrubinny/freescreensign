@@ -4,7 +4,7 @@ import type { ManifestAlert, ManifestV1 } from '@rubinny/shared';
 import { PairingExpiredError, UnauthorizedError, type PlayerApi } from '../src/api';
 import { MediaCache, MemoryBlobStore } from '../src/media-cache';
 import { Player, type PlayerDeps } from '../src/player';
-import type { Renderer } from '../src/renderer';
+import type { Renderer, TouchHandlers } from '../src/renderer';
 import type { PlayableItem } from '../src/sequence';
 import type { ServerEvent } from '../src/socket';
 import { manifest, sha256Hex } from './fixtures';
@@ -59,7 +59,11 @@ function setup(options: {
   native?: PlayerDeps['native'];
   blobStore?: MemoryBlobStore;
   download?: () => Promise<Blob>;
+  /** Called after each play (e.g. to tap a zone), with the touch handlers of the layout. */
+  onPlay?: (count: number, touch: TouchHandlers | undefined) => void;
 }) {
+  let touch: TouchHandlers | undefined;
+  const mounted: string[] = [];
   const played: PlayableItem[] = [];
   const zonesPlayed: string[] = [];
   const messages: { title: string; code?: string }[] = [];
@@ -71,10 +75,14 @@ function setup(options: {
     showMessage: (m) => messages.push(m),
     showAlert: (a) => alerts.push(a),
     clear: vi.fn(),
-    mountLayout: vi.fn(),
+    mountLayout: (layout, handlers?: TouchHandlers) => {
+      mounted.push(layout.id);
+      touch = handlers;
+    },
     play: (zoneId, item) => {
       played.push(item);
       zonesPlayed.push(zoneId);
+      options.onPlay?.(played.length, touch);
       if (played.length >= (options.stopAfterPlays ?? 3)) ref.player?.stop();
       // Each item takes a real (short) tick, like a timer-driven display.
       return new Promise((resolve) => setTimeout(resolve, 1));
@@ -109,6 +117,7 @@ function setup(options: {
   ref.player = player;
   return {
     player,
+    mounted,
     played,
     zonesPlayed,
     messages,
@@ -300,6 +309,55 @@ describe('Player', () => {
     await ctx.player.start();
     expect(new Set(ctx.zonesPlayed)).toEqual(new Set(['main', 'ticker']));
     expect(ctx.played.filter((p) => p.kind === 'widget').map(idOf)).toContain('w-ticker');
+  });
+
+  it('opens layouts by tap, goes back, and returns to scheduled content when idle', async () => {
+    const m = await realManifest();
+    const zone = { x: 0, y: 0, w: 960, h: 1080, z: 0, playlistId: 'p1' };
+    m.layouts = [
+      {
+        id: 'home',
+        width: 1920,
+        height: 1080,
+        zones: [{ ...zone, id: 'go', action: { type: 'layout', layoutId: 'map' }, label: 'Map' }],
+      },
+      {
+        id: 'map',
+        width: 1920,
+        height: 1080,
+        idleSeconds: 10,
+        zones: [
+          { ...zone, id: 'map-zone' },
+          { ...zone, id: 'back', x: 960, action: { type: 'back' }, label: 'Back' },
+        ],
+      },
+    ];
+    m.schedule.defaultLayoutId = 'home';
+    let clock = Date.parse('2026-10-15T10:00:00Z');
+    const ctx = setup({
+      store: memoryStore({ token: 't' }),
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat: vi.fn() },
+      now: () => new Date(clock),
+      stopAfterPlays: 40,
+      onPlay: (count, touch) => {
+        if (count === 3) touch?.onAction({ type: 'layout', layoutId: 'map' });
+        if (count === 10) touch?.onAction({ type: 'back' });
+        if (count === 15) touch?.onAction({ type: 'layout', layoutId: 'map' });
+        // Activity keeps the map open; then 10 s without a touch bring home back.
+        if (count === 20) {
+          clock += 9_000;
+          touch?.onActivity();
+        }
+        // 11 s after the tap, 2 s after the last touch: still open.
+        if (count === 22) clock += 2_000;
+        if (count === 28) clock += 10_001;
+      },
+    });
+    await ctx.player.start();
+    const mounted = ctx.mounted.filter((id, index, all) => id !== all[index - 1]);
+    expect(mounted).toEqual(['home', 'map', 'home', 'map', 'home']);
+    expect(['map-zone', 'back']).toContain(ctx.zonesPlayed[26]);
+    expect(ctx.zonesPlayed.at(-1)).toBe('go');
   });
 
   it('corrects a wrong device clock with the server time, also for the schedule', async () => {

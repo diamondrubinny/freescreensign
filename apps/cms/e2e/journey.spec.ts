@@ -530,6 +530,43 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   ).toBeVisible();
   await expect(player.locator('.alert-layer')).toHaveCount(0, { timeout: 10_000 });
   await expect(page.getByRole('row', { name: /פינוי מיידי/ })).toContainText('הסתיימה');
+
+  // Touch screen: a directory whose zone opens a map; the map's zone goes back.
+  for (const [name, setUp] of [
+    ['מפה', { action: 'חזרה לתבנית הקודמת', label: 'חזרה' }],
+    ['מדריך', { action: 'פתיחת: מפה', label: 'פתיחת המפה' }],
+  ] as const) {
+    await openPage(page, 'תבניות תצוגה');
+    await page.getByLabel('שם התבנית').fill(name);
+    await page.getByRole('button', { name: 'תבנית חדשה' }).click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: `עריכת תבנית: ${name}` }),
+    ).toBeVisible();
+    const zone = page.getByRole('group', { name: /אזור 1/ });
+    await zone.getByLabel('פלייליסט').selectOption({ label: 'שעון' });
+    await zone.getByLabel('בנגיעה (מסך מגע)').selectOption({ label: setUp.action });
+    await zone.getByLabel('שם לקורא מסך').fill(setUp.label);
+    await page.getByRole('button', { name: 'שמירת התבנית' }).click();
+    await expect(page.getByText('התבנית נשמרה והמסכים עודכנו.')).toBeVisible();
+  }
+  await expectAccessible(page, 'layout editor (touch)');
+  await openPage(page, 'מסכים');
+  await page.getByRole('button', { name: 'עריכה מסך אירועים' }).click();
+  const touchDialog = page.getByRole('dialog', { name: 'עריכת מסך' });
+  await touchDialog.getByLabel('תבנית תצוגה').selectOption({ label: 'מדריך' });
+  await touchDialog.getByRole('button', { name: 'שמירה' }).click();
+  await expect(page.getByRole('row', { name: /מסך אירועים/ })).toContainText('מדריך');
+
+  // A tap opens the map; Enter on the focused "back" zone returns (keyboard or switch).
+  const open = player.getByRole('button', { name: 'פתיחת המפה' });
+  await expect(open).toBeVisible({ timeout: 20_000 });
+  await open.click();
+  const back = player.getByRole('button', { name: 'חזרה' });
+  await expect(back).toBeVisible({ timeout: 10_000 });
+  await expect(open).toHaveCount(0);
+  await back.focus();
+  await player.keyboard.press('Enter');
+  await expect(open).toBeVisible({ timeout: 10_000 });
   await device.close();
 });
 

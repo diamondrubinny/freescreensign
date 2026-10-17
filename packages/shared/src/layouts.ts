@@ -15,6 +15,24 @@ const offset = z
   .min(0)
   .max(LAYOUT_LIMITS.maxCanvas - 1);
 
+/** Touch screens (docs/phases/12-touch-wall-ai.md). */
+export const TOUCH_LIMITS = {
+  minIdleSeconds: 10,
+  maxIdleSeconds: 600,
+  defaultIdleSeconds: 60,
+  /** How many taps deep a screen can go from its scheduled layout. */
+  maxDepth: 5,
+  /** Recommended minimum size of a touch target on the screen (WCAG 2.5.8 / 2.5.5). */
+  minTargetPx: 44,
+} as const;
+
+/** What a tap on a zone does: open another layout of the organization, or go back. */
+export const zoneActionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('layout'), layoutId: z.uuid() }),
+  z.object({ type: z.literal('back') }),
+]);
+export type ZoneAction = z.infer<typeof zoneActionSchema>;
+
 export const layoutZoneInputSchema = z.object({
   name: z.string().trim().min(1).max(100),
   x: offset,
@@ -23,6 +41,9 @@ export const layoutZoneInputSchema = z.object({
   h: size,
   z: z.number().int().min(0).max(LAYOUT_LIMITS.maxZ).default(0),
   playlistId: z.uuid().nullable().default(null),
+  action: zoneActionSchema.nullable().default(null),
+  /** Accessible name of a zone that reacts to taps; the zone's name when empty. */
+  label: z.string().trim().max(100).nullable().default(null),
 });
 
 export type LayoutZoneInput = z.infer<typeof layoutZoneInputSchema>;
@@ -43,6 +64,12 @@ export const layoutInputSchema = z
     width: size,
     height: size,
     background: color.default('#000000'),
+    idleSeconds: z
+      .number()
+      .int()
+      .min(TOUCH_LIMITS.minIdleSeconds)
+      .max(TOUCH_LIMITS.maxIdleSeconds)
+      .default(TOUCH_LIMITS.defaultIdleSeconds),
     zones: z.array(layoutZoneInputSchema).min(1).max(LAYOUT_LIMITS.maxZones),
   })
   .superRefine((layout, ctx) => {
@@ -128,6 +155,8 @@ export function templateZones(
       h: Math.max(px(zone.y + zone.h, canvas.height) - y, 1),
       z: 0,
       playlistId: null,
+      action: null,
+      label: null,
     };
   });
 }

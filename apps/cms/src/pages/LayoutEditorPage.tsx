@@ -2,9 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
-import { LAYOUT_LIMITS } from '@rubinny/shared';
+import { LAYOUT_LIMITS, TOUCH_LIMITS } from '@rubinny/shared';
 import { del, get, patch } from '../api/client';
-import type { LayoutDetail, LayoutZone, PlaylistSummary } from '../api/types';
+import type {
+  LayoutDetail,
+  LayoutSummary,
+  LayoutZone,
+  PlaylistSummary,
+  ZoneAction,
+} from '../api/types';
 import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/Dialog';
@@ -19,7 +25,20 @@ interface Draft {
   width: number;
   height: number;
   background: string;
+  idleSeconds: number;
   zones: LayoutZone[];
+}
+
+/** Select value of a zone's tap action. */
+function actionValue(action: ZoneAction | null | undefined): string {
+  if (!action) return '';
+  return action.type === 'back' ? 'back' : `layout:${action.layoutId}`;
+}
+
+function parseAction(value: string): ZoneAction | null {
+  if (value === 'back') return { type: 'back' };
+  if (value.startsWith('layout:')) return { type: 'layout', layoutId: value.slice(7) };
+  return null;
 }
 
 const inputClass =
@@ -32,6 +51,7 @@ function NumberInput(props: {
   min: number;
   max: number;
   error: string | undefined;
+  describedBy?: string;
   onChange: (value: number) => void;
 }) {
   return (
@@ -49,7 +69,11 @@ function NumberInput(props: {
         dir="ltr"
         value={Number.isFinite(props.value) ? props.value : ''}
         aria-invalid={props.error ? true : undefined}
-        aria-describedby={props.error ? `${props.id}-error` : undefined}
+        aria-describedby={
+          [props.error ? `${props.id}-error` : '', props.describedBy ?? '']
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
         onChange={(event) => {
           props.onChange(event.target.value === '' ? Number.NaN : Number(event.target.value));
         }}
@@ -123,6 +147,10 @@ export function LayoutEditorPage() {
     queryKey: ['playlists', orgId],
     queryFn: () => get<{ playlists: PlaylistSummary[] }>(`/api/v1/orgs/${orgId}/playlists`),
   });
+  const layouts = useQuery({
+    queryKey: ['layouts', orgId],
+    queryFn: () => get<{ layouts: LayoutSummary[] }>(`/api/v1/orgs/${orgId}/layouts`),
+  });
 
   // Local editable copy (null = show the server version); saved in one PATCH.
   const [edited, setEdited] = useState<Draft | null>(null);
@@ -133,7 +161,8 @@ export function LayoutEditorPage() {
         width: draft.width,
         height: draft.height,
         background: draft.background,
-        zones: draft.zones.map(({ name, x, y, w, h, z, playlistId }) => ({
+        idleSeconds: draft.idleSeconds,
+        zones: draft.zones.map(({ name, x, y, w, h, z, playlistId, action, label }) => ({
           name,
           x,
           y,
@@ -141,6 +170,8 @@ export function LayoutEditorPage() {
           h,
           z,
           playlistId,
+          action: action ?? null,
+          label: action ? label?.trim() || null : null,
         })),
       }),
     onSuccess: (data) => {
@@ -170,6 +201,7 @@ export function LayoutEditorPage() {
     width: layout.width,
     height: layout.height,
     background: layout.background,
+    idleSeconds: layout.idleSeconds,
     zones: layout.zones,
   };
   const dirty = edited !== null;
@@ -286,6 +318,23 @@ export function LayoutEditorPage() {
                 className="h-9 w-20 rounded-md border border-gray-500"
               />
             </div>
+            <div className="flex flex-col gap-1">
+              <NumberInput
+                id="layout-idle"
+                label={t('layouts.idleSeconds')}
+                value={draft.idleSeconds}
+                min={TOUCH_LIMITS.minIdleSeconds}
+                max={TOUCH_LIMITS.maxIdleSeconds}
+                error={fieldError('idleSeconds')}
+                describedBy="layout-idle-hint"
+                onChange={(idleSeconds) => {
+                  update({ idleSeconds });
+                }}
+              />
+              <p id="layout-idle-hint" className="text-sm text-gray-700 dark:text-gray-300">
+                {t('layouts.idleHint')}
+              </p>
+            </div>
           </fieldset>
 
           <section aria-labelledby="zones-heading" className="flex flex-col gap-4">
@@ -368,6 +417,67 @@ export function LayoutEditorPage() {
                       ))}
                     </select>
                   </div>
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor={id('action')} className="text-sm font-medium">
+                      {t('layouts.onTap')}
+                    </label>
+                    <select
+                      id={id('action')}
+                      value={actionValue(zone.action)}
+                      aria-invalid={fieldError(`${prefix}.action.layoutId`) ? true : undefined}
+                      aria-describedby={
+                        fieldError(`${prefix}.action.layoutId`) ? id('action-error') : undefined
+                      }
+                      onChange={(event) => {
+                        updateZone(index, { action: parseAction(event.target.value) });
+                      }}
+                      className={`${inputClass} bg-white py-1.5`}
+                    >
+                      <option value="">{t('layouts.tapNone')}</option>
+                      <option value="back">{t('layouts.tapBack')}</option>
+                      {layouts.data?.layouts
+                        .filter((l) => l.id !== layoutId)
+                        .map((l) => (
+                          <option key={l.id} value={`layout:${l.id}`}>
+                            {t('layouts.tapOpen', { name: l.name })}
+                          </option>
+                        ))}
+                    </select>
+                    {fieldError(`${prefix}.action.layoutId`) && (
+                      <p
+                        id={id('action-error')}
+                        className="text-sm font-medium text-red-800 dark:text-red-300"
+                      >
+                        {fieldError(`${prefix}.action.layoutId`)}
+                      </p>
+                    )}
+                  </div>
+                  {zone.action && (
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor={id('label')} className="text-sm font-medium">
+                        {t('layouts.tapLabel')}
+                      </label>
+                      <input
+                        id={id('label')}
+                        maxLength={100}
+                        dir="auto"
+                        value={zone.label ?? ''}
+                        aria-describedby={id('label-hint')}
+                        onChange={(event) => {
+                          updateZone(index, { label: event.target.value });
+                        }}
+                        className={`${inputClass} w-48`}
+                      />
+                      <p id={id('label-hint')} className="text-sm text-gray-700 dark:text-gray-300">
+                        {t('layouts.tapLabelHint')}
+                      </p>
+                    </div>
+                  )}
+                  {zone.action && Math.min(zone.w, zone.h) < TOUCH_LIMITS.minTargetPx * 2 && (
+                    <p className="basis-full text-sm font-medium text-amber-900 dark:text-amber-200">
+                      {t('layouts.tapSmall')}
+                    </p>
+                  )}
                   {canEdit && draft.zones.length > 1 && (
                     <Button
                       variant="secondary"

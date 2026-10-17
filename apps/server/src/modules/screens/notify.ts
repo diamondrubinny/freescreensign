@@ -13,6 +13,27 @@ export async function notifyScreens(ctx: AppContext, screenIds: Iterable<string>
 }
 
 /**
+ * These layouts and every layout that reaches one of them by taps (touch screens), at any
+ * depth: a screen showing any of them carries them all in its manifest.
+ */
+export async function withLinkingLayouts(
+  ctx: AppContext,
+  layoutIds: readonly string[],
+): Promise<string[]> {
+  if (layoutIds.length === 0) return [];
+  const result = await sql<{ id: string }>`
+    WITH RECURSIVE reach(id) AS (
+      SELECT unnest(${sql.val([...layoutIds])}::uuid[])
+      UNION
+      SELECT layout_zones.layout_id FROM layout_zones
+        JOIN reach ON layout_zones.action_layout_id = reach.id
+        WHERE layout_zones.action_type = 'layout'
+    )
+    SELECT id FROM reach`.execute(ctx.db);
+  return result.rows.map((row) => row.id);
+}
+
+/**
  * Screens playing one of these playlists: directly, through a layout zone, or through
  * a schedule entry (the playlist itself, or a layout containing it).
  */
@@ -22,50 +43,49 @@ export async function screensForPlaylists(
 ): Promise<string[]> {
   if (playlistIds.length === 0) return [];
   const ids = [...playlistIds];
+  const direct = await ctx.db
+    .selectFrom('layout_zones')
+    .select('layout_id')
+    .distinct()
+    .where('playlist_id', 'in', ids)
+    .execute();
+  const layouts = await withLinkingLayouts(
+    ctx,
+    direct.map((row) => row.layout_id),
+  );
   const rows = await ctx.db
     .selectFrom('screens')
     .select('id')
     .where((eb) => {
-      const layoutsWith = eb
-        .selectFrom('layout_zones')
-        .select('layout_id')
-        .where('playlist_id', 'in', ids);
+      const entries = eb
+        .selectFrom('schedule_entries')
+        .select('schedule_id')
+        .where((inner) =>
+          inner.or([
+            inner('schedule_entries.playlist_id', 'in', ids),
+            ...(layouts.length > 0 ? [inner('schedule_entries.layout_id', 'in', layouts)] : []),
+          ]),
+        );
       return eb.or([
         eb('playlist_id', 'in', ids),
-        eb('layout_id', 'in', layoutsWith),
-        eb(
-          'schedule_id',
-          'in',
-          eb
-            .selectFrom('schedule_entries')
-            .select('schedule_id')
-            .where((inner) =>
-              inner.or([
-                inner('schedule_entries.playlist_id', 'in', ids),
-                inner(
-                  'schedule_entries.layout_id',
-                  'in',
-                  inner
-                    .selectFrom('layout_zones')
-                    .select('layout_id')
-                    .where('playlist_id', 'in', ids),
-                ),
-              ]),
-            ),
-        ),
+        ...(layouts.length > 0 ? [eb('layout_id', 'in', layouts)] : []),
+        eb('schedule_id', 'in', entries),
       ]);
     })
     .execute();
   return rows.map((row) => row.id);
 }
 
-/** Screens showing one of these layouts, by default or through a schedule entry. */
+/**
+ * Screens showing one of these layouts, by default or through a schedule entry, directly or
+ * one or more taps away.
+ */
 export async function screensForLayouts(
   ctx: AppContext,
   layoutIds: readonly string[],
 ): Promise<string[]> {
   if (layoutIds.length === 0) return [];
-  const ids = [...layoutIds];
+  const ids = await withLinkingLayouts(ctx, layoutIds);
   const rows = await ctx.db
     .selectFrom('screens')
     .select('id')

@@ -147,6 +147,7 @@ describe('LayoutEditorPage', () => {
     width: 1920,
     height: 1080,
     background: '#000000',
+    idleSeconds: 60,
     updatedAt: '2026-10-15T10:00:00Z',
     screens: [],
     zones: [
@@ -189,6 +190,88 @@ describe('LayoutEditorPage', () => {
     };
     expect(body.zones[1]).toMatchObject({ h: 120, playlistId: 'p1' });
     expect(body.zones[0]).not.toHaveProperty('id');
+  });
+
+  it('sets what a tap on a zone does, its spoken name and the idle time', async () => {
+    const calls = mockApi({
+      ...base,
+      [`GET /api/v1/orgs/${ORG}/layouts/l1`]: () => ({ status: 200, body: { layout } }),
+      [`GET /api/v1/orgs/${ORG}/playlists`]: () => ({ status: 200, body: { playlists: [] } }),
+      [`GET /api/v1/orgs/${ORG}/layouts`]: () => ({
+        status: 200,
+        body: {
+          layouts: [
+            {
+              id: 'l1',
+              name: 'לובי',
+              width: 1920,
+              height: 1080,
+              zones: [],
+              zoneCount: 2,
+              screenCount: 0,
+              updatedAt: '',
+            },
+            {
+              id: 'l2',
+              name: 'מפה',
+              width: 1920,
+              height: 1080,
+              zones: [],
+              zoneCount: 1,
+              screenCount: 0,
+              updatedAt: '',
+            },
+          ],
+        },
+      }),
+      [`PATCH /api/v1/orgs/${ORG}/layouts/l1`]: (body) => ({
+        status: 200,
+        body: { layout: { ...layout, ...(body as object) } },
+      }),
+    });
+    renderRoutes(
+      [{ path: '/orgs/:orgId/layouts/:layoutId', element: <LayoutEditorPage /> }],
+      `/orgs/${ORG}/layouts/l1`,
+    );
+    const user = userEvent.setup();
+    const main = await screen.findByRole('group', { name: /אזור 1/ });
+    const onTap = within(main).getByLabelText('בנגיעה (מסך מגע)');
+    // The layout itself is not offered as a target.
+    await waitFor(() => {
+      expect(within(onTap).getByRole('option', { name: 'פתיחת: מפה' })).toBeInTheDocument();
+    });
+    expect(within(onTap).queryByRole('option', { name: 'פתיחת: לובי' })).toBeNull();
+    await user.selectOptions(onTap, 'פתיחת: מפה');
+    await user.type(within(main).getByLabelText('שם לקורא מסך'), 'פתיחת המפה');
+    const idle = screen.getByLabelText('חזרה לתוכן הרגיל אחרי (שניות בלי נגיעה)');
+    expect(idle).toHaveAccessibleDescription('כשהתבנית נפתחה בנגיעה. 10–600.');
+    await user.clear(idle);
+    await user.type(idle, '45');
+
+    // A thin zone gets a hint that it is small for touch.
+    const ticker = screen.getByRole('group', { name: /אזור 2/ });
+    const tickerHeight = within(ticker).getByLabelText('גובה');
+    await user.clear(tickerHeight);
+    await user.type(tickerHeight, '60');
+    await user.selectOptions(
+      within(ticker).getByLabelText('בנגיעה (מסך מגע)'),
+      'חזרה לתבנית הקודמת',
+    );
+    expect(within(ticker).getByText(/האזור קטן למגע/)).toBeInTheDocument();
+    expect(within(main).queryByText(/האזור קטן למגע/)).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'שמירת התבנית' }));
+    expect(await screen.findByText('התבנית נשמרה והמסכים עודכנו.')).toBeInTheDocument();
+    const body = calls.find((c) => c.key.startsWith('PATCH'))?.body as {
+      idleSeconds: number;
+      zones: { action: unknown; label: string | null }[];
+    };
+    expect(body.idleSeconds).toBe(45);
+    expect(body.zones[0]).toMatchObject({
+      action: { type: 'layout', layoutId: 'l2' },
+      label: 'פתיחת המפה',
+    });
+    expect(body.zones[1]).toMatchObject({ action: { type: 'back' }, label: null });
   });
 });
 

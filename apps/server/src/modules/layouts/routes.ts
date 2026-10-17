@@ -1,7 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { z } from 'zod';
-import { layoutInputSchema, zonesOutOfBounds, type LayoutZoneInput } from '@rubinny/shared';
+import {
+  layoutInputSchema,
+  zonesOutOfBounds,
+  type LayoutZoneInput,
+  type ZoneAction,
+} from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import type { Db } from '../../db/database.js';
 import { audit } from '../../lib/audit.js';
@@ -15,6 +20,16 @@ const layoutParams = z.object({ orgId: z.uuid(), layoutId: z.uuid() });
 const notFound = () => new HttpError(404, 'NOT_FOUND', 'Resource not found');
 const MAX_LAYOUTS_PER_ORG = 500;
 
+/** The stored action of a zone; a deleted target leaves none. */
+export function zoneAction(
+  type: 'layout' | 'back' | null,
+  layoutId: string | null,
+): ZoneAction | null {
+  if (type === 'back') return { type: 'back' };
+  if (type === 'layout' && layoutId) return { type: 'layout', layoutId };
+  return null;
+}
+
 const layoutPatchSchema = z
   .object({
     name: layoutInputSchema.shape.name.optional(),
@@ -24,6 +39,7 @@ const layoutPatchSchema = z
       .string()
       .regex(/^#[0-9a-fA-F]{6}$/)
       .optional(),
+    idleSeconds: layoutInputSchema.shape.idleSeconds.unwrap().optional(),
     zones: layoutInputSchema.shape.zones.optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'Nothing to update' });
@@ -66,6 +82,34 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
     }
   }
 
+  /** Tap targets must be other layouts of the same organization (no cross-org IDOR). */
+  async function assertTargets(
+    orgId: string,
+    layoutId: string | null,
+    zones: readonly LayoutZoneInput[],
+  ) {
+    const targetOf = (zone: LayoutZoneInput) =>
+      zone.action?.type === 'layout' ? zone.action.layoutId : null;
+    const ids = [...new Set(zones.flatMap((zone) => targetOf(zone) ?? []))];
+    if (ids.length === 0) return;
+    const found = await ctx.db
+      .selectFrom('layouts')
+      .select('id')
+      .where('id', 'in', ids)
+      .where('org_id', '=', orgId)
+      .execute();
+    const valid = new Set(found.map((row) => row.id));
+    const invalid = zones.flatMap((zone, index) => {
+      const target = targetOf(zone);
+      if (!target) return [];
+      const reason = target === layoutId ? 'self' : valid.has(target) ? null : 'invalid';
+      return reason ? [{ path: `zones.${String(index)}.action.layoutId`, reason }] : [];
+    });
+    if (invalid.length > 0) {
+      throw new HttpError(400, 'VALIDATION_FAILED', 'Unknown layout', invalid);
+    }
+  }
+
   async function replaceZones(db: Db, layoutId: string, zones: readonly LayoutZoneInput[]) {
     await db.deleteFrom('layout_zones').where('layout_id', '=', layoutId).execute();
     await db
@@ -81,6 +125,9 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
           h: zone.h,
           z: zone.z,
           playlist_id: zone.playlistId,
+          action_type: zone.action?.type ?? null,
+          action_layout_id: zone.action?.type === 'layout' ? zone.action.layoutId : null,
+          label: zone.label || null,
         })),
       )
       .execute();
@@ -100,6 +147,9 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
         'layout_zones.h',
         'layout_zones.z',
         'layout_zones.playlist_id',
+        'layout_zones.action_type',
+        'layout_zones.action_layout_id',
+        'layout_zones.label',
         'playlists.name as playlist_name',
       ])
       .where('layout_zones.layout_id', '=', layoutId)
@@ -118,6 +168,7 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
         width: layout.width,
         height: layout.height,
         background: layout.background,
+        idleSeconds: layout.idle_seconds,
         updatedAt: layout.updated_at.toISOString(),
         screens,
         zones: zones.map((zone) => ({
@@ -130,6 +181,8 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
           z: zone.z,
           playlistId: zone.playlist_id,
           playlistName: zone.playlist_name,
+          action: zoneAction(zone.action_type, zone.action_layout_id),
+          label: zone.label,
         })),
       },
     };
@@ -194,6 +247,7 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
     const { user } = requireAuth(request);
     const body = parse(layoutInputSchema, request.body);
     await assertPlaylists(org.id, body.zones);
+    await assertTargets(org.id, null, body.zones);
     const { count } = await ctx.db
       .selectFrom('layouts')
       .select((eb) => eb.fn.countAll<string>().as('count'))
@@ -211,6 +265,7 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
           width: body.width,
           height: body.height,
           background: body.background,
+          idle_seconds: body.idleSeconds,
           created_by: user.id,
         })
         .returning('id')
@@ -260,7 +315,10 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
         outside.map((index) => ({ path: `zones.${String(index)}.w`, reason: 'out_of_bounds' })),
       );
     }
-    if (body.zones) await assertPlaylists(org.id, body.zones);
+    if (body.zones) {
+      await assertPlaylists(org.id, body.zones);
+      await assertTargets(org.id, layoutId, body.zones);
+    }
 
     await ctx.db.transaction().execute(async (trx) => {
       await trx
@@ -270,6 +328,7 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
           ...(body.width !== undefined ? { width: body.width } : {}),
           ...(body.height !== undefined ? { height: body.height } : {}),
           ...(body.background !== undefined ? { background: body.background } : {}),
+          ...(body.idleSeconds !== undefined ? { idle_seconds: body.idleSeconds } : {}),
           updated_at: new Date(),
         })
         .where('id', '=', layoutId)
@@ -305,13 +364,27 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
           width: source.width,
           height: source.height,
           background: source.background,
+          idle_seconds: source.idle_seconds,
           created_by: user.id,
         })
         .returning('id')
         .executeTakeFirstOrThrow();
       await trx
         .insertInto('layout_zones')
-        .columns(['layout_id', 'position', 'name', 'x', 'y', 'w', 'h', 'z', 'playlist_id'])
+        .columns([
+          'layout_id',
+          'position',
+          'name',
+          'x',
+          'y',
+          'w',
+          'h',
+          'z',
+          'playlist_id',
+          'action_type',
+          'action_layout_id',
+          'label',
+        ])
         .expression((eb) =>
           eb
             .selectFrom('layout_zones')
@@ -325,6 +398,9 @@ export function layoutRoutes(app: FastifyInstance, ctx: AppContext) {
               'h',
               'z',
               'playlist_id',
+              'action_type',
+              'action_layout_id',
+              'label',
             ])
             .where('layout_id', '=', layoutId),
         )

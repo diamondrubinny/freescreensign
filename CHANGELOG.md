@@ -6,6 +6,14 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Touch screens: a zone of a layout can open another layout of the organization or go back
+  when tapped (or with Enter/Space, for keyboards and switches); after a set time without a
+  touch the screen returns to its scheduled content. No touches are recorded. Tapped zones
+  are named buttons for screen readers, with a visible focus ring. See
+  docs/phases/12-touch-wall-ai.md.
+
 ## [0.3.0] - 2026-10-16
 
 Sign-in through the organization (SSO) and content approval. Upgrading from 0.2: see

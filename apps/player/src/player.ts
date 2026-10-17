@@ -1,7 +1,9 @@
 import {
   alertActive,
   type ManifestAlert,
+  type ManifestLayout,
   type ManifestV1,
+  type ManifestZoneAction,
   type NowPlayingItem,
   type RubinnyNativeBridge,
 } from '@rubinny/shared';
@@ -61,6 +63,9 @@ const EMPTY_RETRY_MS = 10_000;
 export const SCHEDULE_CHECK_MS = 30_000;
 /** How often an alert's end time is checked (it ends on the screen even offline). */
 export const ALERT_CHECK_MS = 1000;
+/** Touch screens: layouts opened by taps that can be stacked (oldest dropped beyond it). */
+const MAX_TOUCH_STACK = 10;
+const DEFAULT_IDLE_SECONDS = 60;
 /** Clock samples with a slower round trip are too imprecise to use. */
 const MAX_CLOCK_RTT_MS = 10_000;
 
@@ -94,6 +99,10 @@ export class Player {
   #alertShown: string | null = null;
   /** What each zone shows right now (reported in the heartbeat). */
   #playing = new Map<string, NowPlayingItem>();
+  /** Touch screens: layouts opened by taps, newest last; empty shows the scheduled layout. */
+  #touchStack: string[] = [];
+  /** Device time (ms) of the latest touch or key. */
+  #lastActivity = 0;
 
   constructor(private readonly deps: PlayerDeps) {
     this.#clockOffset = deps.store.clockOffset();
@@ -190,6 +199,7 @@ export class Player {
     void this.#loop(PLAYS_UPLOAD_MS, () => this.uploadPlays());
     void this.#loop(ALERT_CHECK_MS, () => {
       this.#applyAlert();
+      this.#checkIdle();
       return Promise.resolve();
     });
     void this.#loop(SCHEDULE_CHECK_MS, () => {
@@ -231,6 +241,8 @@ export class Player {
       const { failed } = await this.#cache.sync(fresh.media);
       if (failed.length > 0 && this.#manifest) return; // keep playing the old content; retry later
       this.#manifest = fresh;
+      // Layouts that are gone can no longer be shown or returned to.
+      this.#touchStack = this.#touchStack.filter((id) => fresh.layouts.some((l) => l.id === id));
       this.deps.store.setManifest(fresh);
       this.deps.onManifest?.(fresh);
       this.#restart();
@@ -271,8 +283,47 @@ export class Player {
   #checkSchedule() {
     const manifest = this.#manifest;
     if (!manifest) return;
-    const layout = activeLayout(manifest, this.now());
+    const layout = this.#currentLayout(manifest);
     if ((layout?.id ?? null) !== this.#layoutId) this.#restart();
+  }
+
+  /** The layout opened by the latest tap, if any; otherwise the scheduled one. */
+  #currentLayout(manifest: ManifestV1): ManifestLayout | null {
+    const top = this.#touchStack.at(-1);
+    return (
+      (top ? manifest.layouts.find((layout) => layout.id === top) : undefined) ??
+      activeLayout(manifest, this.now())
+    );
+  }
+
+  /** A tap (or Enter/Space) on a zone with an action. */
+  #onTouchAction(action: ManifestZoneAction) {
+    this.#lastActivity = this.deps.now().getTime();
+    const manifest = this.#manifest;
+    if (!manifest) return;
+    if (action.type === 'back') {
+      if (this.#touchStack.length === 0) return;
+      this.#touchStack.pop();
+    } else {
+      const scheduled = activeLayout(manifest, this.now());
+      const index = this.#touchStack.indexOf(action.layoutId);
+      if (action.layoutId === scheduled?.id)
+        this.#touchStack = []; // "home"
+      else if (index >= 0)
+        this.#touchStack.length = index + 1; // back to an opened layout
+      else this.#touchStack = [...this.#touchStack, action.layoutId].slice(-MAX_TOUCH_STACK);
+    }
+    this.#restart();
+  }
+
+  /** Without a touch for the layout's idle time, the scheduled content returns. */
+  #checkIdle() {
+    const manifest = this.#manifest;
+    if (!manifest || this.#touchStack.length === 0) return;
+    const idleSeconds = this.#currentLayout(manifest)?.idleSeconds ?? DEFAULT_IDLE_SECONDS;
+    if (this.deps.now().getTime() - this.#lastActivity < idleSeconds * 1000) return;
+    this.#touchStack = [];
+    this.#restart();
   }
 
   async #heartbeat() {
@@ -338,7 +389,7 @@ export class Player {
   async #playLoop() {
     while (!this.#isStopped()) {
       const manifest = this.#manifest;
-      const layout = manifest ? activeLayout(manifest, this.now()) : null;
+      const layout = manifest ? this.#currentLayout(manifest) : null;
       const zones = (layout?.zones ?? []).map((zone) => ({
         id: zone.id,
         items: manifest ? flattenPlaylist(manifest, zone.playlistId) : [],
@@ -361,7 +412,14 @@ export class Player {
       this.#changed = false;
       const signal = this.#abort.signal;
       this.#playing.clear();
-      this.deps.renderer.mountLayout(layout);
+      this.deps.renderer.mountLayout(layout, {
+        onAction: (action) => {
+          this.#onTouchAction(action);
+        },
+        onActivity: () => {
+          this.#lastActivity = this.deps.now().getTime();
+        },
+      });
       // Every zone plays its own playlist until the content or the schedule changes.
       await Promise.all(zones.map((zone) => this.#runZone(zone.id, zone.items, signal)));
     }

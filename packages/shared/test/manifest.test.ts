@@ -102,6 +102,19 @@ describe('parseManifest', () => {
     expect(errors).toContain('Unknown layout "ghost"');
   });
 
+  it('accepts touch actions to layouts of the manifest only', () => {
+    const m = validManifest();
+    const zone = m.layouts[0]!.zones[0]!;
+    zone.action = { type: 'back' };
+    zone.label = 'Back';
+    m.layouts[0]!.idleSeconds = 30;
+    expect(parseManifest(m).success).toBe(true);
+    zone.action = { type: 'layout', layoutId: 'elsewhere' };
+    expect(messages(m)).toContain('Unknown layout "elsewhere"');
+    m.layouts[0]!.idleSeconds = 5;
+    expect(parseManifest(m).success).toBe(false);
+  });
+
   it('rejects duplicate ids', () => {
     const m = validManifest();
     m.media.push({ ...m.media[0]! });

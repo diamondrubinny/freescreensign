@@ -172,6 +172,7 @@ export interface LayoutsTable {
   width: number;
   height: number;
   background: Generated<string>;
+  idle_seconds: Generated<number>;
   created_by: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
@@ -188,6 +189,9 @@ export interface LayoutZonesTable {
   h: number;
   z: Generated<number>;
   playlist_id: string | null;
+  action_type: 'layout' | 'back' | null;
+  action_layout_id: string | null;
+  label: string | null;
 }
 
 export type ScreenOrientation = 'landscape' | 'portrait' | 'landscape-flipped' | 'portrait-flipped';

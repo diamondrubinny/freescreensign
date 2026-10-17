@@ -64,6 +64,13 @@ export const playlistSchema = z.object({
   items: z.array(playlistItemSchema).max(1000),
 });
 
+/** A tap on the zone opens another layout of the manifest, or goes back. */
+export const manifestZoneActionSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('layout'), layoutId: id }),
+  z.object({ type: z.literal('back') }),
+]);
+export type ManifestZoneAction = z.infer<typeof manifestZoneActionSchema>;
+
 export const zoneSchema = z.object({
   id,
   x: nonNegativeInt,
@@ -72,6 +79,10 @@ export const zoneSchema = z.object({
   h: positiveInt,
   z: z.number().int().min(0).max(100),
   playlistId: id.nullable(),
+  /** Touch screens; optional so older players ignore it. */
+  action: manifestZoneActionSchema.optional(),
+  /** Accessible name of a zone with an action. */
+  label: z.string().min(1).max(100).optional(),
 });
 
 export const layoutSchema = z.object({
@@ -83,6 +94,8 @@ export const layoutSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
   zones: z.array(zoneSchema).min(1).max(32),
+  /** After a tap opened this layout: seconds without a touch before scheduled content returns. */
+  idleSeconds: z.number().int().min(10).max(600).optional(),
 });
 
 export const scheduleEntrySchema = z
@@ -216,6 +229,9 @@ export const manifestV1Schema = z
         }
         if (zone.playlistId !== null && !playlistIds.has(zone.playlistId)) {
           report(`Unknown playlist "${zone.playlistId}"`, [...path, 'playlistId']);
+        }
+        if (zone.action?.type === 'layout' && !layoutIds.has(zone.action.layoutId)) {
+          report(`Unknown layout "${zone.action.layoutId}"`, [...path, 'action', 'layoutId']);
         }
       });
     });
