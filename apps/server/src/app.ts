@@ -34,6 +34,8 @@ import { setupRoutes } from './modules/setup/routes.js';
 import { layoutRoutes } from './modules/layouts/routes.js';
 import { scheduleRoutes } from './modules/schedules/routes.js';
 import { alertRoutes } from './modules/alerts/routes.js';
+import { createAnthropicAi, type AiClientFactory } from './lib/ai.js';
+import { aiRoutes } from './modules/ai/routes.js';
 import { approvalRoutes } from './modules/approvals/routes.js';
 import { startOfflineAlerts } from './modules/ops/alerts.js';
 import { opsRoutes } from './modules/ops/routes.js';
@@ -57,9 +59,11 @@ export interface BuildAppOptions {
   /** Tests: extra routes registered with the same context as the application's. */
   extraRoutes?: (app: FastifyInstance, ctx: AppContext) => void;
   /** Services for the /api routes. When omitted only health endpoints are served. */
-  services?: Omit<AppContext, 'env' | 'mailer' | 'rls'> & {
+  services?: Omit<AppContext, 'env' | 'mailer' | 'rls' | 'ai'> & {
     /** A mailer, or a factory receiving the app logger. */
     mailer: Mailer | ((log: FastifyBaseLogger) => Mailer);
+    /** Defaults to the Anthropic API (official SDK). */
+    ai?: AiClientFactory;
   };
 }
 
@@ -178,6 +182,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
       ...services,
       db: tenantAwareDb(services.db),
       rls,
+      ai: services.ai ?? createAnthropicAi,
       events: {
         publish: (screenId, event) => afterCommit(() => events.publish(screenId, event)),
         onEvent: (handler) => {
@@ -221,6 +226,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     scheduleRoutes(app, ctx);
     alertRoutes(app, ctx);
     approvalRoutes(app, ctx);
+    aiRoutes(app, ctx);
     opsRoutes(app, ctx);
     reportRoutes(app, ctx);
     screenshotRoutes(app, ctx);

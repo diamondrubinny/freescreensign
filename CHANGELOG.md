@@ -17,6 +17,13 @@ All notable changes to Rubinny. The format follows
   show one layout over the whole wall, each its own part; what plays is computed from the
   corrected server clock, so all screens switch together and videos join mid-way in step.
   Accuracy on real hardware still needs testing (no frame-exact sync).
+- Writing suggestions (AI, bring your own key): off by default; an admin turns it on with the
+  organization's own Anthropic API key (checked, stored encrypted, never shown again) after an
+  explicit notice that texts go to an outside provider. Editors get "suggest wording" and
+  "translate" next to text widgets and alert messages; the suggestion is shown and used only
+  if they choose. Prompts and answers are not stored or logged. Uses the official
+  `@anthropic-ai/sdk`. Sending content to an AI provider requires legal review (DPA,
+  transfers abroad).
 
 ## [0.3.0] - 2026-10-16
 

@@ -1,4 +1,5 @@
 import type { Env } from './config/env.js';
+import type { AiClientFactory } from './lib/ai.js';
 import type { Db } from './db/database.js';
 import type { KeyRing } from './lib/crypto.js';
 import type { KvCache } from './lib/kv-cache.js';
@@ -21,6 +22,8 @@ export interface AppContext {
   cache: KvCache;
   /** Pushes events (manifest changes, reload) to connected players. */
   events: ScreenEvents;
+  /** Writing suggestions with an organization's own key (tests pass a fake). */
+  ai: AiClientFactory;
   /** Present when object storage is configured; media routes are disabled otherwise. */
   media?: { storage: Storage; queue: MediaQueue };
 }

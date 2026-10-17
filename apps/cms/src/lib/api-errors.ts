@@ -17,6 +17,7 @@ type ReasonKey = (typeof REASON_KEYS)[number];
 
 /** Maps zod / password-policy / upload reasons from the API to translated messages. */
 function reasonMessage(t: TFunction, path: string, reason: string): string {
+  if (path === 'apiKey' && reason === 'invalid') return t('ai.keyInvalid');
   if (reason === 'too_small' || reason === 'invalid_type') return t('validation.required');
   if (reason === 'too_big') return t('validation.too_long');
   // For files, "too large" is about bytes, not text length.

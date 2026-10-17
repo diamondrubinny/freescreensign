@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import {
@@ -17,6 +17,7 @@ import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/Dialog';
 import { Field } from '../components/Field';
 import { Form, value } from '../components/Form';
+import { AiSuggest } from '../components/AiSuggest';
 import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
 import { TableRegion } from '../components/TableRegion';
@@ -47,6 +48,7 @@ function ConfigField({
 }) {
   const { t } = useTranslation();
   const id = useId();
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const label = t(`widgets.fields.${field.label}`);
   const hint = field.hint ? t(`widgets.fields.${field.hint}`) : undefined;
   const describedBy =
@@ -83,15 +85,30 @@ function ConfigField({
     );
   } else if (field.kind === 'textarea') {
     control = (
-      <textarea
-        {...common}
-        required={field.required}
-        maxLength={field.maxLength}
-        rows={3}
-        dir="auto"
-        defaultValue={text}
-        className={inputClass}
-      />
+      <>
+        <textarea
+          {...common}
+          ref={textRef}
+          required={field.required}
+          maxLength={field.maxLength}
+          rows={3}
+          dir="auto"
+          defaultValue={text}
+          className={inputClass}
+        />
+        {field.key === 'text' && (
+          <AiSuggest
+            task="text"
+            controls={id}
+            maxLength={field.maxLength}
+            getText={() => textRef.current?.value ?? ''}
+            onAccept={(suggestion) => {
+              if (textRef.current) textRef.current.value = suggestion;
+              textRef.current?.focus();
+            }}
+          />
+        )}
+      </>
     );
   } else if (field.kind === 'number') {
     const scaled = typeof initial === 'number' ? String(initial / (field.scale ?? 1)) : text;

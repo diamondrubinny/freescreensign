@@ -69,6 +69,11 @@ export interface OrganizationsTable {
   require_approval: Generated<boolean>;
   offline_alerts: Generated<boolean>;
   offline_alert_minutes: Generated<number>;
+  /** Writing suggestions: the organization's API key (encrypted), hint and model. */
+  ai_key_enc: Buffer | null;
+  ai_key_hint: string | null;
+  ai_model: Generated<'claude-opus-5-5' | 'claude-sonnet-5-5' | 'claude-haiku-5-5'>;
+  ai_enabled_at: NullableTimestamp;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: NullableTimestamp;

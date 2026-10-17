@@ -11,6 +11,7 @@ import { Form, value } from '../components/Form';
 import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
 import { useFormErrors } from '../lib/use-form-errors';
+import { AiSettingsSection } from './AiSettingsSection';
 
 export function OrgSettingsPage() {
   const { t } = useTranslation();
@@ -132,6 +133,7 @@ export function OrgSettingsPage() {
         </Button>
         {save.isSuccess && <Alert variant="success">{t('common.saved')}</Alert>}
       </Form>
+      <AiSettingsSection orgId={orgId} />
     </>
   );
 }

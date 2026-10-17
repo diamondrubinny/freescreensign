@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { get, post } from '../api/client';
 import type { AlertItem, ScreenItem } from '../api/types';
+import { AiSuggest } from '../components/AiSuggest';
 import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/Dialog';
@@ -301,6 +302,15 @@ export function AlertsPage() {
                     setDraft({ ...draft, message: event.target.value });
                   }}
                   className={inputClass}
+                />
+                <AiSuggest
+                  task="alert"
+                  controls={`${formId}-message`}
+                  maxLength={500}
+                  getText={() => draft.message || draft.title}
+                  onAccept={(message) => {
+                    setDraft({ ...draft, message });
+                  }}
                 />
               </div>
 

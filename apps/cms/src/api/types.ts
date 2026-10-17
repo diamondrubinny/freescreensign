@@ -258,6 +258,16 @@ export interface LayoutZone {
   label?: string | null;
 }
 
+/** Writing suggestions with the organization's own AI key. */
+export interface AiSettings {
+  enabled: boolean;
+  model: string;
+  models: string[];
+  /** Admins only: the last characters of the key. */
+  keyHint?: string | null;
+  enabledAt?: string | null;
+}
+
 /** Touch screens: what a tap on a zone does. */
 export type ZoneAction = { type: 'layout'; layoutId: string } | { type: 'back' };
 

@@ -98,6 +98,23 @@ exact issuer URL for your tenant) require verification against the provider's
 documentation. Without a verified e-mail address, existing accounts are not linked
 automatically; invite the address instead.
 
+## Writing suggestions (AI, bring your own key)
+
+Off by default, per organization. An admin turns it on in **Organization settings → Writing
+suggestions (AI)** with the organization's own Anthropic API key and a model; the key is
+checked with the provider before it is saved.
+
+- **What is sent:** only the text an editor asks to reword or translate (up to 2,000
+  characters), with fixed instructions, to Anthropic. No screen, user or organization data.
+  The editor sees the suggestion and decides whether to use it.
+- **What is stored:** the key, encrypted with `ENCRYPTION_KEY` (restoring a backup needs the
+  same key), and its last four characters. Prompts and suggestions are not stored or logged;
+  the audit log records that a suggestion was made (task and model only).
+- **Costs and limits:** billed to the organization's Anthropic account. 20 suggestions per
+  person per 10 minutes and 200 per organization per hour.
+- **Before turning it on:** this sends content to a provider abroad. Check the provider's terms
+  and a data processing agreement, and update your privacy policy (requires legal review).
+
 ## Database isolation (row-level security)
 
 Since 0.2, every request to an organization's data runs in a database transaction as the

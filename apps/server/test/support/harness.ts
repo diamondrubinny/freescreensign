@@ -3,6 +3,7 @@ import pg from 'pg';
 import { Redis } from 'ioredis';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { buildApp } from '../../src/app.js';
+import type { AiClientFactory } from '../../src/lib/ai.js';
 import type { AppContext } from '../../src/context.js';
 import { loadEnv, type Env } from '../../src/config/env.js';
 import { createDb, migrateToLatest, type Db } from '../../src/db/database.js';
@@ -46,6 +47,7 @@ export async function createHarness(
   options: {
     media?: boolean;
     extraRoutes?: (app: FastifyInstance, ctx: AppContext) => void;
+    ai?: AiClientFactory;
   } = {},
 ): Promise<Harness> {
   const suffix = randomBytes(6).toString('hex');
@@ -109,6 +111,7 @@ export async function createHarness(
       cache: new RedisKvCache(redis, `rubinny:test:${schema}:cache:`),
       events,
       ...(storage && queue ? { media: { storage, queue } } : {}),
+      ...(options.ai ? { ai: options.ai } : {}),
     },
   });
 
