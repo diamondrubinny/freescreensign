@@ -46,7 +46,7 @@ afterEach(() => {
 
 describe('video wall settings', () => {
   it('places a screen in a wall with 1-based cells, and shows its place in the list', async () => {
-    let current: typeof hall | (typeof hall & { wall: object }) = hall;
+    let current: Record<string, unknown> = hall;
     const list = (key: string) => () => ({ status: 200, body: { [key]: [] } });
     const calls = mockApi({
       'GET /api/v1/auth/session': () => ({ status: 200, body: session }),
@@ -55,7 +55,7 @@ describe('video wall settings', () => {
       [`GET /api/v1/orgs/${ORG}/layouts`]: list('layouts'),
       [`GET /api/v1/orgs/${ORG}/schedules`]: list('schedules'),
       [`PATCH /api/v1/orgs/${ORG}/screens/${SCREEN}`]: (body) => {
-        current = { ...hall, ...(body as object) } as typeof current;
+        current = { ...hall, ...(body as object) };
         return { status: 200, body: { screen: current } };
       },
     });
