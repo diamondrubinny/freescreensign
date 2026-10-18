@@ -6,6 +6,11 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-18
+
+Touch screens, video walls and writing suggestions with the organization's own AI key.
+Upgrading from 0.3: see [docs/UPGRADING.md](docs/UPGRADING.md#03--04) (usually nothing to do).
+
 ### Added
 
 - Touch screens: a zone of a layout can open another layout of the organization or go back
@@ -147,6 +152,7 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
+[0.4.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.4.0
 [0.3.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.3.0
 [0.2.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.2.0
 [0.1.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.1.0

@@ -21,7 +21,7 @@ by the release workflow of this repository. To verify them before running:
 
 ```bash
 for image in server worker web; do
-  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.3.0" \
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.4.0" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@'
 done
@@ -29,6 +29,18 @@ done
 
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
+
+## 0.3 → 0.4
+
+- **Nothing to do for most installations:** the four new migrations (approval claims, touch
+  actions, video walls, AI settings) run when the server starts.
+- **Touch screens and video walls** need the 0.4 player. Web players update when the page
+  reloads; the desktop and Android apps load the player from the server.
+- **Writing suggestions (AI) are off** in every organization until an admin turns them on with
+  the organization's own key. The server then connects to `api.anthropic.com` (HTTPS); allow it
+  in an outbound firewall if you use one. Turning it on sends content to a provider abroad:
+  requires legal review (see [OPERATIONS.md](OPERATIONS.md#writing-suggestions-ai-bring-your-own-key)).
+- **Keep `ENCRYPTION_KEY`:** AI keys are encrypted with it, like other stored secrets.
 
 ## 0.2 → 0.3
 
