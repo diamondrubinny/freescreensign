@@ -105,6 +105,8 @@ export const LIMITS = {
   aiSuggestOrg: { name: 'ai-suggest-org', max: 200, windowSeconds: 3600 },
   /** Saving (and so verifying) an AI key. */
   aiKeyOrg: { name: 'ai-key-org', max: 10, windowSeconds: 3600 },
+  /** The operator's server status page (each call runs several checks). */
+  operatorStatusUser: { name: 'operator-status-user', max: 60, windowSeconds: 60 },
   /** SSO starts and callbacks per address. */
   oidcIp: { name: 'oidc-ip', max: 30, windowSeconds: 600 },
 } as const satisfies Record<string, LimitRule>;

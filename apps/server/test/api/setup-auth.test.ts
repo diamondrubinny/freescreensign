@@ -39,7 +39,10 @@ describe.runIf(integrationEnabled)('setup', () => {
 
     const res = await client.post('/api/v1/setup', payload);
     expect(res.statusCode).toBe(201);
-    expect(res.json()).toMatchObject({ user: { email: 'owner@example.com', emailVerified: true } });
+    // Whoever installs the system operates it.
+    expect(res.json()).toMatchObject({
+      user: { email: 'owner@example.com', emailVerified: true, isOperator: true },
+    });
 
     const session = await client.get('/api/v1/auth/session');
     expect(session.statusCode).toBe(200);

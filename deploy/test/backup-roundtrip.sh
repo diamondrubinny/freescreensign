@@ -70,6 +70,9 @@ BACKUP="$(./backup.sh --output "$TMP/backups" --age-recipient "$RECIPIENT")"
 [ -f "$BACKUP" ] || fail "no backup file"
 [ "$(stat -c %a "$BACKUP")" = 600 ] || fail "backup is readable by others"
 if age -d -i /dev/null "$BACKUP" >/dev/null 2>&1; then fail "backup readable without the key"; fi
+# The operator's status page sees it.
+[ "$(psql_value "SELECT count(*) FROM backup_runs WHERE encrypted AND size_bytes = $(stat -c %s "$BACKUP");")" = 1 ] ||
+  fail "the backup was not recorded for the status page"
 ok "encrypted backup written ($(du -h "$BACKUP" | cut -f1)) and the stack is running again"
 curl -skf https://localhost/health >/dev/null || fail "stack not healthy after the backup"
 

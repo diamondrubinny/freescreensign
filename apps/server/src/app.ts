@@ -44,6 +44,8 @@ import { reportRoutes } from './modules/ops/reports.js';
 import { screenshotRoutes } from './modules/ops/screenshots.js';
 import { widgetRoutes } from './modules/widgets/routes.js';
 import { kitRoutes } from './modules/kits/routes.js';
+import { operatorRoutes, type OperatorProbes } from './modules/operator/routes.js';
+import { clamavVersion } from './lib/clamav.js';
 import { stockRoutes } from './modules/stock/routes.js';
 
 export interface BuildAppOptions {
@@ -57,6 +59,8 @@ export interface BuildAppOptions {
   backgroundJobs?: boolean;
   /** Called for every route as it is registered (tests and diagnostics). */
   onRoute?: (route: { method: string; url: string }) => void;
+  /** Tests: replaces the server status probes (ClamAV versions, disk). */
+  operator?: OperatorProbes;
   /** Tests: extra routes registered with the same context as the application's. */
   extraRoutes?: (app: FastifyInstance, ctx: AppContext) => void;
   /** Services for the /api routes. When omitted only health endpoints are served. */
@@ -234,6 +238,10 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     screenshotRoutes(app, ctx);
     if (options.backgroundJobs) startOfflineAlerts(app, ctx);
     kitRoutes(app, ctx);
+    operatorRoutes(app, ctx, options.checks ?? [], {
+      ...(ctx.media ? { clamav: () => clamavVersion(env.CLAMAV_HOST, env.CLAMAV_PORT) } : {}),
+      ...options.operator,
+    });
     if (ctx.media) {
       await app.register(multipart, {
         // Per-request limits are tightened in the upload handler.

@@ -33,9 +33,18 @@ export interface UsersTable {
   >;
   /** False for accounts created through SSO until a password is set. */
   password_login: Generated<boolean>;
+  /** Operator of the installation: sees the server status page. */
+  is_operator: Generated<boolean>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: NullableTimestamp;
+}
+
+export interface BackupRunsTable {
+  id: Generated<string>;
+  finished_at: Generated<Date>;
+  size_bytes: ColumnType<string, number | string, number | string>;
+  encrypted: boolean;
 }
 
 export interface RecoveryCodesTable {
@@ -368,6 +377,7 @@ export interface PairingCodesTable {
 
 export interface Database {
   users: UsersTable;
+  backup_runs: BackupRunsTable;
   recovery_codes: RecoveryCodesTable;
   sessions: SessionsTable;
   user_tokens: UserTokensTable;

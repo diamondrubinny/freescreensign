@@ -115,5 +115,18 @@ else
 fi
 chmod 600 "$FILE"
 log "Backup written: $FILE ($(du -h "$FILE" | cut -f1))"
+
+# For the operator's status page: when the last backup finished, its size, and whether it
+# is encrypted. A failure here does not fail the backup (e.g. an older version without
+# the table).
+SIZE="$(stat -c %s "$FILE")"
+ENCRYPTED=false
+if [ ${#AGE_ARGS[@]} -gt 0 ]; then ENCRYPTED=true; fi
+if ! docker compose exec -T postgres sh -c \
+  'psql -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1 <<SQL; then
+INSERT INTO backup_runs (size_bytes, encrypted) VALUES ($SIZE, $ENCRYPTED);
+SQL
+  log "note: could not record the backup for the status page"
+fi
 log "Copy it off this server. Restore with: ./restore.sh $FILE"
 printf '%s\n' "$FILE"

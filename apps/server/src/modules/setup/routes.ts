@@ -61,6 +61,8 @@ export function setupRoutes(app: FastifyInstance, ctx: AppContext) {
           password_hash: passwordHash,
           locale: body.locale,
           email_verified_at: new Date(),
+          // Whoever installs the system operates it (the server status page).
+          is_operator: true,
         })
         .returningAll()
         .executeTakeFirstOrThrow();

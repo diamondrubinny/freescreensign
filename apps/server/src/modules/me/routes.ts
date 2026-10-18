@@ -273,6 +273,7 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
           mfa_pending_secret_enc: null,
           mfa_enabled_at: null,
           mfa_last_step: null,
+          is_operator: false,
           deleted_at: new Date(),
           updated_at: new Date(),
         })

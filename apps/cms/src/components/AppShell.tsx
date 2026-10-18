@@ -13,6 +13,7 @@ import {
   Menu,
   Monitor,
   ScrollText,
+  Server,
   Settings,
   UserRound,
   Users,
@@ -208,6 +209,11 @@ export function AppShell({ session }: { session: SessionInfo }) {
               <NavItem to={`${org}/members`} icon={Users} label={t('nav.members')} />
               <NavItem to={`${org}/settings`} icon={Settings} label={t('nav.settings')} />
               <NavItem to={`${org}/audit`} icon={ScrollText} label={t('nav.audit')} />
+            </NavGroup>
+          )}
+          {session.user.isOperator && (
+            <NavGroup id={`${navId}-installation`} title={t('nav.groupInstallation')}>
+              <NavItem to="/operator" icon={Server} label={t('operator.nav')} />
             </NavGroup>
           )}
           <NavGroup id={`${navId}-personal`} title={t('nav.groupPersonal')}>

@@ -73,6 +73,29 @@ cd deploy
 - **Audit log:** sign-ins, failed sign-ins, role changes, deletions and admin actions are in
   the organization's audit log (kept one year).
 
+## Server status page (operator)
+
+The operator of the installation sees **Server status** in the menu (under "Installation"):
+services, antivirus signatures, the last backup, disk, media processing, outgoing mail and
+usage counts. Each item says OK, Needs attention or Problem, in words. The page shows numbers
+only, no names or addresses, and needs the operator's two-step verification.
+
+- **Who is the operator:** the account created by the first setup. After upgrading an
+  existing installation to 0.6, the oldest account.
+- **More operators:** only from the server, never through the web interface:
+  - `./set-operator.sh someone@example.com` adds one.
+  - `./set-operator.sh someone@example.com --remove` removes one.
+  - `./set-operator.sh --list` lists them.
+- **Backups on the page:** `backup.sh` records each backup it makes (time, size, encrypted or
+  not). A backup older than 26 hours is a problem, and an unencrypted one needs attention.
+- **Thresholds:**
+  - ClamAV signatures older than 3 days.
+  - Less than 20% free disk (less than 10%: a problem). The free space is that of the
+    server's disk, which holds the Docker volumes in the default setup.
+  - A file waiting more than 15 minutes for scanning or processing.
+- **The page does not alert by itself.** Keep the external alerts above for the times
+  nobody is looking at it.
+
 ## Sign-in through your organization (SSO)
 
 Users can sign in with their organization account through any OpenID Connect provider (Google

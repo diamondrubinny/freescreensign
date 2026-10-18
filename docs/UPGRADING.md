@@ -30,6 +30,15 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
+## 0.5 → 0.6 (in development)
+
+- **Nothing to do for most installations:** one migration (the operator, backup records)
+  runs when the server starts.
+- **The operator** is your oldest account. Check with `./set-operator.sh --list`, and add or
+  remove operators with `./set-operator.sh` (see [OPERATIONS.md](OPERATIONS.md#server-status-page-operator)).
+- **Update `backup.sh` too** (it is in the deploy folder): from 0.6 it records each backup for
+  the status page.
+
 ## 0.4 → 0.5
 
 - **Nothing to do for most installations:** two migrations (time windows of playlist items,

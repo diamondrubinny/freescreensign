@@ -6,6 +6,14 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Server status page for the operator of the installation: services, antivirus signature
+  age, the last backup (recorded by `backup.sh`), disk, media processing, outgoing mail and
+  usage counts, each as OK / Needs attention / Problem in words. The first setup's account
+  is the operator (after upgrading, the oldest account); more only with
+  `deploy/set-operator.sh`. Needs two-step verification; hidden (404) from everyone else.
+
 ## [0.5.0] - 2026-10-18
 
 Time windows for playlist items, screen groups and a time zone per screen.

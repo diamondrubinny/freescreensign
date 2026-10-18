@@ -4,6 +4,8 @@ import { Redis } from 'ioredis';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { buildApp } from '../../src/app.js';
 import type { AiClientFactory } from '../../src/lib/ai.js';
+import type { HealthCheck } from '../../src/lib/health-checks.js';
+import type { OperatorProbes } from '../../src/modules/operator/routes.js';
 import type { AppContext } from '../../src/context.js';
 import { loadEnv, type Env } from '../../src/config/env.js';
 import { createDb, migrateToLatest, type Db } from '../../src/db/database.js';
@@ -48,6 +50,8 @@ export async function createHarness(
     media?: boolean;
     extraRoutes?: (app: FastifyInstance, ctx: AppContext) => void;
     ai?: AiClientFactory;
+    operator?: OperatorProbes;
+    checks?: readonly HealthCheck[];
   } = {},
 ): Promise<Harness> {
   const suffix = randomBytes(6).toString('hex');
@@ -103,6 +107,8 @@ export async function createHarness(
     logger: false,
     onRoute: (route) => routes.push(route),
     ...(options.extraRoutes ? { extraRoutes: options.extraRoutes } : {}),
+    ...(options.operator ? { operator: options.operator } : {}),
+    ...(options.checks ? { checks: options.checks } : {}),
     services: {
       db,
       keys: new KeyRing(env.ENCRYPTION_KEY),

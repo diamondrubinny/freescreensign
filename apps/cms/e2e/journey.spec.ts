@@ -828,6 +828,29 @@ test("approval of an editor's change; the admin changes the role, reviews the au
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 
+  await test.step('the operator sees the server status; a teacher does not', async () => {
+    // From the legal pages (outside the app shell) back to the dashboard.
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1, name: 'לוח בקרה' })).toBeVisible();
+    await openPage(page, 'מצב השרת');
+    const table = page.getByRole('table', { name: 'מצב השרת' });
+    await expect(table.getByRole('row', { name: /שירותים/ })).toContainText('תקין');
+    // ClamAV answers in the stack: its version and signatures are shown.
+    await expect(table.getByRole('row', { name: /אנטי-וירוס/ })).toContainText(/חתימות \d+/);
+    // No backup was made in this test run.
+    await expect(table.getByRole('row', { name: /גיבוי אחרון/ })).toContainText('תקלה');
+    await expect(page.getByRole('region', { name: 'שימוש' })).toContainText('ארגונים');
+    await expectAccessible(page, 'server status');
+
+    const teacherContext = await browser.newContext({ ignoreHTTPSErrors: true });
+    const teacher = await teacherContext.newPage();
+    await signIn(teacher, TEACHER, false);
+    await expect(mainNav(teacher).getByRole('link', { name: 'מצב השרת' })).toHaveCount(0);
+    await teacher.goto('/operator');
+    await expect(teacher.getByText('הדף זמין רק למפעיל ההתקנה.')).toBeVisible();
+    await teacherContext.close();
+  });
+
   await page.goto('/no-such-page');
   await expect(page.getByRole('heading', { level: 1, name: 'העמוד לא נמצא' })).toBeVisible();
 });

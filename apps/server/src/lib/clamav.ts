@@ -83,6 +83,53 @@ export function scanStream(
   });
 }
 
+/** clamd's version line, e.g. "ClamAV 1.4.1/27431/Sat Oct 17 07:35:12 2026". */
+export interface ClamavVersion {
+  engine: string;
+  /** Signature database version (daily.cvd), when clamd reports it. */
+  signatures: number | null;
+  /** When that database was built, when clamd reports it. */
+  signaturesDate: Date | null;
+}
+
+export function parseClamavVersion(line: string): ClamavVersion {
+  const [engine = '', signatures, date] = line.trim().split('/');
+  const parsed = date ? new Date(`${date.replace(/^\w{3} /, '')} UTC`) : null;
+  return {
+    engine: engine.replace(/^ClamAV\s*/, ''),
+    signatures: signatures && /^\d+$/.test(signatures) ? Number(signatures) : null,
+    signaturesDate: parsed && !Number.isNaN(parsed.getTime()) ? parsed : null,
+  };
+}
+
+/** Asks clamd for its engine and signature versions (the status page). */
+export function clamavVersion(
+  host: string,
+  port: number,
+  timeoutMs = 3000,
+): Promise<ClamavVersion> {
+  return new Promise((resolve, reject) => {
+    const socket = new Socket();
+    let reply = '';
+    socket.setTimeout(timeoutMs, () => {
+      socket.destroy();
+      reject(new Error('ClamAV version timed out'));
+    });
+    socket.on('error', reject);
+    socket.on('data', (data) => {
+      reply += data.toString('utf8');
+      if (reply.includes('\0')) {
+        socket.destroy();
+        resolve(parseClamavVersion(reply.replace(/\0.*$/s, '')));
+      }
+    });
+    socket.on('end', () => {
+      resolve(parseClamavVersion(reply.replace(/\0.*$/s, '')));
+    });
+    socket.connect(port, host, () => socket.write('zVERSION\0'));
+  });
+}
+
 /** Checks that clamd answers PING (used for readiness). */
 export function pingClamav(host: string, port: number, timeoutMs = 3000): Promise<void> {
   return new Promise((resolve, reject) => {

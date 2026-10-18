@@ -106,6 +106,10 @@ export const routes: RouteObject[] = [
             path: 'orgs/:orgId/audit',
             ...lazyPage(() => import('./pages/AuditPage'), 'AuditPage'),
           },
+          {
+            path: 'operator',
+            ...lazyPage(() => import('./pages/OperatorStatusPage'), 'OperatorStatusPage'),
+          },
         ],
       },
       {

@@ -9,6 +9,8 @@ export interface User {
   mfaEnabled: boolean;
   /** False for accounts created through SSO that have not set a password. */
   hasPassword: boolean;
+  /** Operator of the installation: sees the server status page. */
+  isOperator?: boolean;
   createdAt: string;
 }
 
