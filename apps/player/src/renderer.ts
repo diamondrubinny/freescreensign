@@ -16,6 +16,8 @@ export interface Renderer {
   mountLayout(layout: ManifestLayout, touch?: TouchHandlers): void;
   /** Shows one item in a zone; resolves when it should be replaced. `url` is set for media. */
   play(zoneId: string, item: PlayableItem, url: string | null, signal: AbortSignal): Promise<void>;
+  /** Removes a zone's content (nothing in it is meant to show now): its background shows. */
+  clearZone(zoneId: string): void;
   clear(): void;
 }
 
@@ -169,6 +171,14 @@ export class DomRenderer implements Renderer {
     }
     this.#stage.append(panel);
     this.#message = panel;
+  }
+
+  clearZone(zoneId: string) {
+    const zone = this.#zones.get(zoneId);
+    if (!zone?.current) return;
+    zone.current.lifetime.abort();
+    zone.current.element.remove();
+    zone.current = null;
   }
 
   clear() {

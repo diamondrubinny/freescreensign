@@ -1,5 +1,12 @@
 import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
-import type { NowPlayingItem, PlayerCapability, PlayerPlatform, Role, Wall } from '@rubinny/shared';
+import type {
+  ItemWindow,
+  NowPlayingItem,
+  PlayerCapability,
+  PlayerPlatform,
+  Role,
+  Wall,
+} from '@rubinny/shared';
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 type NullableTimestamp = ColumnType<
@@ -156,6 +163,8 @@ export interface PlaylistItemsTable {
   widget_id: string | null;
   duration_ms: number | null;
   fit: Generated<'contain' | 'cover' | 'blur'>;
+  /** When the item is shown; null: always (jsonb). */
+  time_window: ColumnType<ItemWindow | null, string | null | undefined, string | null>;
 }
 
 export interface WidgetsTable {

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
-import { hasRole } from '@rubinny/shared';
+import { hasRole, normalizeWindow } from '@rubinny/shared';
 import { del, get, patch, put } from '../api/client';
 import { useSession } from '../api/session';
 import type { MediaItem, PlaylistDetail, PlaylistEntry, WidgetItem } from '../api/types';
@@ -16,6 +16,7 @@ import { PageHeading } from '../components/PageHeading';
 import { formatDuration } from '../lib/format-bytes';
 import { useDuplicate } from '../lib/use-duplicate';
 import { useFormErrors } from '../lib/use-form-errors';
+import { ALWAYS, ItemWindowFields, useWindowSummary } from './playlist/ItemWindowFields';
 
 const DEFAULT_IMAGE_MS = 10_000;
 const DEFAULT_WIDGET_MS = 15_000;
@@ -61,6 +62,9 @@ export function PlaylistEditorPage() {
   // Local, editable copy of the items (null = show the server version); saved in one atomic PUT.
   const [items, setItems] = useState<PlaylistEntry[] | null>(null);
   const dirty = items !== null;
+  // The item whose time window is open for editing.
+  const [windowOpen, setWindowOpen] = useState<number | null>(null);
+  const summary = useWindowSummary();
 
   const edit = (next: PlaylistEntry[]) => {
     setItems(next);
@@ -73,6 +77,7 @@ export function PlaylistEditorPage() {
     const next = [...list];
     const [moved] = next.splice(index, 1);
     if (moved) next.splice(target, 0, moved);
+    setWindowOpen(null);
     edit(next);
   };
 
@@ -81,8 +86,13 @@ export function PlaylistEditorPage() {
       put<{ playlist: PlaylistDetail }>(`/api/v1/orgs/${orgId}/playlists/${playlistId}/items`, {
         items: list.map((item) =>
           item.kind === 'media'
-            ? { mediaId: item.mediaId, durationMs: item.durationMs, fit: item.fit }
-            : { widgetId: item.widgetId, durationMs: item.durationMs },
+            ? {
+                mediaId: item.mediaId,
+                durationMs: item.durationMs,
+                fit: item.fit,
+                window: item.window,
+              }
+            : { widgetId: item.widgetId, durationMs: item.durationMs, window: item.window },
         ),
       }),
     onSuccess: (data) => {
@@ -168,123 +178,175 @@ export function PlaylistEditorPage() {
           <p>{t('playlists.noItems')}</p>
         ) : (
           <ol className="flex flex-col gap-2">
-            {current.map((item, index) => (
-              <li
-                key={`${itemId(item)}-${String(index)}`}
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white shadow-sm p-2 dark:border-gray-800 dark:bg-gray-900"
-              >
-                <span className="w-8 text-center font-semibold" aria-hidden="true">
-                  {index + 1}
-                </span>
-                {item.kind === 'media' && item.thumbnailUrl ? (
-                  <img src={item.thumbnailUrl} alt="" className="h-12 w-20 rounded object-cover" />
-                ) : item.kind === 'widget' ? (
-                  <span className="flex h-12 w-20 items-center justify-center rounded bg-brand-100 px-1 text-center text-xs font-semibold text-brand-900 dark:bg-brand-950 dark:text-brand-100">
-                    {t(`widgets.types.${item.widgetType}`, { defaultValue: item.widgetType })}
+            {current.map((item, index) => {
+              const windowError = (field: string) =>
+                saveErrors.fields[`items.${String(index)}.window.${field}`];
+              const hasWindowError = [
+                'dateFrom',
+                'dateTo',
+                'timeFrom',
+                'timeTo',
+                'daysOfWeek',
+              ].some((field) => windowError(field));
+              const open = windowOpen === index || hasWindowError;
+              const when = summary(item.window);
+              return (
+                <li
+                  key={`${itemId(item)}-${String(index)}`}
+                  className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white shadow-sm p-2 dark:border-gray-800 dark:bg-gray-900"
+                >
+                  <span className="w-8 text-center font-semibold" aria-hidden="true">
+                    {index + 1}
                   </span>
-                ) : (
-                  <span className="h-12 w-20" />
-                )}
-                <span className="min-w-32 flex-1 font-medium" dir="auto">
-                  {item.name}
-                </span>
-                {canEdit ? (
-                  <>
-                    <div className="flex flex-col">
-                      <label htmlFor={`duration-${String(index)}`} className="sr-only">
-                        {t('playlists.durationSeconds', { name: item.name })}
-                      </label>
-                      <input
-                        id={`duration-${String(index)}`}
-                        type="number"
-                        min={1}
-                        max={86400}
-                        step={1}
-                        inputMode="numeric"
-                        placeholder={String(
-                          Math.round(
-                            (item.kind === 'media' && item.mediaKind === 'image'
-                              ? DEFAULT_IMAGE_MS
-                              : item.effectiveDurationMs) / 1000,
-                          ),
-                        )}
-                        value={item.durationMs === null ? '' : Math.round(item.durationMs / 1000)}
-                        onChange={(event) => {
-                          const seconds = Number(event.target.value);
-                          const next = [...current];
-                          next[index] = {
-                            ...item,
-                            durationMs:
-                              event.target.value === '' || !Number.isFinite(seconds)
-                                ? null
-                                : Math.max(1, Math.round(seconds)) * 1000,
-                          };
-                          edit(next);
-                        }}
-                        className="w-24 rounded-md border border-gray-500 bg-white px-2 py-1 dark:bg-gray-900"
-                      />
-                    </div>
-                    {item.kind === 'media' && (
+                  {item.kind === 'media' && item.thumbnailUrl ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt=""
+                      className="h-12 w-20 rounded object-cover"
+                    />
+                  ) : item.kind === 'widget' ? (
+                    <span className="flex h-12 w-20 items-center justify-center rounded bg-brand-100 px-1 text-center text-xs font-semibold text-brand-900 dark:bg-brand-950 dark:text-brand-100">
+                      {t(`widgets.types.${item.widgetType}`, { defaultValue: item.widgetType })}
+                    </span>
+                  ) : (
+                    <span className="h-12 w-20" />
+                  )}
+                  <span className="flex min-w-32 flex-1 flex-col">
+                    <span className="font-medium" dir="auto">
+                      {item.name}
+                    </span>
+                    {when && (
+                      <span
+                        className={`text-sm ${when.ended ? 'font-semibold text-red-800 dark:text-red-300' : 'text-gray-700 dark:text-gray-300'}`}
+                      >
+                        {t(when.ended ? 'playlists.window.ended' : 'playlists.window.scheduled')}:{' '}
+                        <span dir="auto">{when.text}</span>
+                      </span>
+                    )}
+                  </span>
+                  {canEdit ? (
+                    <>
                       <div className="flex flex-col">
-                        <label htmlFor={`fit-${String(index)}`} className="sr-only">
-                          {t('playlists.fitLabel', { name: item.name })}
+                        <label htmlFor={`duration-${String(index)}`} className="sr-only">
+                          {t('playlists.durationSeconds', { name: item.name })}
                         </label>
-                        <select
-                          id={`fit-${String(index)}`}
-                          value={item.fit}
-                          aria-describedby="fit-hint"
+                        <input
+                          id={`duration-${String(index)}`}
+                          type="number"
+                          min={1}
+                          max={86400}
+                          step={1}
+                          inputMode="numeric"
+                          placeholder={String(
+                            Math.round(
+                              (item.kind === 'media' && item.mediaKind === 'image'
+                                ? DEFAULT_IMAGE_MS
+                                : item.effectiveDurationMs) / 1000,
+                            ),
+                          )}
+                          value={item.durationMs === null ? '' : Math.round(item.durationMs / 1000)}
                           onChange={(event) => {
+                            const seconds = Number(event.target.value);
                             const next = [...current];
-                            next[index] = { ...item, fit: event.target.value as typeof item.fit };
+                            next[index] = {
+                              ...item,
+                              durationMs:
+                                event.target.value === '' || !Number.isFinite(seconds)
+                                  ? null
+                                  : Math.max(1, Math.round(seconds)) * 1000,
+                            };
                             edit(next);
                           }}
-                          className="rounded-lg border border-gray-400 bg-white px-2 py-1 dark:border-gray-600 dark:bg-gray-900"
-                        >
-                          {(['contain', 'cover', 'blur'] as const).map((fit) => (
-                            <option key={fit} value={fit}>
-                              {t(`playlists.fits.${fit}`)}
-                            </option>
-                          ))}
-                        </select>
+                          className="w-24 rounded-md border border-gray-500 bg-white px-2 py-1 dark:bg-gray-900"
+                        />
                       </div>
-                    )}
-                    <div className="flex gap-1">
+                      {item.kind === 'media' && (
+                        <div className="flex flex-col">
+                          <label htmlFor={`fit-${String(index)}`} className="sr-only">
+                            {t('playlists.fitLabel', { name: item.name })}
+                          </label>
+                          <select
+                            id={`fit-${String(index)}`}
+                            value={item.fit}
+                            aria-describedby="fit-hint"
+                            onChange={(event) => {
+                              const next = [...current];
+                              next[index] = { ...item, fit: event.target.value as typeof item.fit };
+                              edit(next);
+                            }}
+                            className="rounded-lg border border-gray-400 bg-white px-2 py-1 dark:border-gray-600 dark:bg-gray-900"
+                          >
+                            {(['contain', 'cover', 'blur'] as const).map((fit) => (
+                              <option key={fit} value={fit}>
+                                {t(`playlists.fits.${fit}`)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <Button
                         variant="secondary"
-                        disabled={index === 0}
-                        aria-label={t('playlists.moveUp', { name: item.name })}
+                        aria-expanded={open}
+                        aria-controls={open ? `window-${String(index)}-fields` : undefined}
                         onClick={() => {
-                          move(index, -1);
+                          setWindowOpen(windowOpen === index ? null : index);
                         }}
                       >
-                        <span aria-hidden="true">↑</span>
+                        {t('playlists.window.toggle')}
+                        <span className="sr-only">{` ${item.name}`}</span>
                       </Button>
-                      <Button
-                        variant="secondary"
-                        disabled={index === current.length - 1}
-                        aria-label={t('playlists.moveDown', { name: item.name })}
-                        onClick={() => {
-                          move(index, 1);
-                        }}
-                      >
-                        <span aria-hidden="true">↓</span>
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        aria-label={t('playlists.removeItem', { name: item.name })}
-                        onClick={() => {
-                          edit(current.filter((_, i) => i !== index));
-                        }}
-                      >
-                        <span aria-hidden="true">✕</span>
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <span>{formatDuration(item.effectiveDurationMs)}</span>
-                )}
-              </li>
-            ))}
+                      <div className="flex gap-1">
+                        <Button
+                          variant="secondary"
+                          disabled={index === 0}
+                          aria-label={t('playlists.moveUp', { name: item.name })}
+                          onClick={() => {
+                            move(index, -1);
+                          }}
+                        >
+                          <span aria-hidden="true">↑</span>
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          disabled={index === current.length - 1}
+                          aria-label={t('playlists.moveDown', { name: item.name })}
+                          onClick={() => {
+                            move(index, 1);
+                          }}
+                        >
+                          <span aria-hidden="true">↓</span>
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          aria-label={t('playlists.removeItem', { name: item.name })}
+                          onClick={() => {
+                            setWindowOpen(null);
+                            edit(current.filter((_, i) => i !== index));
+                          }}
+                        >
+                          <span aria-hidden="true">✕</span>
+                        </Button>
+                      </div>
+                      {open && (
+                        <ItemWindowFields
+                          idPrefix={`window-${String(index)}`}
+                          name={item.name}
+                          window={item.window ?? ALWAYS}
+                          fieldError={windowError}
+                          onChange={(window) => {
+                            const next = [...current];
+                            next[index] = { ...item, window: normalizeWindow(window) };
+                            edit(next);
+                          }}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <span>{formatDuration(item.effectiveDurationMs)}</span>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         )}
         {canEdit && (
@@ -350,6 +412,7 @@ export function PlaylistEditorPage() {
                         effectiveDurationMs:
                           m.kind === 'video' && m.durationMs ? m.durationMs : DEFAULT_IMAGE_MS,
                         thumbnailUrl: m.thumbnailUrl ?? null,
+                        window: null,
                       },
                     ]);
                   }}
@@ -403,6 +466,7 @@ export function PlaylistEditorPage() {
                         name: w.name,
                         durationMs: null,
                         effectiveDurationMs: widgetDefaultMs(w),
+                        window: null,
                       },
                     ]);
                   }}

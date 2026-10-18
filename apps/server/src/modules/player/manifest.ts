@@ -2,9 +2,11 @@ import { createHash } from 'node:crypto';
 import { sql } from 'kysely';
 import {
   designMediaIds,
+  localTime,
   manifestV1Schema,
   parseWidgetConfig,
   TOUCH_LIMITS,
+  windowEnded,
   type DesignConfig,
   type ManifestV1,
 } from '@rubinny/shared';
@@ -230,6 +232,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
           'playlist_items.position',
           'playlist_items.duration_ms as item_duration_ms',
           'playlist_items.fit',
+          'playlist_items.time_window',
           'media.id as media_id',
           'media.kind',
           'media.mime',
@@ -255,9 +258,12 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
     [...ownPlaylists].sort().map((id) => [id, { id, items: [] }]),
   );
 
+  // Items whose window is over for good are left out (the player checks windows itself).
+  const today = localTime(new Date(), screen.timezone).date;
   for (const item of items) {
     const playlist = playlists.get(item.playlist_id);
-    if (!playlist) continue;
+    if (!playlist || windowEnded(item.time_window, today)) continue;
+    const window = item.time_window ? { window: item.time_window } : {};
 
     if (item.media_id && item.sha256 && item.mime && item.mime in ACCEPTED_TYPES) {
       if (!media.has(item.media_id)) {
@@ -281,6 +287,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
             : DEFAULT_IMAGE_DURATION_MS),
         transition: 'fade',
         ...(item.fit !== 'contain' ? { fit: item.fit } : {}),
+        ...window,
       });
       continue;
     }
@@ -300,6 +307,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
         ref: item.widget_id,
         durationMs: item.item_duration_ms ?? defaultWidgetDurationMs(type, parsed.config),
         transition: 'fade',
+        ...window,
       });
     }
   }

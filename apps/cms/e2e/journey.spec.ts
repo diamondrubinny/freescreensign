@@ -494,6 +494,32 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   await expect(player.locator('.zone')).toHaveCount(1);
   await expect(player.locator('.w-clock-time')).toHaveCount(0);
 
+  // A time window: the ticker only tomorrow (the screen's clock), so it leaves the screen now.
+  const tomorrow = new Date(Date.now() + 86_400_000);
+  const tomorrowLabel = new Intl.DateTimeFormat('he', {
+    weekday: 'short',
+    timeZone: 'Asia/Jerusalem',
+  }).format(tomorrow);
+  await openPage(page, 'פלייליסטים');
+  await page.getByRole('link', { name: /עריכה פס הודעות/ }).click();
+  await page.getByRole('button', { name: /מתי להציג\s*הודעות/ }).click();
+  const when = page.getByRole('group', { name: 'מתי להציג את הודעות' });
+  await when.getByRole('checkbox', { name: tomorrowLabel }).check();
+  await expect(
+    page.getByRole('region', { name: 'תוכן הפלייליסט' }).getByRole('listitem'),
+  ).toContainText(`מתוזמן: ${tomorrowLabel}`);
+  await expectAccessible(page, 'playlist editor (time window)');
+  await page.getByRole('button', { name: 'שמירת הפלייליסט' }).click();
+  await expect(page.getByText('הפלייליסט נשמר והמסכים עודכנו.')).toBeVisible();
+  await expect(player.locator('.w-ticker')).toHaveCount(0, { timeout: 20_000 });
+  // Back to always: the ticker returns.
+  await when.getByRole('button', { name: 'להציג תמיד' }).click();
+  await page.getByRole('button', { name: 'שמירת הפלייליסט' }).click();
+  await expect(page.getByText('הפלייליסט נשמר והמסכים עודכנו.')).toBeVisible();
+  await expect(player.locator('.w-ticker')).toContainText('ברוכים הבאים לבית הספר', {
+    timeout: 20_000,
+  });
+
   // Disabling the entry brings the layout back, without touching the screen.
   await openPage(page, 'תזמון');
   await page.getByRole('link', { name: 'עריכה אירועים' }).click();

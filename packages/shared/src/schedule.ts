@@ -40,20 +40,52 @@ export interface ScheduleRule {
   timeTo?: string | null | undefined;
 }
 
+/** Dates, days of week and hours: the fields a schedule entry and a playlist item share. */
+const ruleFields = {
+  dateFrom: localDateSchema.nullable().default(null),
+  dateTo: localDateSchema.nullable().default(null),
+  daysOfWeek: z
+    .array(z.number().int().min(0).max(6))
+    .max(7)
+    .default([])
+    .transform((days) => [...new Set(days)].sort((a, b) => a - b)),
+  timeFrom: timeOfDaySchema.nullable().default(null),
+  timeTo: timeOfDaySchema.nullable().default(null),
+};
+
+function checkRule(
+  rule: {
+    dateFrom: string | null;
+    dateTo: string | null;
+    timeFrom: string | null;
+    timeTo: string | null;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (rule.dateFrom && rule.dateTo && rule.dateFrom > rule.dateTo) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'dateFrom must not be after dateTo',
+      path: ['dateTo'],
+    });
+  }
+  if ((rule.timeFrom === null) !== (rule.timeTo === null)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'timeFrom and timeTo must be provided together',
+      path: ['timeTo'],
+    });
+  } else if (rule.timeFrom !== null && rule.timeFrom === rule.timeTo) {
+    ctx.addIssue({ code: 'custom', message: 'The time window is empty', path: ['timeTo'] });
+  }
+}
+
 export const scheduleEntryInputSchema = z
   .object({
     name: z.string().trim().min(1).max(200),
     layoutId: z.uuid().nullable().default(null),
     playlistId: z.uuid().nullable().default(null),
-    dateFrom: localDateSchema.nullable().default(null),
-    dateTo: localDateSchema.nullable().default(null),
-    daysOfWeek: z
-      .array(z.number().int().min(0).max(6))
-      .max(7)
-      .default([])
-      .transform((days) => [...new Set(days)].sort((a, b) => a - b)),
-    timeFrom: timeOfDaySchema.nullable().default(null),
-    timeTo: timeOfDaySchema.nullable().default(null),
+    ...ruleFields,
     enabled: z.boolean().default(true),
   })
   .superRefine((entry, ctx) => {
@@ -64,23 +96,45 @@ export const scheduleEntryInputSchema = z
         path: ['layoutId'],
       });
     }
-    if (entry.dateFrom && entry.dateTo && entry.dateFrom > entry.dateTo) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'dateFrom must not be after dateTo',
-        path: ['dateTo'],
-      });
-    }
-    if ((entry.timeFrom === null) !== (entry.timeTo === null)) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'timeFrom and timeTo must be provided together',
-        path: ['timeTo'],
-      });
-    } else if (entry.timeFrom !== null && entry.timeFrom === entry.timeTo) {
-      ctx.addIssue({ code: 'custom', message: 'The time window is empty', path: ['timeTo'] });
-    }
+    checkRule(entry, ctx);
   });
+
+/**
+ * When a playlist item is shown (all optional): between two dates, on some days of the week,
+ * between two times. Evaluated by the player on the screen's wall clock, so it works offline.
+ */
+export const itemWindowSchema = z.object(ruleFields).superRefine(checkRule);
+export type ItemWindow = z.infer<typeof itemWindowSchema>;
+
+/** A window without any condition means "always": stored and sent as no window at all. */
+export function normalizeWindow(window: ItemWindow | null | undefined): ItemWindow | null {
+  if (!window) return null;
+  const empty =
+    !window.dateFrom &&
+    !window.dateTo &&
+    window.daysOfWeek.length === 0 &&
+    !window.timeFrom &&
+    !window.timeTo;
+  return empty ? null : window;
+}
+
+/** Whether an item with this window shows at `now` on a screen in `timeZone`. */
+export function windowActive(
+  window: ScheduleRule | null | undefined,
+  now: Date,
+  timeZone: string,
+): boolean {
+  return !window || ruleActiveAt(window, localTime(now, timeZone));
+}
+
+/** The window is over for good on `date` (YYYY-MM-DD, local): it will never show again. */
+export function windowEnded(window: ScheduleRule | null | undefined, date: string): boolean {
+  if (!window?.dateTo) return false;
+  // A window crossing midnight still shows early on the day after its last date.
+  const crossesMidnight =
+    window.timeFrom && window.timeTo && toMinutes(window.timeFrom) > toMinutes(window.timeTo);
+  return date > (crossesMidnight ? addDays(window.dateTo, 1) : window.dateTo);
+}
 
 export type ScheduleEntryInput = z.infer<typeof scheduleEntryInputSchema>;
 

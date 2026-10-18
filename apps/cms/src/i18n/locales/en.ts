@@ -518,6 +518,16 @@ export const en: Messages = {
     fitHint:
       'Fit: the whole image. Fill: covers the zone and crops the edges. Blurred backdrop: the whole image over a blurred copy instead of black bars.',
     duplicate: 'Duplicate',
+    window: {
+      toggle: 'When to show',
+      legend: 'When to show {{name}}',
+      hint: 'The item shows only at these times, on the screen’s own clock, also offline. No days, times or dates: always. A change takes effect when the item on screen at that moment ends.',
+      always: 'Show always',
+      scheduled: 'Scheduled',
+      ended: 'Ended, will not show again',
+      from: 'from {{date}}',
+      until: 'until {{date}}',
+    },
   },
   widgets: {
     title: 'Widgets',

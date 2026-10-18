@@ -61,12 +61,14 @@ function setup(options: {
   download?: () => Promise<Blob>;
   /** Called after each play (e.g. to tap a zone), with the touch handlers of the layout. */
   onPlay?: (count: number, touch: TouchHandlers | undefined) => void;
+  onClearZone?: (zoneId: string) => void;
 }) {
   let touch: TouchHandlers | undefined;
   const mounted: string[] = [];
   const walls: unknown[] = [];
   const played: PlayableItem[] = [];
   const zonesPlayed: string[] = [];
+  const cleared: string[] = [];
   const messages: { title: string; code?: string }[] = [];
   const alerts: (ManifestAlert | null)[] = [];
   let emit: (e: ServerEvent) => void = () => undefined;
@@ -77,6 +79,10 @@ function setup(options: {
     showMessage: (m) => messages.push(m),
     showAlert: (a) => alerts.push(a),
     clear: vi.fn(),
+    clearZone: (zoneId) => {
+      cleared.push(zoneId);
+      options.onClearZone?.(zoneId);
+    },
     mountLayout: (layout, handlers?: TouchHandlers) => {
       mounted.push(layout.id);
       touch = handlers;
@@ -123,6 +129,7 @@ function setup(options: {
     mounted,
     played,
     zonesPlayed,
+    cleared,
     messages,
     alerts,
     reload,
@@ -383,6 +390,76 @@ describe('Player', () => {
     expect(idOf(played)).toBe(items[1]!.ref);
     expect(played.durationMs).toBe(items[1]!.durationMs - 1500);
     expect(played.kind === 'media' && played.startAtMs).toBe(1500);
+  });
+
+  it('plays items only in their time window, on the screen’s wall clock', async () => {
+    const m = await realManifest();
+    const items = m.playlists.find((p) => p.id === 'p1')!.items;
+    // Thursday 13:00 in Jerusalem: the image is for Fridays only, the video for now.
+    items[0]!.window = {
+      dateFrom: null,
+      dateTo: null,
+      daysOfWeek: [5],
+      timeFrom: null,
+      timeTo: null,
+    };
+    items[1]!.window = {
+      dateFrom: '2026-10-15',
+      dateTo: '2026-10-15',
+      daysOfWeek: [],
+      timeFrom: '12:00',
+      timeTo: '14:00',
+    };
+    const ctx = setup({
+      store: memoryStore({ token: 't' }),
+      api: { manifest: vi.fn().mockResolvedValue(m), heartbeat: vi.fn() },
+      stopAfterPlays: 3,
+    });
+    await ctx.player.start();
+    expect(ctx.played.map(idOf)).toEqual(['m2', 'm2', 'm2']);
+    expect(ctx.cleared).toEqual([]);
+  });
+
+  it('clears a zone with nothing in its window, and plays when a window opens', async () => {
+    const m = await realManifest();
+    m.playlists = [
+      {
+        id: 'p1',
+        items: [
+          {
+            kind: 'media',
+            ref: 'm1',
+            durationMs: 10_000,
+            transition: 'none',
+            window: {
+              dateFrom: null,
+              dateTo: null,
+              daysOfWeek: [],
+              timeFrom: '08:00',
+              timeTo: '09:00',
+            },
+          },
+        ],
+      },
+    ];
+    for (const synced of [false, true]) {
+      if (synced) m.screen.wall = { columns: 2, rows: 1, column: 0, row: 0, bezelX: 0, bezelY: 0 };
+      // 07:59:59.9 in Jerusalem (UTC+3): nothing to show yet.
+      let clock = Date.UTC(2026, 9, 15, 4, 59, 59, 900);
+      const ctx = setup({
+        store: memoryStore({ token: 't' }),
+        api: { manifest: vi.fn().mockResolvedValue(m), heartbeat: vi.fn() },
+        now: () => new Date(clock),
+        stopAfterPlays: 1,
+        // The window is open by the time the zone waits for the next minute.
+        onClearZone: () => {
+          clock = Date.UTC(2026, 9, 15, 5, 0, 59, 950);
+        },
+      });
+      await ctx.player.start();
+      expect(ctx.cleared, `synced: ${String(synced)}`).toEqual(['main']);
+      expect(ctx.played.map(idOf)).toEqual(['m1']);
+    }
   });
 
   it('corrects a wrong device clock with the server time, also for the schedule', async () => {

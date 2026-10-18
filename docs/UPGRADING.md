@@ -30,6 +30,14 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
+## 0.4 → 0.5 (in development)
+
+- **Nothing to do for most installations:** one migration (time windows of playlist items)
+  runs when the server starts.
+- **Time windows need the 0.5 player.** Web players update when the page reloads; the desktop
+  and Android apps load the player from the server. A player before 0.5 ignores windows and
+  shows every item, except items whose last date has passed (the server leaves those out).
+
 ## 0.4 → 0.4.1
 
 - **Nothing to do:** no migrations and no new settings. Pending approval requests of people

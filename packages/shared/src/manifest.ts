@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { wallSchema } from './layouts.js';
-import { localDateSchema, localTime, ruleActiveAt } from './schedule.js';
+import { itemWindowSchema, localDateSchema, localTime, ruleActiveAt } from './schedule.js';
 
 /**
  * Player manifest, schema version 1.
@@ -58,6 +58,8 @@ export const playlistItemSchema = z.object({
   transition: z.enum(TRANSITIONS).default('none'),
   /** Media only; players that predate it use "contain". */
   fit: z.enum(MEDIA_FITS).optional(),
+  /** Shown only in this window (screen's wall clock); players before 0.5 ignore it. */
+  window: itemWindowSchema.optional(),
 });
 
 export const playlistSchema = z.object({

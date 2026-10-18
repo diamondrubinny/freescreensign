@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { activeLayoutId, entryActive, localTime } from '../src/schedule';
-import { flattenPlaylist, activeLayout, syncedPosition } from '../src/sequence';
+import { flattenPlaylist, activeLayout, itemShowing, syncedPosition } from '../src/sequence';
 import { manifest } from './fixtures';
 
 describe('localTime', () => {
@@ -101,6 +101,50 @@ describe('activeLayoutId', () => {
 });
 
 describe('flattenPlaylist', () => {
+  it('carries time windows, and a nested list’s window applies to all its items', () => {
+    const always = { dateFrom: null, dateTo: null, timeFrom: null, timeTo: null };
+    const m = manifest({
+      playlists: [
+        {
+          id: 'outer',
+          items: [
+            { kind: 'media', ref: 'm1', durationMs: 1000, transition: 'none' },
+            {
+              kind: 'playlist',
+              ref: 'inner',
+              durationMs: 1,
+              transition: 'none',
+              window: { ...always, daysOfWeek: [4] }, // Thursdays
+            },
+          ],
+        },
+        {
+          id: 'inner',
+          items: [
+            {
+              kind: 'media',
+              ref: 'm2',
+              durationMs: 2000,
+              transition: 'fade',
+              window: { ...always, daysOfWeek: [], timeFrom: '12:00', timeTo: '14:00' },
+            },
+          ],
+        },
+      ],
+    });
+    const [plain, nested] = flattenPlaylist(m, 'outer');
+    expect(plain?.windows).toBeUndefined();
+    expect(nested?.windows).toHaveLength(2);
+    const tz = 'Asia/Jerusalem';
+    // Thursday 13:00 local: both windows open.
+    expect(itemShowing(nested!, new Date('2026-10-15T10:00:00Z'), tz)).toBe(true);
+    // Thursday 15:00: the item's own window is closed.
+    expect(itemShowing(nested!, new Date('2026-10-15T12:00:00Z'), tz)).toBe(false);
+    // Friday 13:00: the list's window is closed.
+    expect(itemShowing(nested!, new Date('2026-10-16T10:00:00Z'), tz)).toBe(false);
+    expect(itemShowing(plain!, new Date('2026-10-16T10:00:00Z'), tz)).toBe(true);
+  });
+
   it('expands nested playlists, widgets, and skips missing references', () => {
     const m = manifest({
       widgets: [{ id: 'w1', type: 'clock', config: {} }],

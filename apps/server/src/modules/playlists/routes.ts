@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
 import { z } from 'zod';
-import { MEDIA_FITS } from '@rubinny/shared';
+import { itemWindowSchema, MEDIA_FITS, normalizeWindow, type ItemWindow } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
@@ -16,6 +16,11 @@ const playlistParams = z.object({ orgId: z.uuid(), playlistId: z.uuid() });
 const notFound = () => new HttpError(404, 'NOT_FOUND', 'Resource not found');
 const MAX_ITEMS = 500;
 
+const windowJson = (window: ItemWindow | null) => {
+  const normalized = normalizeWindow(window);
+  return normalized ? JSON.stringify(normalized) : null;
+};
+
 type PlaylistItemDto =
   | {
       kind: 'widget';
@@ -24,6 +29,7 @@ type PlaylistItemDto =
       name: string;
       durationMs: number | null;
       effectiveDurationMs: number;
+      window: ItemWindow | null;
     }
   | {
       kind: 'media';
@@ -35,6 +41,7 @@ type PlaylistItemDto =
       durationMs: number | null;
       effectiveDurationMs: number;
       thumbnailUrl: string | null;
+      window: ItemWindow | null;
     };
 
 export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
@@ -66,6 +73,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
         'playlist_items.media_id',
         'playlist_items.widget_id',
         'playlist_items.fit',
+        'playlist_items.time_window',
         'media.name as media_name',
         'media.kind',
         'media.status',
@@ -103,6 +111,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
                 durationMs: item.duration_ms,
                 effectiveDurationMs:
                   item.duration_ms ?? defaultWidgetDurationMs(type, item.widget_config ?? {}),
+                window: item.time_window,
               },
             ];
           }
@@ -125,6 +134,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
                 item.status === 'ready' && item.thumbnail_key
                   ? `/api/v1/orgs/${orgId}/media/${item.media_id}/thumbnail`
                   : null,
+              window: item.time_window,
             },
           ];
         }),
@@ -220,6 +230,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     const { user } = requireAuth(request);
     const { playlistId } = parse(playlistParams, request.params);
     const duration = z.number().int().min(1000).max(86_400_000).nullable();
+    const window = itemWindowSchema.nullable().default(null);
     const { items } = parse(
       z.object({
         items: z
@@ -229,8 +240,9 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
                 mediaId: z.uuid(),
                 durationMs: duration,
                 fit: z.enum(MEDIA_FITS).default('contain'),
+                window,
               }),
-              z.object({ widgetId: z.uuid(), durationMs: duration }),
+              z.object({ widgetId: z.uuid(), durationMs: duration, window }),
             ]),
           )
           .max(MAX_ITEMS),
@@ -284,6 +296,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
               widget_id: 'widgetId' in item ? item.widgetId : null,
               fit: 'mediaId' in item ? item.fit : 'contain',
               duration_ms: item.durationMs,
+              time_window: windowJson(item.window),
             })),
           )
           .execute();
@@ -324,7 +337,15 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
           .executeTakeFirstOrThrow();
         await trx
           .insertInto('playlist_items')
-          .columns(['playlist_id', 'position', 'media_id', 'widget_id', 'duration_ms', 'fit'])
+          .columns([
+            'playlist_id',
+            'position',
+            'media_id',
+            'widget_id',
+            'duration_ms',
+            'fit',
+            'time_window',
+          ])
           .expression((eb) =>
             eb
               .selectFrom('playlist_items')
@@ -335,6 +356,7 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
                 'widget_id',
                 'duration_ms',
                 'fit',
+                'time_window',
               ])
               .where('playlist_id', '=', playlistId),
           )

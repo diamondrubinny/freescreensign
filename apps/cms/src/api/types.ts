@@ -1,4 +1,4 @@
-import type { Locale, Role } from '@rubinny/shared';
+import type { ItemWindow, Locale, Role } from '@rubinny/shared';
 
 export interface User {
   id: string;
@@ -161,6 +161,8 @@ export type PlaylistEntry =
       durationMs: number | null;
       effectiveDurationMs: number;
       thumbnailUrl: string | null;
+      /** When the item is shown; null: always. */
+      window: ItemWindow | null;
     }
   | {
       kind: 'widget';
@@ -169,6 +171,7 @@ export type PlaylistEntry =
       name: string;
       durationMs: number | null;
       effectiveDurationMs: number;
+      window: ItemWindow | null;
     };
 
 export interface PlaylistDetail {

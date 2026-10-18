@@ -1,16 +1,18 @@
-import type {
-  ManifestLayout,
-  ManifestMedia,
-  ManifestPlaylist,
-  ManifestV1,
-  ManifestWidget,
+import {
+  windowActive,
+  type ItemWindow,
+  type ManifestLayout,
+  type ManifestMedia,
+  type ManifestPlaylist,
+  type ManifestV1,
+  type ManifestWidget,
 } from '@rubinny/shared';
 import { activeLayoutId } from './schedule';
 
 type Transition = 'none' | 'fade' | 'slide';
 type Fit = 'contain' | 'cover' | 'blur';
 
-export type PlayableItem =
+export type PlayableItem = (
   | {
       kind: 'media';
       media: ManifestMedia;
@@ -20,7 +22,16 @@ export type PlayableItem =
       /** Video walls: start a video this far in (to join the other screens in sync). */
       startAtMs?: number;
     }
-  | { kind: 'widget'; widget: ManifestWidget; durationMs: number; transition: Transition };
+  | { kind: 'widget'; widget: ManifestWidget; durationMs: number; transition: Transition }
+) & {
+  /** Shown only when every window is open (its own, and those of the lists it is in). */
+  windows?: ItemWindow[];
+};
+
+/** Whether the item shows now, on the screen's wall clock. */
+export function itemShowing(item: PlayableItem, now: Date, timeZone: string): boolean {
+  return (item.windows ?? []).every((window) => windowActive(window, now, timeZone));
+}
 
 const MAX_DEPTH = 8;
 
@@ -32,13 +43,15 @@ export function flattenPlaylist(manifest: ManifestV1, playlistId: string | null)
   const widgets = new Map<string, ManifestWidget>(manifest.widgets.map((w) => [w.id, w]));
   const out: PlayableItem[] = [];
 
-  const walk = (id: string, depth: number) => {
+  const walk = (id: string, depth: number, outer: ItemWindow[]) => {
     const playlist = playlists.get(id);
     if (!playlist || depth > MAX_DEPTH) return;
     for (const item of playlist.items) {
       const { durationMs, transition } = item;
+      const windows = item.window ? [...outer, item.window] : outer;
+      const timed = windows.length > 0 ? { windows } : {};
       if (item.kind === 'playlist') {
-        walk(item.ref, depth + 1);
+        walk(item.ref, depth + 1, windows);
       } else if (item.kind === 'media') {
         const m = media.get(item.ref);
         if (m) {
@@ -48,15 +61,16 @@ export function flattenPlaylist(manifest: ManifestV1, playlistId: string | null)
             durationMs,
             transition,
             ...(item.fit ? { fit: item.fit } : {}),
+            ...timed,
           });
         }
       } else {
         const w = widgets.get(item.ref);
-        if (w) out.push({ kind: 'widget', widget: w, durationMs, transition });
+        if (w) out.push({ kind: 'widget', widget: w, durationMs, transition, ...timed });
       }
     }
   };
-  walk(playlistId, 0);
+  walk(playlistId, 0, []);
   return out;
 }
 

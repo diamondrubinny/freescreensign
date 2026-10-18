@@ -12,7 +12,13 @@ import type { MediaCache } from './media-cache';
 import { captureBytes } from './native';
 import type { PlayLog } from './play-log';
 import { wait, type Renderer } from './renderer';
-import { activeLayout, flattenPlaylist, syncedPosition, type PlayableItem } from './sequence';
+import {
+  activeLayout,
+  flattenPlaylist,
+  itemShowing,
+  syncedPosition,
+  type PlayableItem,
+} from './sequence';
 import type { ServerEvent } from './socket';
 import type { store as defaultStore } from './store';
 
@@ -425,11 +431,13 @@ export class Player {
       });
       // Every zone plays its own playlist until the content or the schedule changes.
       const synced = Boolean(manifest.screen.wall);
+      const showing = (item: PlayableItem) =>
+        itemShowing(item, this.now(), manifest.screen.timezone);
       await Promise.all(
         zones.map((zone) =>
           synced
-            ? this.#runSyncedZone(zone.id, zone.items, signal)
-            : this.#runZone(zone.id, zone.items, signal),
+            ? this.#runSyncedZone(zone.id, zone.items, showing, signal)
+            : this.#runZone(zone.id, zone.items, showing, signal),
         ),
       );
     }
@@ -439,16 +447,30 @@ export class Player {
    * Video walls: what plays is a function of the server's clock, so every screen of the wall
    * shows the same item at the same moment; each item ends on the clock (no drift builds up).
    */
-  async #runSyncedZone(zoneId: string, items: PlayableItem[], signal: AbortSignal) {
+  async #runSyncedZone(
+    zoneId: string,
+    all: PlayableItem[],
+    showing: (item: PlayableItem) => boolean,
+    signal: AbortSignal,
+  ) {
     const active = () => !signal.aborted && !this.#isStopped() && !this.#hasChanged();
-    if (items.length === 0) {
+    if (all.length === 0) {
       await wait(2 ** 31 - 1, signal);
       return;
     }
     while (active()) {
+      // Every screen of the wall shares the clock, so they all drop the same items.
+      const items = all.filter(showing);
+      if (items.length === 0) {
+        this.#nothingShowing(zoneId);
+        await wait(this.#untilNextMinute(), signal);
+        continue;
+      }
       const { index, offsetMs } = syncedPosition(items, this.now().getTime());
       const item = items[index];
       if (!item) return;
+      // A window that opens or closes takes effect when this item ends (the same moment on
+      // every screen of the wall).
       const remaining = item.durationMs - offsetMs;
       const url =
         item.kind === 'media' ? ((await this.#cache?.objectUrl(item.media)) ?? null) : null;
@@ -479,7 +501,12 @@ export class Player {
     }
   }
 
-  async #runZone(zoneId: string, items: PlayableItem[], signal: AbortSignal) {
+  async #runZone(
+    zoneId: string,
+    items: PlayableItem[],
+    showing: (item: PlayableItem) => boolean,
+    signal: AbortSignal,
+  ) {
     const active = () => !signal.aborted && !this.#isStopped() && !this.#hasChanged();
     if (items.length === 0) {
       await wait(2 ** 31 - 1, signal); // an empty zone shows the background until a change
@@ -487,8 +514,11 @@ export class Player {
     }
     while (active()) {
       let played = 0;
+      let inWindow = 0;
       for (const item of items) {
         if (!active()) return;
+        if (!showing(item)) continue; // outside its time window
+        inWindow++;
         let url: string | null = null;
         if (item.kind === 'media') {
           url = (await this.#cache?.objectUrl(item.media)) ?? null;
@@ -510,8 +540,24 @@ export class Player {
         }
         played++;
       }
-      // Nothing playable (e.g. all downloads failed): avoid a busy loop.
-      if (played === 0) await wait(EMPTY_RETRY_MS, signal);
+      // Nothing in its window: the zone shows its background until a window opens.
+      if (inWindow === 0) {
+        this.#nothingShowing(zoneId);
+        await wait(this.#untilNextMinute(), signal);
+      } else if (played === 0) {
+        // Nothing playable (e.g. all downloads failed): avoid a busy loop.
+        await wait(EMPTY_RETRY_MS, signal);
+      }
     }
+  }
+
+  #nothingShowing(zoneId: string) {
+    this.#playing.delete(zoneId);
+    this.deps.renderer.clearZone(zoneId);
+  }
+
+  /** Windows are set in minutes: they open and close on the minute. */
+  #untilNextMinute(): number {
+    return 60_000 - (this.now().getTime() % 60_000) + 50;
   }
 }

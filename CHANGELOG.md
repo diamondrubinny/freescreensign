@@ -6,6 +6,14 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Time windows for playlist items: each item can be limited to dates, days of the week and
+  hours ("lunch menu, Sunday to Thursday, 11:30-13:30"). The screen decides on its own clock
+  and time zone, so it works offline; an item whose last date has passed is no longer sent to
+  screens. The playlist editor shows each window in words ("Scheduled: ...", "Ended") and
+  edits it with labelled fields. Needs the 0.5 player (older players show every item).
+
 ## [0.4.1] - 2026-10-18
 
 Fixes for content approval and privacy. Upgrading from 0.4: nothing to do (no migrations).
