@@ -115,3 +115,51 @@ describe('video wall settings', () => {
     expect(calls.find((c) => c.key.startsWith('PATCH'))?.body).toMatchObject({ wall: null });
   });
 });
+
+describe('screen time zone', () => {
+  it('picks the time zone from a labelled list and shows the server’s error next to it', async () => {
+    const list = (key: string) => () => ({ status: 200, body: { [key]: [] } });
+    let attempt = 0;
+    const calls = mockApi({
+      'GET /api/v1/auth/session': () => ({ status: 200, body: session }),
+      [`GET /api/v1/orgs/${ORG}/screens`]: () => ({ status: 200, body: { screens: [hall] } }),
+      [`GET /api/v1/orgs/${ORG}/playlists`]: list('playlists'),
+      [`GET /api/v1/orgs/${ORG}/layouts`]: list('layouts'),
+      [`GET /api/v1/orgs/${ORG}/schedules`]: list('schedules'),
+      [`PATCH /api/v1/orgs/${ORG}/screens/${SCREEN}`]: (body) =>
+        ++attempt === 1
+          ? {
+              status: 400,
+              body: {
+                error: {
+                  code: 'VALIDATION_FAILED',
+                  message: 'Invalid request',
+                  fields: [{ path: 'timezone', reason: 'invalid' }],
+                },
+              },
+            }
+          : { status: 200, body: { screen: { ...hall, ...(body as object) } } },
+    });
+    renderRoutes(
+      [{ path: '/orgs/:orgId/screens', element: <ScreensPage /> }],
+      `/orgs/${ORG}/screens`,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('button', { name: /^עריכה\s*אולם$/ }, { timeout: 5000 }),
+    );
+    const dialog = screen.getByRole('dialog', { name: 'עריכת מסך' });
+    const zone = within(dialog).getByLabelText('אזור זמן');
+    expect(zone).toHaveValue('Asia/Jerusalem');
+    expect(zone).toHaveAccessibleDescription(/תזמון וחלונות זמן/);
+    await user.selectOptions(zone, 'Europe/London');
+    await user.click(within(dialog).getByRole('button', { name: 'שמירה' }));
+    expect(await within(dialog).findByLabelText('אזור זמן')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'שמירה' }));
+    const bodies = calls.filter((c) => c.key.startsWith('PATCH')).map((c) => c.body);
+    expect(bodies.at(-1)).toMatchObject({ timezone: 'Europe/London' });
+  });
+});

@@ -56,7 +56,7 @@ describe.runIf(integrationEnabled)('playlist items shown only in a time window',
     });
     expect(screen.statusCode, screen.body).toBe(201);
     const id = screen.json<{ screen: { id: string } }>().screen.id;
-    await h.db.updateTable('screens').set({ timezone }).where('id', '=', id).execute();
+    expect((await editor.patch(api(`/screens/${id}`), { timezone })).statusCode).toBe(200);
     const { deviceToken } = (
       await player.post('/player/v1/pair/status', { pollToken: start.pollToken })
     ).json<{ deviceToken: string }>();

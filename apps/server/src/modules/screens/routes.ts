@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { hasRole, normalizePairingCode, wallSchema } from '@rubinny/shared';
+import { hasRole, normalizePairingCode, timeZoneSchema, wallSchema } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import type { Screen } from '../../db/schema.js';
 import { audit } from '../../lib/audit.js';
@@ -238,6 +238,8 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
           scheduleId: z.uuid().nullable().optional(),
           orientation: z.enum(ORIENTATIONS).optional(),
           wall: wallSchema.nullable().optional(),
+          /** The wall clock schedules and time windows use on this screen. */
+          timezone: timeZoneSchema.optional(),
         })
         .refine((v) => Object.keys(v).length > 0, { message: 'Nothing to update' }),
       request.body,
@@ -254,6 +256,7 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
         ...(body.layoutId !== undefined ? { layout_id: body.layoutId } : {}),
         ...(body.scheduleId !== undefined ? { schedule_id: body.scheduleId } : {}),
         ...(body.orientation !== undefined ? { orientation: body.orientation } : {}),
+        ...(body.timezone !== undefined ? { timezone: body.timezone } : {}),
         ...(body.wall !== undefined
           ? { wall: body.wall === null ? null : JSON.stringify(body.wall) }
           : {}),

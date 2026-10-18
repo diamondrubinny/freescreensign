@@ -435,6 +435,8 @@ export const he = {
     playlist: 'פלייליסט',
     noPlaylist: 'ללא פלייליסט',
     orientation: 'כיוון מסך',
+    timezone: 'אזור זמן',
+    timezoneHint: 'לפי השעון הזה המסך מפעיל תזמון וחלונות זמן של פריטים.',
     orientations: {
       landscape: 'לרוחב',
       portrait: 'לאורך',

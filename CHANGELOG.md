@@ -13,6 +13,8 @@ All notable changes to Rubinny. The format follows
   and time zone, so it works offline; an item whose last date has passed is no longer sent to
   screens. The playlist editor shows each window in words ("Scheduled: ...", "Ended") and
   edits it with labelled fields. Needs the 0.5 player (older players show every item).
+- A screen's time zone can be chosen in "Edit screen" (it was fixed to Asia/Jerusalem).
+  Schedules and time windows follow it; the screen updates at once.
 
 ## [0.4.1] - 2026-10-18
 

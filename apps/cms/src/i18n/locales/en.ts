@@ -454,6 +454,8 @@ export const en: Messages = {
     playlist: 'Playlist',
     noPlaylist: 'No playlist',
     orientation: 'Orientation',
+    timezone: 'Time zone',
+    timezoneHint: 'The clock this screen uses for schedules and item time windows.',
     orientations: {
       landscape: 'Landscape',
       portrait: 'Portrait',

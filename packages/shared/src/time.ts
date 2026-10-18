@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /** Offset (ms) of `timeZone` from UTC at the instant `utcMs`. */
 function zoneOffset(utcMs: number, timeZone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -50,4 +52,35 @@ export function splitDuration(ms: number): {
     minutes: Math.floor((total % 3600) / 60),
     seconds: total % 60,
   };
+}
+
+/** Whether the runtime knows this IANA time zone ("Asia/Jerusalem", "UTC"). */
+export function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** A screen's time zone, stored in its canonical spelling ("asia/jerusalem" → "Asia/Jerusalem"). */
+export const timeZoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .refine(isTimeZone, { message: 'Unknown time zone' })
+  .transform(
+    (value) => new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone,
+  );
+
+/** The time zones to offer in a list (the runtime's list, or a short fallback). */
+export function timeZoneOptions(): string[] {
+  // Missing in browsers before 2022.
+  const zones =
+    'supportedValuesOf' in Intl
+      ? Intl.supportedValuesOf('timeZone')
+      : ['Asia/Jerusalem', 'Europe/London'];
+  return zones.includes('UTC') ? zones : [...zones, 'UTC'];
 }

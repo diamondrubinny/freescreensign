@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
-import { CLOCK_WARNING_MS, WALL_LIMITS, hasRole } from '@rubinny/shared';
+import { CLOCK_WARNING_MS, WALL_LIMITS, hasRole, timeZoneOptions } from '@rubinny/shared';
 import { del, get, patch, post } from '../api/client';
 import { useSession } from '../api/session';
 import type {
@@ -233,6 +233,7 @@ export function ScreensPage() {
       layoutId: string | null;
       scheduleId: string | null;
       orientation: Orientation;
+      timezone: string;
       wall: ScreenWall | null;
     }) => patch(`/api/v1/orgs/${orgId}/screens/${id}`, body),
     onSuccess: async () => {
@@ -467,6 +468,7 @@ export function ScreensPage() {
                 layoutId: value(data, 'layoutId') || null,
                 scheduleId: value(data, 'scheduleId') || null,
                 orientation: value(data, 'orientation') as Orientation,
+                timezone: value(data, 'timezone'),
                 wall: readWall(data),
               });
             }}
@@ -520,6 +522,40 @@ export function ScreensPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="edit-screen-timezone" className="font-medium">
+                {t('screens.timezone')}
+              </label>
+              <select
+                id="edit-screen-timezone"
+                name="timezone"
+                dir="ltr"
+                defaultValue={editing.timezone}
+                aria-describedby={`edit-screen-timezone-hint${editErrors.fields.timezone ? ' edit-screen-timezone-error' : ''}`}
+                aria-invalid={editErrors.fields.timezone ? true : undefined}
+                className="rounded-md border border-gray-500 bg-white px-3 py-2 dark:bg-gray-900"
+              >
+                {[...new Set([editing.timezone, ...timeZoneOptions()])].map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </select>
+              <p
+                id="edit-screen-timezone-hint"
+                className="text-sm text-gray-700 dark:text-gray-300"
+              >
+                {t('screens.timezoneHint')}
+              </p>
+              {editErrors.fields.timezone && (
+                <p
+                  id="edit-screen-timezone-error"
+                  className="text-sm font-medium text-red-800 dark:text-red-300"
+                >
+                  {editErrors.fields.timezone}
+                </p>
+              )}
             </div>
             <WallFields wall={editing.wall} errors={editErrors.fields} />
             <div className="flex flex-wrap justify-end gap-2">
