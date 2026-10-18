@@ -10,6 +10,7 @@ import type {
   Orientation,
   PlaylistSummary,
   ScheduleSummary,
+  ScreenGroup,
   ScreenItem,
   ScreenWall,
 } from '../api/types';
@@ -24,6 +25,8 @@ import { StatusPill, linkClass } from '../components/ui';
 import { formatDateTime } from '../lib/format';
 import { useFormErrors } from '../lib/use-form-errors';
 import { TableRegion } from '../components/TableRegion';
+import { ContentSelect } from './screens/ContentSelect';
+import { ScreenGroupsSection } from './screens/ScreenGroupsSection';
 
 const ORIENTATIONS: Orientation[] = [
   'landscape',
@@ -31,51 +34,6 @@ const ORIENTATIONS: Orientation[] = [
   'landscape-flipped',
   'portrait-flipped',
 ];
-
-function ContentSelect({
-  id,
-  name,
-  label,
-  emptyLabel,
-  hint,
-  options,
-  defaultValue,
-}: {
-  id: string;
-  name: string;
-  label: string;
-  emptyLabel: string;
-  hint?: string;
-  options: { id: string; name: string }[];
-  defaultValue: string | null;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="font-medium">
-        {label}
-      </label>
-      {hint && (
-        <p id={`${id}-hint`} className="text-sm text-gray-700 dark:text-gray-300">
-          {hint}
-        </p>
-      )}
-      <select
-        id={id}
-        name={name}
-        defaultValue={defaultValue ?? ''}
-        aria-describedby={hint ? `${id}-hint` : undefined}
-        className="rounded-md border border-gray-500 bg-white px-3 py-2 dark:bg-gray-900"
-      >
-        <option value="">{emptyLabel}</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
 
 /** The wall fields of the edit form; cells are 1-based for people, 0-based in the API. */
 function readWall(data: FormData): ScreenWall | null {
@@ -221,6 +179,14 @@ export function ScreensPage() {
       post(`/api/v1/orgs/${orgId}/screens`, body),
     onSuccess: refresh,
   });
+  const groups = useQuery({
+    queryKey: ['screen-groups', orgId],
+    queryFn: () => get<{ groups: ScreenGroup[] }>(`/api/v1/orgs/${orgId}/screen-groups`),
+  });
+  const [groupFilter, setGroupFilter] = useState('');
+  const shown = (screens.data?.screens ?? []).filter(
+    (screen) => !groupFilter || (screen.groupIds ?? []).includes(groupFilter),
+  );
   const [editing, setEditing] = useState<ScreenItem | null>(null);
   const update = useMutation({
     mutationFn: ({
@@ -323,6 +289,28 @@ export function ScreensPage() {
       {screens.data?.screens.length === 0 && <p>{t('screens.empty')}</p>}
       {screens.data && screens.data.screens.length > 0 && (
         <>
+          {(groups.data?.groups.length ?? 0) > 0 && (
+            <div className="mb-3 flex flex-col gap-1">
+              <label htmlFor="screens-group-filter" className="font-medium">
+                {t('screenGroups.filter')}
+              </label>
+              <select
+                id="screens-group-filter"
+                value={groupFilter}
+                onChange={(event) => {
+                  setGroupFilter(event.target.value);
+                }}
+                className="max-w-xs rounded-md border border-gray-500 bg-white px-3 py-2 dark:bg-gray-900"
+              >
+                <option value="">{t('screenGroups.allScreens')}</option>
+                {groups.data?.groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <TableRegion label={t('screens.title')}>
             <table className="data-table">
               <caption className="sr-only">{t('screens.title')}</caption>
@@ -348,7 +336,7 @@ export function ScreensPage() {
                 </tr>
               </thead>
               <tbody>
-                {screens.data.screens.map((screen) => (
+                {shown.map((screen) => (
                   <tr key={screen.id}>
                     <th scope="row" className="text-start font-semibold" dir="auto">
                       <Link to={`/orgs/${orgId}/screens/${screen.id}`} className={linkClass}>
@@ -447,6 +435,18 @@ export function ScreensPage() {
             </div>
           )}
         </>
+      )}
+
+      {screens.data && (
+        <ScreenGroupsSection
+          orgId={orgId}
+          screens={screens.data.screens}
+          canEdit={canEdit}
+          playlists={playlists.data?.playlists ?? []}
+          layouts={layouts.data?.layouts ?? []}
+          schedules={schedules.data?.schedules ?? []}
+          onContentChanged={refresh}
+        />
       )}
 
       <Dialog

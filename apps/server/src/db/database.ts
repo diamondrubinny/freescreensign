@@ -19,6 +19,7 @@ import * as m0015 from './migrations/0015_touch.js';
 import * as m0016 from './migrations/0016_video_wall.js';
 import * as m0017 from './migrations/0017_ai.js';
 import * as m0018 from './migrations/0018_item_windows.js';
+import * as m0019 from './migrations/0019_screen_groups.js';
 
 export type Db = Kysely<Database>;
 
@@ -58,6 +59,7 @@ export const MIGRATIONS: readonly (readonly [name: string, migration: Migration]
   ['0016_video_wall', m0016],
   ['0017_ai', m0017],
   ['0018_item_windows', m0018],
+  ['0019_screen_groups', m0019],
 ];
 
 /**

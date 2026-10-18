@@ -102,7 +102,7 @@ diff -u "$TMP/storage.before" "$TMP/storage.after" || fail "media differs after 
 [ "$(psql_value "SELECT pg_has_role(current_user, 'rubinny_tenant', 'MEMBER')
   AND has_table_privilege('rubinny_tenant', 'widgets', 'SELECT')
   AND (SELECT count(*) FROM pg_policies
-         WHERE schemaname = current_schema() AND policyname = 'tenant_isolation') = 18;")" = t ] ||
+         WHERE schemaname = current_schema() AND policyname = 'tenant_isolation') = 20;")" = t ] ||
   fail "row-level security is not complete after the restore"
 ok "database, media and settings are identical after the restore; the stack is healthy"
 rm -f .env.before-restore-*

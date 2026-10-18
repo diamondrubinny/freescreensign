@@ -88,6 +88,11 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
     const player = new Client(h.app, '203.0.113.20');
     const start = (await player.post('/player/v1/pair/start')).json<{ code: string }>();
     ids.screenId = await created('/screens', { code: start.code, name: 'A screen' }, 'screen');
+    ids.groupId = await created(
+      '/screen-groups',
+      { name: 'A group', screenIds: [ids.screenId] },
+      'group',
+    );
     ids.alertId = await created(
       '/alerts',
       { style: 'notice', title: 'A notice', durationMinutes: 60 },
@@ -137,6 +142,8 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
     'POST /layouts/:layoutId/duplicate': { name: 'copy' },
     'PATCH /schedules/:scheduleId': { name: 'hacked' },
     'PATCH /screens/:screenId': { name: 'hacked' },
+    'PATCH /screen-groups/:groupId': { name: 'hacked' },
+    'PUT /screen-groups/:groupId/content': { playlistId: null },
     'PATCH /members/:userId': { role: 'VIEWER' },
     'PATCH /media/:mediaId': { name: 'hacked' },
   };
@@ -156,8 +163,8 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
       if (resourceParams.length === 0 || resourceParams.some((p) => SHARED.has(p))) continue;
       templates.add(`${route.method} ${route.url.slice('/api/v1/orgs/:orgId'.length)}`);
     }
-    // 27 without object storage (the media routes are then not registered).
-    expect(templates.size).toBeGreaterThanOrEqual(27);
+    // 30 without object storage (the media routes are then not registered).
+    expect(templates.size).toBeGreaterThanOrEqual(30);
 
     const wrong: string[] = [];
     let attempts = 0;
@@ -201,6 +208,9 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
     });
     const screens = (await ownerA.get(inA('/screens'))).json<{ screens: { name: string }[] }>();
     expect(screens.screens.map((s) => s.name)).toEqual(['A screen']);
+    expect((await ownerA.get(inA('/screen-groups'))).json()).toEqual({
+      groups: [{ id: ids.groupId, name: 'A group', screenIds: [ids.screenId] }],
+    });
     const members = await h.db
       .selectFrom('memberships')
       .select('role')

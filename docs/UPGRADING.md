@@ -32,8 +32,8 @@ release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
 ## 0.4 → 0.5 (in development)
 
-- **Nothing to do for most installations:** one migration (time windows of playlist items)
-  runs when the server starts.
+- **Nothing to do for most installations:** two migrations (time windows of playlist items,
+  screen groups with row-level security) run when the server starts.
 - **Time windows need the 0.5 player.** Web players update when the page reloads; the desktop
   and Android apps load the player from the server. A player before 0.5 ignores windows and
   shows every item, except items whose last date has passed (the server leaves those out).

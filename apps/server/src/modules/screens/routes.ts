@@ -146,6 +146,11 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('screens.org_id', '=', org.id)
       .orderBy('screens.name')
       .execute();
+    const members = await ctx.db
+      .selectFrom('screen_group_members')
+      .select(['group_id', 'screen_id'])
+      .where('org_id', '=', org.id)
+      .execute();
     return {
       screens: rows.map(
         ({
@@ -153,7 +158,10 @@ export function screenRoutes(app: FastifyInstance, ctx: AppContext) {
           layout_name: layoutName,
           schedule_name: scheduleName,
           ...screen
-        }) => screenDto(screen, playlistName, layoutName, scheduleName),
+        }) => ({
+          ...screenDto(screen, playlistName, layoutName, scheduleName),
+          groupIds: members.filter((m) => m.screen_id === screen.id).map((m) => m.group_id),
+        }),
       ),
     };
   });

@@ -593,6 +593,28 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   await back.focus();
   await player.keyboard.press('Enter');
   await expect(open).toBeVisible({ timeout: 10_000 });
+
+  // A screen group: one assignment gives every screen in it the same layout.
+  await openPage(page, 'מסכים');
+  const groupsRegion = page.getByRole('region', { name: 'קבוצות מסכים' });
+  await groupsRegion.getByRole('button', { name: 'קבוצה חדשה' }).click();
+  const groupDialog = page.getByRole('dialog', { name: 'קבוצה חדשה' });
+  await groupDialog.getByLabel(/שם הקבוצה/).fill('קומה 2');
+  await groupDialog
+    .getByRole('group', { name: 'המסכים בקבוצה' })
+    .getByRole('checkbox', { name: 'מסך אירועים' })
+    .check();
+  await expectAccessible(page, 'screen group dialog');
+  await groupDialog.getByRole('button', { name: 'שמירת הקבוצה' }).click();
+  await expect(groupsRegion.getByText('מסך אחד: מסך אירועים')).toBeVisible();
+  await groupsRegion.getByRole('button', { name: /שיוך תוכן\s*קומה 2/ }).click();
+  const assignDialog = page.getByRole('dialog', { name: 'שיוך תוכן לקבוצה: קומה 2' });
+  await assignDialog.getByLabel('תבנית תצוגה').selectOption({ label: 'לובי ראשי' });
+  await assignDialog.getByRole('button', { name: 'שיוך לכל המסכים' }).click();
+  await expect(page.getByText('התוכן שויך למסך אחד, והוא מתעדכן.')).toBeVisible();
+  await expect(page.getByRole('row', { name: /מסך אירועים/ })).toContainText('לובי ראשי');
+  await expect(player.locator('.w-clock-time')).toHaveText(/^\d{2}:\d{2}$/, { timeout: 20_000 });
+  await expect(player.locator('.zone')).toHaveCount(2);
   await device.close();
 });
 

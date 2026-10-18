@@ -26,6 +26,7 @@ const KINDS = {
   layout: { table: 'layouts', param: 'layoutId' },
   schedule: { table: 'schedules', param: 'scheduleId' },
   screen: { table: 'screens', param: 'screenId' },
+  screenGroup: { table: 'screen_groups', param: 'groupId' },
   media: { table: 'media', param: 'mediaId' },
 } as const;
 

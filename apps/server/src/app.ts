@@ -29,6 +29,7 @@ import { mediaRoutes } from './modules/media/routes.js';
 import websocket from '@fastify/websocket';
 import { playerRoutes } from './modules/player/routes.js';
 import { playlistRoutes } from './modules/playlists/routes.js';
+import { screenGroupRoutes } from './modules/screens/groups.js';
 import { screenRoutes } from './modules/screens/routes.js';
 import { setupRoutes } from './modules/setup/routes.js';
 import { layoutRoutes } from './modules/layouts/routes.js';
@@ -220,6 +221,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     await app.register(websocket, { options: { maxPayload: 4096 } });
     playerRoutes(app, ctx);
     screenRoutes(app, ctx);
+    screenGroupRoutes(app, ctx);
     playlistRoutes(app, ctx);
     widgetRoutes(app, ctx);
     layoutRoutes(app, ctx);

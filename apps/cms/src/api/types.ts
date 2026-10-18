@@ -131,6 +131,14 @@ export interface ScreenItem {
   clockOffsetMs: number | null;
   /** Place in a video wall (0-based cell), or null. */
   wall: ScreenWall | null;
+  /** The groups the screen is in (in the list of screens). */
+  groupIds?: string[];
+}
+
+export interface ScreenGroup {
+  id: string;
+  name: string;
+  screenIds: string[];
 }
 
 export interface ScreenWall {

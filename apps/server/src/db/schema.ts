@@ -210,6 +210,20 @@ export interface LayoutZonesTable {
 
 export type ScreenOrientation = 'landscape' | 'portrait' | 'landscape-flipped' | 'portrait-flipped';
 
+export interface ScreenGroupsTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface ScreenGroupMembersTable {
+  org_id: string;
+  group_id: string;
+  screen_id: string;
+}
+
 export interface ScreensTable {
   id: Generated<string>;
   org_id: string;
@@ -365,6 +379,8 @@ export interface Database {
   playlists: PlaylistsTable;
   playlist_items: PlaylistItemsTable;
   screens: ScreensTable;
+  screen_groups: ScreenGroupsTable;
+  screen_group_members: ScreenGroupMembersTable;
   pairing_codes: PairingCodesTable;
   widgets: WidgetsTable;
   layouts: LayoutsTable;
