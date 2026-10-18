@@ -1,6 +1,6 @@
 {
   "name": "@rubinny/shared",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Shared schemas and types for Rubinny (manifest spec, pairing, roles).",
   "license": "MIT",
   "type": "module",

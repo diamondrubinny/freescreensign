@@ -1,6 +1,6 @@
 {
   "name": "@rubinny/server",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "private": true,
   "description": "Rubinny API and realtime server.",
   "license": "AGPL-3.0-only",

@@ -6,6 +6,11 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-18
+
+Time windows for playlist items, screen groups and a time zone per screen.
+Upgrading from 0.4: see [docs/UPGRADING.md](docs/UPGRADING.md#04--05) (usually nothing to do).
+
 ### Added
 
 - Time windows for playlist items: each item can be limited to dates, days of the week and
@@ -179,6 +184,7 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
+[0.5.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.5.0
 [0.4.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.4.1
 [0.4.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.4.0
 [0.3.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.3.0

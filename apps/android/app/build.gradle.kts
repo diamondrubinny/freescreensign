@@ -12,8 +12,8 @@ android {
         minSdk = 26
         // Tested behavior: Android 16. Raise after testing on Android 17.
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.4.1"
+        versionCode = 6
+        versionName = "0.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
