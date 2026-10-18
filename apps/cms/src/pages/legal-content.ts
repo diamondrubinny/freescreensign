@@ -135,6 +135,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
           heading: 'עוגיות שבשימוש',
           paragraphs: [
             '\u200E__Host-rubinny_session — עוגייה חיונית, מאובטחת (HttpOnly, Secure, SameSite=Lax). היא שומרת על החיבור שלכם, ותוקפה עד 30 יום. אינה משותפת עם צד שלישי ואינה דורשת הסכמה.',
+            '\u200E__Secure-rubinny_oidc — עוגייה חיונית, מאובטחת (HttpOnly, Secure, SameSite=Lax), רק בהתחברות דרך ספק חיצוני (SSO). היא מוודאת שהחזרה מספק ההתחברות שייכת לדפדפן שלכם, ונמחקת מיד בסיום ההתחברות (לכל היותר 10 דקות). אינה דורשת הסכמה.',
           ],
         },
         {
@@ -294,6 +295,7 @@ export const LEGAL: Record<'he' | 'en', Docs> = {
           heading: 'Cookies we use',
           paragraphs: [
             '__Host-rubinny_session — essential, secure (HttpOnly, Secure, SameSite=Lax). It keeps you signed in and lasts up to 30 days. It is not shared with third parties and needs no consent.',
+            '__Secure-rubinny_oidc — essential, secure (HttpOnly, Secure, SameSite=Lax), only when signing in with an external provider (SSO). It makes sure the return from the provider belongs to your browser, and is deleted as soon as sign-in ends (10 minutes at most). It needs no consent.',
           ],
         },
         {
