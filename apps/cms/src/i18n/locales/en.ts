@@ -249,7 +249,7 @@ export const en: Messages = {
       'claude-haiku-5-5': 'Claude Haiku 5.5 (fast, low cost)',
     },
     consent: 'I have read the explanation and agree that texts are sent to the provider',
-    save: 'Save',
+    save: 'Save AI settings',
     saved: 'Writing suggestions are on.',
     disable: 'Turn off and delete the key',
     disableConfirm: 'Turn off writing suggestions and delete the key from the server?',

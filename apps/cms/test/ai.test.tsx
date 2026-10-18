@@ -83,6 +83,8 @@ describe('AI writing suggestions', () => {
       { timeout: 5000 },
     );
     expect(within(section).getByText('כבוי')).toBeVisible();
+    // The organization form keeps the only plain "שמירה" button on the page.
+    expect(screen.getAllByRole('button', { name: 'שמירה' })).toHaveLength(1);
     expect(within(section).getByText(/נשלח ל-Anthropic/)).toBeVisible();
     const key = within(section).getByLabelText(/מפתח API של Anthropic/);
     expect(key).toHaveAttribute('type', 'password');
@@ -96,7 +98,7 @@ describe('AI writing suggestions', () => {
       within(section).getByLabelText('מודל'),
       'Claude Haiku 5.5 (מהיר וזול)',
     );
-    await user.click(within(section).getByRole('button', { name: 'שמירה' }));
+    await user.click(within(section).getByRole('button', { name: 'שמירת הגדרות ה-AI' }));
     expect(
       await within(section).findByText('המפתח לא התקבל אצל הספק. בדקו אותו ונסו שוב.'),
     ).toBeVisible();
@@ -104,7 +106,7 @@ describe('AI writing suggestions', () => {
 
     await user.clear(key);
     await user.type(key, 'sk-ant-good-0000000000WXYZ');
-    await user.click(within(section).getByRole('button', { name: 'שמירה' }));
+    await user.click(within(section).getByRole('button', { name: 'שמירת הגדרות ה-AI' }));
     expect(await within(section).findByText('פעיל · מפתח שמסתיים ב-WXYZ')).toBeVisible();
     expect(calls.filter((c) => c.key.startsWith('PUT')).at(-1)?.body).toEqual({
       apiKey: 'sk-ant-good-0000000000WXYZ',
