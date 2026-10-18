@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   Client,
+  STRONG_PASSWORD,
   createHarness,
   insertOrg,
   insertUser,
@@ -281,6 +282,72 @@ describe.runIf(integrationEnabled)('content approval', () => {
     });
     const empty = await editor.post(api('/screens'), { code, name: 'Gym' });
     expect(empty.statusCode).toBe(201);
+  });
+
+  it('withdraws the pending changes of a member who leaves, and lists them in the export', async () => {
+    const { widget } = await content();
+    await admin.patch(api(), { requireApproval: true });
+    const ask = async (client: Client, text: string) =>
+      (await client.patch(api(`/widgets/${widget.id}`), { config: { text } })).json<{
+        approval: Approval;
+      }>().approval;
+    const held = await ask(editor, 'Held');
+    const rejected = await ask(editor, 'Rejected');
+    await admin.post(api(`/approvals/${rejected.id}/reject`), { note: 'Not now' });
+
+    // Right of access: the requests the editor made, without the change itself.
+    const exported = (await editor.get('/api/v1/me/export')).json<{
+      approvals: Record<string, unknown>[];
+    }>().approvals;
+    expect(exported).toHaveLength(2);
+    expect(exported.find((a) => a.status === 'rejected')).toMatchObject({
+      org_id: orgId,
+      note: 'Not now',
+      summary: { kind: 'widget', action: 'update' },
+      requestedByMe: true,
+      decidedByMe: false,
+    });
+    expect(JSON.stringify(exported)).not.toContain('Held');
+    const adminExport = (await admin.get('/api/v1/me/export')).json<{
+      approvals: { decidedByMe: boolean; requestedByMe: boolean }[];
+    }>().approvals;
+    expect(adminExport).toEqual([
+      expect.objectContaining({ decidedByMe: true, requestedByMe: false }),
+    ]);
+
+    // The admin removes the editor: the pending change can no longer be approved.
+    const editorId = (
+      await h.db
+        .selectFrom('users')
+        .select('id')
+        .where('email', '=', 'teacher@school.example')
+        .executeTakeFirstOrThrow()
+    ).id;
+    expect((await admin.delete(api(`/members/${editorId}`))).statusCode).toBe(204);
+    expect((await admin.get(api('/approvals'))).json()).toEqual({ approvals: [] });
+    expect((await admin.post(api(`/approvals/${held.id}/approve`))).statusCode).toBe(409);
+    expect(await widgetText(widget.id)).toBe('Welcome');
+    const statuses = await h.db
+      .selectFrom('approval_requests')
+      .select(['id', 'status'])
+      .orderBy('requested_at')
+      .execute();
+    expect(statuses).toEqual([
+      { id: held.id, status: 'withdrawn' },
+      { id: rejected.id, status: 'rejected' },
+    ]);
+  });
+
+  it('withdraws the pending changes of a deleted account', async () => {
+    const { widget } = await content();
+    await admin.patch(api(), { requireApproval: true });
+    const { approval } = (
+      await editor.patch(api(`/widgets/${widget.id}`), { config: { text: 'Later' } })
+    ).json<{ approval: Approval }>();
+    expect((await editor.delete('/api/v1/me', { password: STRONG_PASSWORD })).statusCode).toBe(204);
+    expect((await admin.get(api('/approvals'))).json()).toEqual({ approvals: [] });
+    expect((await admin.post(api(`/approvals/${approval.id}/approve`))).statusCode).toBe(409);
+    expect(await widgetText(widget.id)).toBe('Welcome');
   });
 
   it('keeps organizations apart', async () => {

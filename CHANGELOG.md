@@ -6,6 +6,15 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Content approval: when a member leaves the organization, is removed or deletes their
+  account, their pending requests are withdrawn, so they cannot be approved by mistake later.
+- "Download my data" now includes the approval requests you made or decided (summary,
+  status, dates and note; not the change itself).
+- The cookie policy draft lists the SSO sign-in cookie (`__Secure-rubinny_oidc`, essential,
+  deleted when sign-in ends).
+
 ## [0.4.0] - 2026-10-18
 
 Touch screens, video walls and writing suggestions with the organization's own AI key.

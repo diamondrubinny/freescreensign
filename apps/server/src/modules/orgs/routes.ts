@@ -224,13 +224,21 @@ export function orgRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('org_id', '=', org.id)
       .where('user_id', '=', userId)
       .execute();
+    // A former member's pending changes are not approved later by mistake.
+    const withdrawn = await ctx.db
+      .updateTable('approval_requests')
+      .set({ status: 'withdrawn', decided_by: user.id, decided_at: new Date() })
+      .where('org_id', '=', org.id)
+      .where('requested_by', '=', userId)
+      .where('status', '=', 'pending')
+      .executeTakeFirst();
     await audit(ctx.db, {
       action: 'member.removed',
       orgId: org.id,
       actorUserId: user.id,
       targetType: 'user',
       targetId: userId,
-      meta: { self },
+      meta: { self, approvalsWithdrawn: Number(withdrawn.numUpdatedRows) },
     });
     return reply.status(204).send();
   });

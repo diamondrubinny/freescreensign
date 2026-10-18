@@ -129,7 +129,7 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
   /** Right of access / data portability: everything we hold about the caller. */
   app.get('/api/v1/me/export', async (request, reply) => {
     const { user } = requireAuth(request);
-    const [memberships, sessions, events, identities] = await Promise.all([
+    const [memberships, sessions, events, identities, approvals] = await Promise.all([
       listMemberships(ctx, user.id),
       ctx.db
         .selectFrom('sessions')
@@ -148,6 +148,23 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
         .select(['issuer', 'subject', 'email', 'created_at', 'last_used_at'])
         .where('user_id', '=', user.id)
         .execute(),
+      // Changes the caller asked for or decided (the change itself is organization content).
+      ctx.db
+        .selectFrom('approval_requests')
+        .select([
+          'org_id',
+          'summary',
+          'status',
+          'requested_by',
+          'requested_at',
+          'decided_by',
+          'decided_at',
+          'note',
+        ])
+        .where((eb) => eb.or([eb('requested_by', '=', user.id), eb('decided_by', '=', user.id)]))
+        .orderBy('requested_at', 'desc')
+        .limit(10_000)
+        .execute(),
     ]);
     await audit(ctx.db, { action: 'user.exported', actorUserId: user.id });
     void reply.header('content-disposition', 'attachment; filename="rubinny-my-data.json"');
@@ -157,6 +174,11 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
       memberships,
       sessions,
       identities,
+      approvals: approvals.map(({ requested_by, decided_by, ...row }) => ({
+        ...row,
+        requestedByMe: requested_by === user.id,
+        decidedByMe: decided_by === user.id,
+      })),
       activity: events,
     };
   });
@@ -229,6 +251,12 @@ export function meRoutes(app: FastifyInstance, ctx: AppContext) {
           .where('id', 'in', soloOrgIds)
           .execute();
       }
+      await trx
+        .updateTable('approval_requests')
+        .set({ status: 'withdrawn', decided_by: user.id, decided_at: new Date() })
+        .where('requested_by', '=', user.id)
+        .where('status', '=', 'pending')
+        .execute();
       await trx.deleteFrom('memberships').where('user_id', '=', user.id).execute();
       await trx.deleteFrom('sessions').where('user_id', '=', user.id).execute();
       await trx.deleteFrom('user_tokens').where('user_id', '=', user.id).execute();
