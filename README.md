@@ -5,7 +5,7 @@ screens from one web dashboard — self-hosted, offline-first, with Hebrew/RTL a
 built in. Runs on anything with a modern browser: Raspberry Pi, Windows, Linux, Android /
 Android TV / Fire TV, and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
 
-[עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Sponsor](#support-the-project)
 
 > **Status: early development** — phase 8 of 9 complete (media, playlists, screens, offline
 > player, layouts, widgets, a free-form designer, a free image library, scheduling, operations,
@@ -158,6 +158,25 @@ pnpm check      # format, lint, typecheck, tests
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for running the server locally, integration tests and
 the end-to-end/accessibility suite.
+
+## Support the project
+
+Rubinny is free and stays free: every feature, no paid edition. Sponsorship pays for the time
+that goes into it: development, security fixes, accessibility work and the Hebrew interface.
+
+[![Sponsor Rubinny on GitHub](https://img.shields.io/badge/Sponsor-Rubinny-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/diamondrubinny)
+
+| Tier         | Per month | You get                                                       |
+| ------------ | --------: | ------------------------------------------------------------- |
+| Supporter    |        $5 | Our thanks                                                    |
+| Backer       |       $25 | Your name in the sponsors list below                          |
+| Organization |      $100 | Your logo in the sponsors list below                          |
+| Partner      |      $500 | A large logo at the top of the list, and a say in the roadmap |
+
+One-time amounts are welcome too. Sponsorship is a donation to the project: it does not buy
+support, a warranty or a service level, and the license stays the same for everyone.
+
+**Sponsors:** be the first!
 
 ## License
 
