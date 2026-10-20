@@ -1,10 +1,28 @@
 import { z } from 'zod';
 
+let hourCycleSupported: boolean | undefined;
+
+/**
+ * Options for a 0-23 hour. Engines before Chromium 73 (Samsung screens of 2020, LG webOS
+ * Signage 6) ignore `hourCycle` and would give a 12-hour clock: they get `hour12: false`,
+ * which may print "24" at midnight, so read hours with `hourOf`. Newer engines get only
+ * `hourCycle`, because `hour12` would override it.
+ */
+export function hour23(): Intl.DateTimeFormatOptions {
+  hourCycleSupported ??=
+    new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23' }).resolvedOptions()
+      .hourCycle === 'h23';
+  return hourCycleSupported ? { hourCycle: 'h23' } : { hour12: false };
+}
+
+/** The hour (0-23) of formatted parts made with `hour23()`. */
+export const hourOf = (value: string): number => Number(value) % 24;
+
 /** Offset (ms) of `timeZone` from UTC at the instant `utcMs`. */
 function zoneOffset(utcMs: number, timeZone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
-    hourCycle: 'h23',
+    ...hour23(),
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -17,7 +35,7 @@ function zoneOffset(utcMs: number, timeZone: string): number {
     get('year'),
     get('month') - 1,
     get('day'),
-    get('hour'),
+    get('hour') % 24,
     get('minute'),
     get('second'),
   );

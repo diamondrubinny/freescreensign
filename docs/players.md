@@ -13,6 +13,7 @@ full screen and awake, recovering from crashes, and (where noted) remote screens
 | Windows / Linux PC, mini-PC       | [Desktop app](#desktop-app-windows-linux) |         ✓          |
 | Raspberry Pi 4 / 5                | [Raspberry Pi kiosk](#raspberry-pi)       |         —          |
 | Android 8.0+, Android TV, tablets | [Android app](#android-and-android-tv)    |         ✓          |
+| Samsung (2020+), LG webOS screens | [Samsung and LG](#samsung-and-lg-screens) |         —          |
 
 **Pairing is the same everywhere:** the screen shows a 6-character code; in the dashboard go to
 **Screens › Add screen** and enter it. The screen then keeps a device token and needs no
@@ -123,3 +124,56 @@ screen on, recovers from crashes, and can send a real screenshot to the dashboar
   and its data (the device token) is excluded from backups and device transfers.
 - **Debug build:** the APK from CI is signed with a debug key and allows inspecting the page
   over USB debugging. A signed release build for stores is not part of this phase.
+
+## Samsung and LG screens
+
+> **Not yet verified on a real screen.** The player is built and checked for the browser engine
+> of these screens, but every step below **requires verification against the official
+> documentation** of Samsung and LG and a test on a device. Please report what works.
+
+**Which screens:** the player needs Chromium 69 or newer.
+
+- **Samsung** (Tizen): 2020 models (Tizen 5.5) and newer, per Samsung's
+  [web engine table](https://developer.samsung.com/tv/develop/specifications/web-engine-specifications).
+- **LG** (webOS Signage): 6.0 and newer. LG publishes no engine table for signage; the version
+  comes from other vendors' notes.
+- **Older screens are not supported.** Their browser engine no longer gets security fixes;
+  use a [desktop app](#desktop-app-windows-linux) or [Android](#android-and-android-tv) box
+  instead.
+
+**Option 1, nothing to install (recommended for signage models):** many signage screens can
+open a web address on their own. Point it at `https://<your-domain>/player/`:
+
+- **Samsung:** the **URL Launcher** of the screen's menu.
+- **LG:** the screen's setting for a web address or "SI Server".
+
+The names and menus differ by model; see the screen's manual.
+
+**Option 2, the Rubinny loader app:** each release has two small packages. They contain a
+loader page only: it asks for the server address once and then opens your server's player.
+Updates of the player still come from your server.
+
+- `rubinny-tv-tizen-<version>-unsigned.wgt` (Samsung): **unsigned.** Samsung screens install
+  only apps signed with a certificate that names the device. Sign it with **Tizen Studio**
+  (Certificate Manager, a Samsung certificate with your screens' IDs), then install it with
+  Tizen Studio's Device Manager or the `tizen` command. You may need to change the package ID
+  in `config.xml` (`RbnyPlayer`) to one of your own.
+- `rubinny-tv-webos-<version>.ipk` (LG): install it with LG's
+  [`ares-install`](https://www.npmjs.com/package/@webos-tools/cli) on a screen in
+  **Developer Mode**, or the way your signage model installs apps.
+
+**Using the loader:**
+
+1. **First start:** enter your server address with the remote (a bare `signage.example.com`
+   works; only https is accepted), then **Save and start**.
+2. **Later starts:** the player opens after 10 seconds. Any key stops the countdown;
+   **Change server** goes back to the address.
+3. **Back** in the player returns to the loader page.
+
+**What the loader can't do (yet):** remote screenshots, turning the screen on and off on a
+schedule, and updating itself. Those need the vendors' own APIs and a device to test on.
+
+**Security and privacy:** the loader runs no code from the network itself, only opens your
+server's player; it keeps only the server address on the screen (the player keeps its device
+token, as on every device). Because the server is chosen on the screen, the app's network
+permissions allow any https address; the loader refuses anything else.

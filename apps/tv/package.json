@@ -1,0 +1,20 @@
+{
+  "name": "@rubinny/tv",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Rubinny loader apps for Samsung (Tizen) and LG (webOS) screens: ask for the server once, then open its web player.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit && node scripts/build.mjs",
+    "package": "node scripts/package.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "acorn": "8.19.0",
+    "esbuild": "0.28.2",
+    "jsdom": "29.1.1"
+  }
+}

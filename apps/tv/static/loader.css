@@ -1,0 +1,79 @@
+/* Loader of the TV apps; plain CSS for Chromium 69 (no min(), clamp() or :focus-visible). */
+:root {
+  color-scheme: dark;
+  font-family: system-ui, 'Segoe UI', Arial, sans-serif;
+  background: #0f172a;
+  color: #f8fafc;
+  /* Sized for a TV seen from a distance (1920×1080 or 1280×720 layout). */
+  font-size: 28px;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+main {
+  width: 80%;
+  max-width: 40rem;
+}
+h1 {
+  font-size: 2.2rem;
+  margin: 0 0 1rem;
+}
+h2 {
+  font-size: 1.4rem;
+  margin: 0 0 0.5rem;
+}
+.server {
+  margin: 1rem 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+label {
+  display: block;
+  font-weight: 600;
+  margin: 1.5rem 0 0.5rem;
+}
+input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1.1rem;
+  padding: 0.6rem;
+  border-radius: 0.4rem;
+  border: 3px solid #94a3b8;
+  background: #1e293b;
+  color: inherit;
+}
+.actions button {
+  margin-left: 1rem;
+}
+button {
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  padding: 0.6rem 1.4rem;
+  border: 3px solid transparent;
+  border-radius: 0.4rem;
+  background: #4f46e5;
+  color: #fff;
+  cursor: pointer;
+}
+/* A remote has no pointer: the focus ring is always shown, thick, and not by color alone. */
+input:focus,
+button:focus {
+  outline: 5px solid #fbbf24;
+  outline-offset: 4px;
+}
+.hint {
+  color: #cbd5e1;
+}
+.error {
+  color: #fca5a5;
+  font-weight: 600;
+  min-height: 1.5em;
+}
+[hidden] {
+  display: none !important;
+}

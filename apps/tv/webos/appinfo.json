@@ -1,0 +1,13 @@
+{
+  "id": "net.rubinny.player",
+  "version": "@VERSION@",
+  "vendor": "Rubinny",
+  "type": "web",
+  "main": "index.html",
+  "title": "Rubinny Player",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": false,
+  "requiredACG": []
+}

@@ -151,6 +151,9 @@ importers:
       '@types/qrcode':
         specifier: 1.5.6
         version: 1.5.6
+      acorn:
+        specifier: 8.19.0
+        version: 8.19.0
       jsdom:
         specifier: 29.1.1
         version: 29.1.1(@noble/hashes@2.4.0)
@@ -248,6 +251,18 @@ importers:
       ws:
         specifier: 8.22.0
         version: 8.22.0
+
+  apps/tv:
+    devDependencies:
+      acorn:
+        specifier: 8.19.0
+        version: 8.19.0
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+      jsdom:
+        specifier: 29.1.1
+        version: 29.1.1(@noble/hashes@2.4.0)
 
   packages/shared:
     dependencies:

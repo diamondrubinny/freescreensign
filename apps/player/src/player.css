@@ -1,3 +1,7 @@
+/*
+ * Runs on old TV engines too (Chromium 69, docs/phases/14-tizen-webos.md): every min(), max()
+ * and clamp() size has a plain fallback on the line before, which older engines keep.
+ */
 /* Full-screen, black, no cursor, no scrollbars. System fonts only (no network). */
 html,
 body,
@@ -115,11 +119,15 @@ body,
 .zone.touch > * {
   pointer-events: none;
 }
-.zone.touch:focus-visible {
+.zone.touch:focus {
   outline: none;
 }
-/* Drawn above the content (an inset shadow on the zone would be covered by it). */
-.zone.touch:focus-visible::after {
+/*
+ * Drawn above the content (an inset shadow on the zone would be covered by it). On any focus,
+ * then hidden for taps where :focus-visible exists: engines without it (Chromium < 86) drop
+ * that second rule and keep the ring for keyboards.
+ */
+.zone.touch:focus::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -128,6 +136,9 @@ body,
   box-shadow:
     inset 0 0 0 4px #ffffff,
     inset 0 0 0 8px #000000;
+}
+.zone.touch:focus:not(:focus-visible)::after {
+  content: none;
 }
 
 .layer {
@@ -180,8 +191,14 @@ body,
   gap: 1.5vh;
   padding: 4vw;
   text-align: center;
-  font-size: clamp(16px, 2.6vh, 40px);
+  font-size: 2.6vh;
   line-height: 1.5;
+}
+/* Apart from the rule above: the build tool merges a fallback in the same rule away here. */
+@supports (font-size: min(1px, 2px)) {
+  .message {
+    font-size: max(16px, min(2.6vh, 40px));
+  }
 }
 .message h1 {
   margin: 0;
@@ -194,7 +211,8 @@ body,
   border-radius: 3vh;
   background: rgb(255 255 255 / 0.05);
   box-shadow: 0 2vh 8vh rgb(0 0 0 / 0.45);
-  font-size: clamp(48px, 14vh, 220px);
+  font-size: 14vh;
+  font-size: max(48px, min(14vh, 220px));
   font-weight: 700;
   letter-spacing: 0.08em;
   font-family: ui-monospace, 'DejaVu Sans Mono', monospace;
@@ -206,7 +224,8 @@ body,
   display: flex;
   align-items: center;
   gap: 1.2vh;
-  font-size: clamp(16px, 3vh, 44px);
+  font-size: 3vh;
+  font-size: max(16px, min(3vh, 44px));
   font-weight: 700;
   letter-spacing: 0.02em;
   opacity: 0.92;
@@ -282,6 +301,7 @@ body,
 }
 .w-divider {
   width: 30%;
+  height: 2px;
   height: max(2px, calc(var(--zone-h, 200px) * 0.008));
   border-radius: 999px;
   background: currentColor;
@@ -299,17 +319,20 @@ body,
   line-height: 1.1;
 }
 .w-clock-time {
+  font-size: calc(var(--zone-h, 200px) * 0.34);
   font-size: min(calc(var(--zone-h, 200px) * 0.34), calc(var(--zone-w, 400px) * 0.22));
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .w-clock-date {
+  font-size: calc(var(--zone-h, 200px) * 0.085);
   font-size: min(calc(var(--zone-h, 200px) * 0.085), calc(var(--zone-w, 400px) * 0.06));
   font-weight: 500;
   opacity: 0.9;
 }
 .w-clock-hebrew {
+  font-size: calc(var(--zone-h, 200px) * 0.075);
   font-size: min(calc(var(--zone-h, 200px) * 0.075), calc(var(--zone-w, 400px) * 0.055));
   padding: 0.25em 0.9em;
   border-radius: 999px;
@@ -449,12 +472,14 @@ body,
   line-height: 0;
 }
 .w-qr-code {
+  width: calc(var(--zone-h, 200px) * 0.62);
   width: min(calc(var(--zone-h, 200px) * 0.62), calc(var(--zone-w, 200px) * 0.78));
   height: auto;
   aspect-ratio: 1;
 }
 .w-qr figcaption {
   max-width: 90%;
+  font-size: calc(var(--zone-h, 200px) * 0.075);
   font-size: min(calc(var(--zone-h, 200px) * 0.075), calc(var(--zone-w, 200px) * 0.08));
   font-weight: 700;
   text-align: center;
@@ -522,6 +547,7 @@ body,
   border-spacing: 0;
   table-layout: auto;
   /* Lines share the zone height (--rows is set by the widget). */
+  font-size: calc(var(--zone-h, 300px) * 0.42 / var(--rows, 9));
   font-size: min(
     calc(var(--zone-h, 300px) * 0.42 / var(--rows, 9)),
     calc(var(--zone-w, 400px) * 0.035)
@@ -591,6 +617,7 @@ body,
   justify-content: center;
   gap: calc(var(--zone-h, 300px) * 0.04);
   padding: calc(var(--zone-h, 300px) * 0.06) calc(var(--zone-w, 400px) * 0.06);
+  font-size: calc(var(--zone-h, 300px) * 0.065);
   font-size: min(calc(var(--zone-h, 300px) * 0.065), calc(var(--zone-w, 400px) * 0.05));
 }
 .w-weather-place {
@@ -641,11 +668,13 @@ body,
   text-align: center;
 }
 .w-countdown-title {
+  font-size: calc(var(--zone-h, 200px) * 0.11);
   font-size: min(calc(var(--zone-h, 200px) * 0.11), calc(var(--zone-w, 400px) * 0.06));
   font-weight: 700;
 }
 .w-countdown-units {
   display: flex;
+  gap: calc(var(--zone-h, 200px) * 0.05);
   gap: min(calc(var(--zone-h, 200px) * 0.05), calc(var(--zone-w, 400px) * 0.025));
 }
 .w-countdown-unit {
@@ -655,6 +684,7 @@ body,
   min-width: 2.6em;
   padding: 0.35em 0.4em 0.3em;
   border-radius: 0.35em;
+  font-size: calc(var(--zone-h, 200px) * 0.12);
   font-size: min(calc(var(--zone-h, 200px) * 0.12), calc(var(--zone-w, 400px) * 0.045));
   background: rgb(255 255 255 / 0.12);
 }
@@ -669,6 +699,7 @@ body,
   opacity: 0.8;
 }
 .w-countdown-done {
+  font-size: calc(var(--zone-h, 200px) * 0.16);
   font-size: min(calc(var(--zone-h, 200px) * 0.16), calc(var(--zone-w, 400px) * 0.07));
   font-weight: 800;
 }

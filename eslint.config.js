@@ -7,7 +7,15 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', '**/.turbo/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/release/**',
+      '**/coverage/**',
+      '**/node_modules/**',
+      '**/.turbo/**',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   {
@@ -50,7 +58,7 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.serviceworker } },
   },
   {
-    files: ['apps/player/**/*.ts'],
+    files: ['apps/player/**/*.ts', 'apps/tv/src/**/*.ts', 'apps/tv/test/**/*.ts'],
     languageOptions: { globals: { ...globals.browser } },
   },
   {

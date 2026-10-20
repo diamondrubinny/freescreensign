@@ -6,6 +6,21 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Samsung (Tizen, 2020 and newer) and LG (webOS Signage 6.0 and newer) screens: the player now
+  runs on Chromium 69, and each release carries small loader apps for both
+  (`rubinny-tv-tizen-<version>-unsigned.wgt`, which the operator signs, and
+  `rubinny-tv-webos-<version>.ipk`). The loader asks for the server address once (https only),
+  then opens the server's player; usable with a TV remote. Guide in
+  [docs/players.md](docs/players.md#samsung-and-lg-screens). Not yet verified on a real screen.
+
+### Changed
+
+- The player is built for Chromium 69 (it needed about Chromium 80): syntax is lowered, two
+  missing built-ins are added, and CSS sizes have fallbacks. CI checks the built player for
+  syntax and browser APIs that Chromium 69 lacks.
+
 ## [0.6.0] - 2026-10-20
 
 Time windows for playlist items, screen groups, a time zone per screen and a server status

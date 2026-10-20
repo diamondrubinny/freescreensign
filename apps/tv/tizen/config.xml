@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Rubinny loader for Samsung screens (Tizen web app). Packaged unsigned by
+  scripts/package.mjs; the operator signs it with their Samsung certificate (docs/players.md).
+  The server is chosen on the screen, so network access and navigation cannot be limited to it
+  here: the loader itself accepts https addresses only.
+  Requires verification on a device (docs/phases/14-tizen-webos.md).
+-->
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets"
+  id="https://github.com/diamondrubinny/freescreensign/tv" version="@VERSION@">
+  <!-- 2.3: Samsung's documented value for all TVs since 2015; the player needs a 2020 TV. -->
+  <tizen:application id="RbnyPlayer.Rubinny" package="RbnyPlayer" required_version="2.3" />
+  <tizen:profile name="tv-samsung" />
+  <name>Rubinny Player</name>
+  <icon src="icon.png" />
+  <content src="index.html" />
+  <access origin="*" subdomains="true" />
+  <tizen:allow-navigation>*</tizen:allow-navigation>
+  <tizen:privilege name="http://tizen.org/privilege/internet" />
+</widget>

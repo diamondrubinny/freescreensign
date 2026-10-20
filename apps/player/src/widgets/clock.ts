@@ -1,4 +1,4 @@
-import { clockConfigSchema, formatHebrewDate, type WidgetConfig } from '@rubinny/shared';
+import { clockConfigSchema, formatHebrewDate, hour23, type WidgetConfig } from '@rubinny/shared';
 import { defineWidget, el, every } from '@rubinny/widget-sdk';
 import { applyColors } from './theme';
 
@@ -18,7 +18,7 @@ function formatters(config: ClockConfig, timeZone: string) {
       hour: '2-digit',
       minute: '2-digit',
       ...(config.showSeconds ? { second: '2-digit' } : {}),
-      hourCycle: config.format === '24h' ? 'h23' : 'h12',
+      ...(config.format === '24h' ? hour23() : { hour12: true }),
     }),
     date: safe({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
     timeZone,
@@ -49,7 +49,8 @@ export const clockWidget = defineWidget<ClockConfig>({
     let lastDay = '';
     const update = () => {
       const now = ctx.now();
-      time.textContent = format.time.format(now);
+      // Older engines may print 24:05 for 00:05 (see hour23).
+      time.textContent = format.time.format(now).replace(/^24(?=\D)/, '00');
       const day = format.date.format(now);
       if (day !== lastDay) {
         lastDay = day;

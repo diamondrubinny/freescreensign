@@ -295,7 +295,7 @@ export class Player {
 
   /** The layout opened by the latest tap, if any; otherwise the scheduled one. */
   #currentLayout(manifest: ManifestV1): ManifestLayout | null {
-    const top = this.#touchStack.at(-1);
+    const top = this.#touchStack[this.#touchStack.length - 1];
     return (
       (top ? manifest.layouts.find((layout) => layout.id === top) : undefined) ??
       activeLayout(manifest, this.now())

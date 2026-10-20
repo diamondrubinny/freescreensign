@@ -3,7 +3,7 @@
 **Free & open-source digital signage.** Design content, build layouts, and run any number of
 screens from one web dashboard — self-hosted, offline-first, with Hebrew/RTL and accessibility
 built in. Runs on anything with a modern browser: Raspberry Pi, Windows, Linux, Android /
-Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
+Android TV / Fire TV, and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
@@ -21,7 +21,8 @@ Android TV / Fire TV, with Samsung Tizen and LG webOS planned.
   playing from a verified (sha256) local cache through network outages and reboots.
 - **Live updates** over WebSocket — changes reach screens in seconds.
 - **Players for every device** ([install guide](docs/players.md)): any browser, a desktop app
-  for Windows and Linux, a Raspberry Pi kiosk installer, and an Android / Android TV app. The
+  for Windows and Linux, a Raspberry Pi kiosk installer, an Android / Android TV app, and loader
+  apps for Samsung and LG screens. The
   desktop and Android apps start with the device, stay full screen, recover from crashes, and
   send **real remote screenshots** to the dashboard.
 - **Layouts with zones**: each zone plays its own playlist (e.g. video + clock + ticker).
@@ -135,6 +136,7 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `apps/player`         | Offline-first web player (PWA): pairing, verified media cache, zones, widgets, WebSocket        | AGPL-3.0 |
 | `apps/desktop`        | Desktop player app for Windows and Linux (Electron)                                             | AGPL-3.0 |
 | `apps/android`        | Android / Android TV player app (WebView)                                                       | AGPL-3.0 |
+| `apps/tv`             | Loader apps for Samsung (Tizen) and LG (webOS) screens                                          | AGPL-3.0 |
 | `packages/shared`     | Shared schemas: player manifest, layouts, widgets, designs, pairing codes, roles, Hebrew dates  | MIT      |
 | `packages/widget-sdk` | SDK for community widgets (the built-in widgets use it too)                                     | MIT      |
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |

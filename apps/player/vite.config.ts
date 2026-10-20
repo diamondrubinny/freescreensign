@@ -14,7 +14,7 @@ export default defineConfig({
     proxy: { '/player/v1': { target: 'http://127.0.0.1:3000', ws: true } },
   },
   build: {
-    target: 'es2020',
+    target: 'chrome69',
     sourcemap: false,
     modulePreload: { polyfill: false },
     assetsInlineLimit: 0,

@@ -1,3 +1,4 @@
+import './legacy';
 import { detectNative } from './native';
 import { PlayLog, localPlayLogStorage } from './play-log';
 import '@fontsource-variable/heebo';

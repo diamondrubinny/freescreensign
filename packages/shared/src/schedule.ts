@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { hour23, hourOf } from './time.js';
 
 /**
  * Scheduling: which content a screen shows when.
@@ -182,7 +183,7 @@ export function localTime(now: Date, timeZone: string): LocalTime {
       weekday: 'short',
       hour: '2-digit',
       minute: '2-digit',
-      hourCycle: 'h23',
+      ...hour23(),
     }).formatToParts(now);
   } catch {
     return deviceLocalTime(now);
@@ -193,7 +194,7 @@ export function localTime(now: Date, timeZone: string): LocalTime {
   return {
     date: `${get('year')}-${get('month')}-${get('day')}`,
     day,
-    minutes: Number(get('hour')) * 60 + Number(get('minute')),
+    minutes: hourOf(get('hour')) * 60 + Number(get('minute')),
   };
 }
 
@@ -300,7 +301,7 @@ export function dayTimeline(
   starts.forEach((from, i) => {
     const to = starts[i + 1] ?? 1440;
     const rule = winningRule(rules, { date, day, minutes: from });
-    const last = segments.at(-1);
+    const last = segments[segments.length - 1];
     if (last && last.rule === rule) last.to = to;
     else segments.push({ from, to, rule });
   });

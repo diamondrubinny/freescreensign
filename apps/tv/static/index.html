@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rubinny Player</title>
+    <link rel="stylesheet" href="loader.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Rubinny Player</h1>
+
+      <section id="starting" aria-labelledby="starting-title" hidden>
+        <h2 id="starting-title">
+          פותחים את הנגן · <span lang="en" dir="ltr">Opening the player</span>
+        </h2>
+        <p class="server"><span id="starting-server" dir="ltr"></span></p>
+        <p id="countdown" class="hint"></p>
+        <div class="actions">
+          <button id="start-now" type="button">
+            התחלה עכשיו · <span lang="en" dir="ltr">Start now</span>
+          </button>
+          <button id="change" type="button">
+            החלפת שרת · <span lang="en" dir="ltr">Change server</span>
+          </button>
+        </div>
+      </section>
+
+      <form id="setup" novalidate hidden>
+        <p>הזינו את כתובת שרת Rubinny של הארגון.</p>
+        <p lang="en" dir="ltr">Enter your organization's Rubinny server address.</p>
+        <label for="server">כתובת השרת · <span lang="en" dir="ltr">Server address</span></label>
+        <input
+          id="server"
+          name="server"
+          type="url"
+          dir="ltr"
+          required
+          autocomplete="url"
+          placeholder="https://signage.example.com"
+          aria-describedby="hint error"
+        />
+        <p id="hint" class="hint">
+          <span dir="ltr">https://</span> בלבד · <span lang="en" dir="ltr">https only</span>
+        </p>
+        <p id="error" class="error" role="alert"></p>
+        <button type="submit">
+          שמירה והתחלה · <span lang="en" dir="ltr">Save and start</span>
+        </button>
+      </form>
+
+      <p class="hint">
+        החצים בשלט עוברים בין הכפתורים, <span dir="ltr">OK</span> בוחר ·
+        <span lang="en" dir="ltr">Arrow keys move between buttons, OK selects</span>
+      </p>
+    </main>
+    <script src="loader.js"></script>
+  </body>
+</html>
