@@ -6,24 +6,11 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
-### Security
+## [0.6.0] - 2026-10-20
 
-- Screen groups with content approval: assigning content now applies to the screens that
-  were in the group when the editor asked. Before, an editor could add screens to the group
-  while the request waited, and the admin's approval reached them too (0.5.0).
-
-### Added
-
-- Server status page for the operator of the installation: services, antivirus signature
-  age, the last backup (recorded by `backup.sh`), disk, media processing, outgoing mail and
-  usage counts, each as OK / Needs attention / Problem in words. The first setup's account
-  is the operator (after upgrading, the oldest account); more only with
-  `deploy/set-operator.sh`. Needs two-step verification; hidden (404) from everyone else.
-
-## [0.5.0] - 2026-10-18
-
-Time windows for playlist items, screen groups and a time zone per screen.
-Upgrading from 0.4: see [docs/UPGRADING.md](docs/UPGRADING.md#04--05) (usually nothing to do).
+Time windows for playlist items, screen groups, a time zone per screen and a server status
+page for the operator. 0.5.0 was prepared but not published; this release replaces it.
+Upgrading from 0.4: see [docs/UPGRADING.md](docs/UPGRADING.md#04--06) (usually nothing to do).
 
 ### Added
 
@@ -31,13 +18,19 @@ Upgrading from 0.4: see [docs/UPGRADING.md](docs/UPGRADING.md#04--05) (usually n
   hours ("lunch menu, Sunday to Thursday, 11:30-13:30"). The screen decides on its own clock
   and time zone, so it works offline; an item whose last date has passed is no longer sent to
   screens. The playlist editor shows each window in words ("Scheduled: ...", "Ended") and
-  edits it with labelled fields. Needs the 0.5 player (older players show every item).
+  edits it with labelled fields. Needs the 0.6 player (older players show every item).
 - Screen groups: name a group of screens ("Floor 2") and give all of them a layout, playlist
   or schedule at once ("Assign content"); filter the list of screens by group. A screen can
   be in several groups. Assigning content waits for an admin when the organization requires
-  approval; naming groups and choosing their screens does not.
+  approval, and an approval covers the screens that were in the group when the editor asked;
+  naming groups and choosing their screens does not wait.
 - A screen's time zone can be chosen in "Edit screen" (it was fixed to Asia/Jerusalem).
   Schedules and time windows follow it; the screen updates at once.
+- Server status page for the operator of the installation: services, antivirus signature
+  age, the last backup (recorded by `backup.sh`), disk, media processing, outgoing mail and
+  usage counts, each as OK / Needs attention / Problem in words. The first setup's account
+  is the operator (after upgrading, the oldest account); more only with
+  `deploy/set-operator.sh`. Needs two-step verification; hidden (404) from everyone else.
 
 ## [0.4.1] - 2026-10-18
 
@@ -198,7 +191,7 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
-[0.5.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.5.0
+[0.6.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.6.0
 [0.4.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.4.1
 [0.4.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.4.0
 [0.3.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.3.0

@@ -21,7 +21,7 @@ by the release workflow of this repository. To verify them before running:
 
 ```bash
 for image in server worker web; do
-  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.5.0" \
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.6.0" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@'
 done
@@ -30,25 +30,23 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
-## 0.5 → 0.6 (in development)
+## 0.4 → 0.6
 
-- **Nothing to do for most installations:** one migration (the operator, backup records)
-  runs when the server starts.
-- **The operator** is your oldest account. Check with `./set-operator.sh --list`, and add or
-  remove operators with `./set-operator.sh` (see [OPERATIONS.md](OPERATIONS.md#server-status-page-operator)).
-- **Update `backup.sh` too** (it is in the deploy folder): from 0.6 it records each backup for
-  the status page.
+0.5.0 was not published: upgrade from 0.4.1 straight to 0.6.0.
 
-## 0.4 → 0.5
-
-- **Nothing to do for most installations:** two migrations (time windows of playlist items,
-  screen groups with row-level security) run when the server starts.
-- **Time windows need the 0.5 player.** Web players update when the page reloads; the desktop
-  and Android apps load the player from the server. A player before 0.5 ignores windows and
+- **Nothing to do for most installations:** three migrations (time windows of playlist
+  items, screen groups with row-level security, the operator and backup records) run when
+  the server starts.
+- **Time windows need the 0.6 player.** Web players update when the page reloads; the desktop
+  and Android apps load the player from the server. An older player ignores windows and
   shows every item, except items whose last date has passed (the server leaves those out).
 - **Check each screen's time zone** in "Edit screen": until now every screen used
   Asia/Jerusalem. Screens outside Israel should get their own zone, so that schedules and
   time windows follow their local clock.
+- **The operator** is your oldest account. Check with `./set-operator.sh --list`, and add or
+  remove operators with `./set-operator.sh` (see [OPERATIONS.md](OPERATIONS.md#server-status-page-operator)).
+- **Update the deploy folder** (`backup.sh`, the new `set-operator.sh`): from 0.6
+  `backup.sh` records each backup for the status page.
 
 ## 0.4 → 0.4.1
 

@@ -58,7 +58,7 @@ export const playlistItemSchema = z.object({
   transition: z.enum(TRANSITIONS).default('none'),
   /** Media only; players that predate it use "contain". */
   fit: z.enum(MEDIA_FITS).optional(),
-  /** Shown only in this window (screen's wall clock); players before 0.5 ignore it. */
+  /** Shown only in this window (screen's wall clock); players before 0.6 ignore it. */
   window: itemWindowSchema.optional(),
 });
 
