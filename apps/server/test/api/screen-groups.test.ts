@@ -209,8 +209,21 @@ describe.runIf(integrationEnabled)('screen groups', () => {
           .executeTakeFirstOrThrow()
       ).playlist_id;
     expect(await playlistOf()).toBeNull();
+    // While it waits, the editor adds another screen to the group (not held).
+    const lobby = await pairScreen('Lobby');
+    expect(
+      (await editor.patch(api(`/screen-groups/${group.id}`), { screenIds: [hall, lobby] }))
+        .statusCode,
+    ).toBe(200);
     const { approval } = held.json<{ approval: { id: string } }>();
     expect((await admin.post(api(`/approvals/${approval.id}/approve`))).statusCode).toBe(200);
     expect(await playlistOf()).toBe(news);
+    // The approval covers the screens of the request, not those added since.
+    const lobbyRow = await h.db
+      .selectFrom('screens')
+      .select('playlist_id')
+      .where('id', '=', lobby)
+      .executeTakeFirstOrThrow();
+    expect(lobbyRow.playlist_id).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { sql } from 'kysely';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
@@ -35,7 +35,28 @@ const isUniqueViolation = (error: unknown) =>
 export function screenGroupRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
-  const gated = { preHandler: [orgGuard(ctx, 'EDITOR'), approvalGate(ctx, 'screenGroup')] };
+  /**
+   * Assigning content applies to the screens in the group *now*: their ids go into the
+   * request before the approval gate stores it, so a change of members while the request
+   * waits cannot widen what an admin approves.
+   */
+  const snapshotMembers = async (request: FastifyRequest) => {
+    const { groupId } = parse(groupParams, request.params);
+    const body = request.body;
+    if (typeof body !== 'object' || body === null || Array.isArray(body) || 'screenIds' in body) {
+      return;
+    }
+    const members = await ctx.db
+      .selectFrom('screen_group_members')
+      .select('screen_id')
+      .where('group_id', '=', groupId)
+      .where('org_id', '=', requireOrg(request).id)
+      .execute();
+    request.body = { ...body, screenIds: members.map((m) => m.screen_id) };
+  };
+  const gated = {
+    preHandler: [orgGuard(ctx, 'EDITOR'), snapshotMembers, approvalGate(ctx, 'screenGroup')],
+  };
 
   async function loadGroup(orgId: string, groupId: string) {
     const group = await ctx.db
@@ -228,11 +249,19 @@ export function screenGroupRoutes(app: FastifyInstance, ctx: AppContext) {
           playlistId: z.uuid().nullable().optional(),
           layoutId: z.uuid().nullable().optional(),
           scheduleId: z.uuid().nullable().optional(),
+          /** The screens to change (members when asked); only those still in the group. */
+          screenIds: z.array(z.uuid()).max(GROUP_LIMITS.maxScreensPerGroup).optional(),
         })
-        .refine((v) => Object.keys(v).length > 0, { message: 'Nothing to update' }),
+        .refine(
+          (v) =>
+            v.playlistId !== undefined || v.layoutId !== undefined || v.scheduleId !== undefined,
+          { message: 'Nothing to update' },
+        ),
       request.body,
     );
     const group = await groupDto(org.id, groupId);
+    const asked = body.screenIds ? new Set(body.screenIds) : null;
+    const targets = group.screenIds.filter((id) => !asked || asked.has(id));
     for (const [key, table] of [
       ['playlistId', 'playlists'],
       ['layoutId', 'layouts'],
@@ -252,7 +281,7 @@ export function screenGroupRoutes(app: FastifyInstance, ctx: AppContext) {
         ]);
       }
     }
-    if (group.screenIds.length > 0) {
+    if (targets.length > 0) {
       await ctx.db
         .updateTable('screens')
         .set({
@@ -262,9 +291,9 @@ export function screenGroupRoutes(app: FastifyInstance, ctx: AppContext) {
           updated_at: new Date(),
         })
         .where('org_id', '=', org.id)
-        .where('id', 'in', group.screenIds)
+        .where('id', 'in', targets)
         .execute();
-      for (const screenId of group.screenIds) {
+      for (const screenId of targets) {
         await ctx.events.publish(screenId, { type: 'manifest.changed' });
       }
     }
@@ -274,8 +303,11 @@ export function screenGroupRoutes(app: FastifyInstance, ctx: AppContext) {
       actorUserId: user.id,
       targetType: 'screen_group',
       targetId: groupId,
-      meta: { fields: Object.keys(body), screens: group.screenIds.length },
+      meta: {
+        fields: Object.keys(body).filter((key) => key !== 'screenIds'),
+        screens: targets.length,
+      },
     });
-    return { group, updated: group.screenIds.length };
+    return { group, updated: targets.length };
   });
 }

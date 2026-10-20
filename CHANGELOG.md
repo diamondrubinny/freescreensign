@@ -6,6 +6,12 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- Screen groups with content approval: assigning content now applies to the screens that
+  were in the group when the editor asked. Before, an editor could add screens to the group
+  while the request waited, and the admin's approval reached them too (0.5.0).
+
 ### Added
 
 - Server status page for the operator of the installation: services, antivirus signature
