@@ -47,6 +47,9 @@ release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
   remove operators with `./set-operator.sh` (see [OPERATIONS.md](OPERATIONS.md#server-status-page-operator)).
 - **Update the deploy folder** (`backup.sh`, the new `set-operator.sh`): from 0.6
   `backup.sh` records each backup for the status page.
+- **New: Samsung and LG screens** ([guide](players.md#samsung-and-lg-screens)). Existing
+  screens need nothing: the player is now also built for older browser engines (Chromium 69),
+  and works as before on newer ones.
 
 ## 0.4 → 0.4.1
 

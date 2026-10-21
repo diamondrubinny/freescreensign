@@ -6,6 +6,13 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-21
+
+Time windows for playlist items, screen groups, a time zone per screen, a server status page
+for the operator, and Samsung and LG screens (not yet verified on a device). 0.5.0 was
+prepared but not published; this release replaces it.
+Upgrading from 0.4: see [docs/UPGRADING.md](docs/UPGRADING.md#04--06) (usually nothing to do).
+
 ### Added
 
 - Samsung (Tizen, 2020 and newer) and LG (webOS Signage 6.0 and newer) screens: the player now
@@ -14,21 +21,6 @@ All notable changes to Rubinny. The format follows
   `rubinny-tv-webos-<version>.ipk`). The loader asks for the server address once (https only),
   then opens the server's player; usable with a TV remote. Guide in
   [docs/players.md](docs/players.md#samsung-and-lg-screens). Not yet verified on a real screen.
-
-### Changed
-
-- The player is built for Chromium 69 (it needed about Chromium 80): syntax is lowered, two
-  missing built-ins are added, and CSS sizes have fallbacks. CI checks the built player for
-  syntax and browser APIs that Chromium 69 lacks.
-
-## [0.6.0] - 2026-10-20
-
-Time windows for playlist items, screen groups, a time zone per screen and a server status
-page for the operator. 0.5.0 was prepared but not published; this release replaces it.
-Upgrading from 0.4: see [docs/UPGRADING.md](docs/UPGRADING.md#04--06) (usually nothing to do).
-
-### Added
-
 - Time windows for playlist items: each item can be limited to dates, days of the week and
   hours ("lunch menu, Sunday to Thursday, 11:30-13:30"). The screen decides on its own clock
   and time zone, so it works offline; an item whose last date has passed is no longer sent to
@@ -46,6 +38,12 @@ Upgrading from 0.4: see [docs/UPGRADING.md](docs/UPGRADING.md#04--06) (usually n
   usage counts, each as OK / Needs attention / Problem in words. The first setup's account
   is the operator (after upgrading, the oldest account); more only with
   `deploy/set-operator.sh`. Needs two-step verification; hidden (404) from everyone else.
+
+### Changed
+
+- The player is built for Chromium 69 (it needed about Chromium 80): syntax is lowered, two
+  missing built-ins are added, and CSS sizes have fallbacks. CI checks the built player for
+  syntax and browser APIs that Chromium 69 lacks.
 
 ## [0.4.1] - 2026-10-18
 
