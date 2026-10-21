@@ -10,7 +10,8 @@ ARG GO_IMAGE=golang:1.27-alpine
 # Caddy from its official source, built with a patched Go toolchain and x/net. The binary
 # in the official image can lag behind Go security releases, and this is the public edge.
 # Same program as upstream's cmd/caddy (standard modules only).
-# Cross-compiled on the build machine (fast; no emulation for arm64 images).
+# Cross-compiled on the build machine (fast; no emulation for arm64 images). Downloads are
+# retried: the Go checksum database has had passing network errors (each retry still verifies).
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS caddy
 ARG CADDY_VERSION=v2.11.7
 ARG X_NET_VERSION=v0.60.0
@@ -22,8 +23,9 @@ RUN printf '%s\n' 'package main' '' 'import (' \
       '	_ "github.com/caddyserver/caddy/v2/modules/standard"' \
       ')' '' 'func main() { caddycmd.Main() }' > main.go \
  && go mod init rubinny.local/caddy \
- && go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}" "golang.org/x/net@${X_NET_VERSION}" \
- && go mod tidy \
+ && retry() { for attempt in 1 2 3; do "$@" && return 0; echo "$* failed (attempt $attempt)" >&2; sleep 20; done; return 1; } \
+ && retry go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}" "golang.org/x/net@${X_NET_VERSION}" \
+ && retry go mod tidy \
  && CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath -ldflags "-s -w" -o /caddy .
 
 # Static files are the same for every architecture: built once, on the build machine.
