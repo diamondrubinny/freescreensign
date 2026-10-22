@@ -377,10 +377,11 @@ test('a layout shows a clock and a ticker side by side on a screen', async ({ pa
   await device.close();
 });
 
-test('the free-form designer: drag, images, and the result on a screen', async ({
+test('the free-form designer and a kit by trade, and the results on screens', async ({
   page,
   browser,
 }) => {
+  test.setTimeout(150_000);
   await signIn(page, ADMIN, true);
   await openPage(page, 'Widgets');
   await page.getByRole('link', { name: 'בחירה עיצוב חופשי' }).click();
@@ -445,6 +446,51 @@ test('the free-form designer: drag, images, and the result on a screen', async (
     .poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth), { timeout: 20_000 })
     .toBeGreaterThan(0);
   await device.close();
+
+  // A kit by trade (same sign-in: each two-factor sign-in counts toward the user's limit).
+  await test.step('a kit by trade: the restaurant menu, its art and ticker on a screen', async () => {
+    await openPage(page, 'תבניות תצוגה');
+    await expect(page.getByRole('heading', { name: 'לפי תחום' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'ערכת מסעדה על מסך' })).toBeVisible();
+    await expectAccessible(page, 'layouts with the kits by trade');
+    await page.getByRole('button', { name: 'יצירת ערכה מסעדה' }).click();
+    await expect(
+      page.getByRole('heading', { level: 1, name: /עריכת תבנית: מסעדה — ביסטרו הגפן/ }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    const device = await browser.newContext({ ignoreHTTPSErrors: true });
+    const player = await device.newPage();
+    const cspViolations: string[] = [];
+    player.on('console', (message) => {
+      if (/Content Security Policy/i.test(message.text())) cspViolations.push(message.text());
+    });
+    await player.goto('/player/');
+    const code = (
+      await player.getByTestId('pairing-code').textContent({ timeout: 15_000 })
+    )?.trim();
+    await openPage(page, 'מסכים');
+    const addForm = page.getByRole('form', { name: 'הוספת מסך' });
+    await addForm.getByLabel('קוד חיבור').fill(code ?? '');
+    await addForm.getByLabel('שם מלא').fill('מסך מסעדה');
+    await addForm.getByRole('button', { name: 'הוספת מסך' }).click();
+    await expect(page.getByText('המסך חובר בהצלחה.')).toBeVisible();
+    await page.getByRole('button', { name: 'עריכה מסך מסעדה' }).click();
+    const dialog = page.getByRole('dialog', { name: 'עריכת מסך' });
+    await dialog.getByLabel('תבנית תצוגה').selectOption({ label: 'מסעדה — ביסטרו הגפן' });
+    await dialog.getByRole('button', { name: 'שמירה' }).click();
+
+    // The menu with shekel prices, the dish of the day with its illustration, and the ticker.
+    const menu = player.locator('.w-menu');
+    await expect(menu).toContainText('סטייק אנטריקוט', { timeout: 20_000 });
+    await expect(menu).toContainText('₪');
+    await expect(player.locator('.w-ticker')).toHaveAttribute('dir', 'rtl');
+    const art = player.locator('.w-design-image img');
+    await expect
+      .poll(() => art.evaluate((img: HTMLImageElement) => img.naturalWidth), { timeout: 60_000 })
+      .toBeGreaterThan(0);
+    expect(cspViolations).toEqual([]);
+    await device.close();
+  });
 });
 
 test('a schedule switches what a screen shows, live', async ({ page, browser }) => {
