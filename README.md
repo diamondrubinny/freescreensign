@@ -1,17 +1,47 @@
 # Rubinny
 
-**Free & open-source digital signage.** Design content, build layouts, and run any number of
-screens from one web dashboard — self-hosted, offline-first, with Hebrew/RTL and accessibility
-built in. Runs on anything with a modern browser: Raspberry Pi, Windows, Linux, Android /
-Android TV / Fire TV, and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
+**Free & open-source digital signage that looks professionally designed.** Menus, showtimes,
+sales, welcome screens and notice boards for restaurants, cafés, cinemas, shops, offices, hotels
+and community centers: ready in one click, edited in a web dashboard, and played on any number
+of screens. Self-hosted, offline-first, with Hebrew/RTL and accessibility built in. Runs on
+anything with a modern browser: Raspberry Pi, Windows, Linux, Android / Android TV / Fire TV,
+and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Sponsor](#support-the-project)
 
-> **Status: early development** — phase 8 of 9 complete (media, playlists, screens, offline
-> player, layouts, widgets, a free-form designer, a free image library, scheduling, operations,
-> and players for Windows, Linux, Raspberry Pi and Android). Not ready for production yet.
+> **Status: actively developed (v0.6).** All nine planned phases are done, with releases since
+> 0.1. It is ready to evaluate and pilot; before production use, go through the
+> [production checklist](docs/PRODUCTION-CHECKLIST.md), which also lists what still needs a
+> professional review.
 
-![A screen running the "Lobby" kit: main content with a blurred backdrop, a clock with the Hebrew date, and an updates ticker](docs/screenshots/screen-lobby.png)
+![The restaurant kit on a screen: a menu with prices and dietary tags, a dish of the day with an illustrated plate, and a happy-hour ticker](docs/screenshots/kits/restaurant-en.webp)
+
+## Ready for your venue
+
+Pick your trade and get a finished screen in one click: designed slides, a menu or schedule,
+a ticker and, where it fits, a clock, a countdown or a QR code. Every kit comes in Hebrew or
+English, and every picture in it is original art drawn for the project
+([Rubinny Art Pack](LICENSING.md), CC0). Change any text, price or color in the dashboard.
+The kits by trade arrive with version 0.7.
+
+|                                                             Cinema                                                              |                                                                   Café                                                                   |
+| :-----------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------: |
+|   ![Cinema: a "now showing" poster between red curtains and today's showtimes by hall](docs/screenshots/kits/cinema-en.webp)    | ![Café: a chalkboard menu of coffee, pastries and breakfast, and a morning deal with a steaming cup](docs/screenshots/kits/cafe-en.webp) |
+|                                                           **Retail**                                                            |                                                                **Office**                                                                |
+|    ![Retail: an end-of-season sale at -50% with a price tag, and a members club offer](docs/screenshots/kits/retail-en.webp)    |      ![Office: a welcome screen with the company name, the guest Wi-Fi, a clock and notices](docs/screenshots/kits/office-en.webp)       |
+|                                                            **Hotel**                                                            |                                                           **Community center**                                                           |
+| ![Hotel: a welcome with check-in times, a reception bell and a clock with the Hebrew date](docs/screenshots/kits/hotel-en.webp) | ![Community center: a family festival poster with balloons and confetti, and an updates ticker](docs/screenshots/kits/community-en.webp) |
+
+<details>
+<summary>The same kits in Hebrew</summary>
+
+|   ![The restaurant kit in Hebrew](docs/screenshots/kits/restaurant-he.webp)    | ![The cinema kit in Hebrew](docs/screenshots/kits/cinema-he.webp) |
+| :----------------------------------------------------------------------------: | :---------------------------------------------------------------: |
+|         ![The café kit in Hebrew](docs/screenshots/kits/cafe-he.webp)          | ![The retail kit in Hebrew](docs/screenshots/kits/retail-he.webp) |
+|       ![The office kit in Hebrew](docs/screenshots/kits/office-he.webp)        |  ![The hotel kit in Hebrew](docs/screenshots/kits/hotel-he.webp)  |
+| ![The community center kit in Hebrew](docs/screenshots/kits/community-he.webp) |                                                                   |
+
+</details>
 
 ## Features
 
@@ -27,8 +57,10 @@ Android TV / Fire TV, and Samsung (Tizen) and LG (webOS) screens (not yet verifi
   send **real remote screenshots** to the dashboard.
 - **Layouts with zones**: each zone plays its own playlist (e.g. video + clock + ticker).
 - **Built-in widgets**: clock with the Hebrew date, text, ticker (RTL-aware), QR code, RSS
-  news, weather (opt-in), web page, countdown, **data tables** (Google Sheets, CSV, JSON:
-  menus, price lists and timetables that update on their own) and **free-form designs**.
+  news, weather (opt-in), web page, countdown, **menus and price lists** (sections, prices in
+  shekels, dollars, euros or pounds, tags like vegan, spicy or new, up to 3 columns, in modern,
+  classic or chalkboard style), **data tables** (Google Sheets, CSV, JSON: lists that update on
+  their own) and **free-form designs**.
 - **Sign-in through the organization** (SSO with Google Workspace, Microsoft Entra ID,
   Keycloak or any OpenID Connect provider) and optional **content approval** before editors'
   changes reach screens.
@@ -43,7 +75,9 @@ Android TV / Fire TV, and Samsung (Tizen) and LG (webOS) screens (not yet verifi
 ### In the dashboard
 
 - **Free-form designer**: drag, resize and snap text, images and shapes on a canvas; undo/redo,
-  layers, templates, and full keyboard control.
+  layers, templates, and full keyboard control. Gradients, shadows and glows, outlined text,
+  color overlays on pictures, five fonts with Hebrew, and entrance and looping animations
+  (screens that ask for reduced motion get none).
 - **Free image library**: search public-domain (CC0) images and import them in one click —
   through the server and the same malware scan as uploads.
 - **Scheduling**: switch layouts or playlists by days, hours and dates (a breakfast menu until
@@ -53,7 +87,9 @@ Android TV / Fire TV, and Samsung (Tizen) and LG (webOS) screens (not yet verifi
   a clock check (players correct a wrong device clock with the server time); e-mail alerts when a
   screen goes offline and when it is back; **proof-of-play reports** per content and date range,
   with CSV export.
-- **Ready-made kits**: one click creates a designed screen (lobby, menu board, notice board).
+- **Ready-made kits**: one click creates a designed screen: seven by trade (restaurant, café,
+  cinema, retail, office, hotel, community center) and three general ones (lobby, menu board,
+  notice board), in Hebrew or English.
 - **Secure media library**: uploads are quarantined, scanned by ClamAV, re-encoded and stripped
   of metadata (EXIF/GPS) before use.
 - **Organizations and roles** (owner, admin, editor, viewer), invitations, two-factor
@@ -137,6 +173,7 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `apps/desktop`        | Desktop player app for Windows and Linux (Electron)                                             | AGPL-3.0 |
 | `apps/android`        | Android / Android TV player app (WebView)                                                       | AGPL-3.0 |
 | `apps/tv`             | Loader apps for Samsung (Tizen) and LG (webOS) screens                                          | AGPL-3.0 |
+| `apps/showcase`       | Development tool: screenshots of the starter kits for the READMEs and the dashboard             | AGPL-3.0 |
 | `packages/shared`     | Shared schemas: player manifest, layouts, widgets, designs, pairing codes, roles, Hebrew dates  | MIT      |
 | `packages/widget-sdk` | SDK for community widgets (the built-in widgets use it too)                                     | MIT      |
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |

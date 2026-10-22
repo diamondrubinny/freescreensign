@@ -75,6 +75,16 @@ RUBINNY_INTEGRATION=1 DATABASE_URL=postgres://rubinny:dev@localhost:5432/rubinny
   REDIS_URL=redis://localhost:6379 pnpm test
 ```
 
+After changing a starter kit, its art or the look of a widget, regenerate the kit pictures
+(the READMEs' gallery and the dashboard's kit previews) with the player's own code in Chromium:
+
+```bash
+pnpm --filter @rubinny/shared build
+pnpm --filter @rubinny/showcase screens   # PLAYWRIGHT_CHROMIUM_PATH=... for a custom Chromium
+```
+
+Look at the pictures before committing them: they are what people see first.
+
 ## Code standards
 
 - TypeScript strict mode; no `any` without a comment explaining why.
