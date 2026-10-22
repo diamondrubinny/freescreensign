@@ -17,7 +17,7 @@
     "start:worker": "node dist/worker/main.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.131.0",
+    "@anthropic-ai/sdk": "0.135.0",
     "@aws-sdk/client-s3": "3.1152.0",
     "@aws-sdk/lib-storage": "3.1152.0",
     "@fastify/cookie": "11.1.3",
