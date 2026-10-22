@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -45,12 +45,18 @@ function startAtLogin(): void {
   if (process.platform === 'linux') {
     const dir = join(homedir(), '.config', 'autostart');
     const file = join(dir, 'rubinny-player.desktop');
-    if (!existsSync(file)) {
-      mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true });
+    try {
+      // 'wx' creates the file only if it does not exist yet, in one atomic step
+      // (no check-then-write race, and an existing file or symlink is never overwritten).
       writeFileSync(
         file,
         `[Desktop Entry]\nType=Application\nName=Rubinny Player\nExec="${process.execPath}"\nX-GNOME-Autostart-enabled=true\n`,
+        { flag: 'wx', mode: 0o644 },
       );
+    } catch {
+      // EEXIST means start-at-login is already set up. Any other failure (e.g. a read-only
+      // home folder) is deliberately ignored: it must never stop the player from starting.
     }
   } else {
     app.setLoginItemSettings({ openAtLogin: true });
