@@ -33,7 +33,7 @@
     "file-type": "22.2.0",
     "ioredis": "6.0.0",
     "kysely": "0.29.7",
-    "nodemailer": "10.1.1",
+    "nodemailer": "10.1.7",
     "openid-client": "6.8.8",
     "pg": "8.23.1",
     "pino": "10.4.0",
