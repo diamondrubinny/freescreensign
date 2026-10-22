@@ -67,13 +67,21 @@ describe('screen page', () => {
             nowPlaying: [
               {
                 zoneId: 'main',
+                zoneName: 'ראשי',
                 kind: 'media',
                 id: 'm1',
                 name: 'יום פתוח',
                 mediaKind: 'image',
                 thumbnailUrl: '/thumb.png',
               },
-              { zoneId: 'side', kind: 'widget', id: 'w1', name: 'שעון', widgetType: 'clock' },
+              {
+                zoneId: 'side',
+                zoneName: null,
+                kind: 'widget',
+                id: 'w1',
+                name: 'שעון',
+                widgetType: 'clock',
+              },
             ],
           },
         },
@@ -93,8 +101,9 @@ describe('screen page', () => {
       'listitem',
     );
     expect(zones.map((zone) => zone.textContent)).toEqual([
-      'יום פתוחתמונה · אזור main',
-      'שעוןשעון ותאריך · אזור side',
+      'יום פתוחתמונה · אזור ראשי',
+      // A zone without a name (a playlist alone) shows no zone.
+      'שעוןשעון ותאריך',
     ]);
     // A viewer cannot send commands to the screen.
     expect(screen.queryByRole('button', { name: 'רענון הנגן' })).toBeNull();

@@ -211,7 +211,7 @@ export function DesignCanvas({
                   src={mediaFileUrl(orgId, element.mediaId)}
                   alt=""
                   draggable={false}
-                  className="pointer-events-none block size-full bg-gray-300"
+                  className="pointer-events-none block size-full"
                   style={{ objectFit: element.fit, borderRadius: `${String(element.radius)}px` }}
                 />
               )}

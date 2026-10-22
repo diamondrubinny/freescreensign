@@ -54,8 +54,12 @@ function NowPlayingCard({ entry }: { entry: NowPlayingEntry }) {
           {entry.kind === 'media'
             ? t(`screenPage.media.${entry.mediaKind}`)
             : t(`widgets.types.${entry.widgetType}`, { defaultValue: entry.widgetType })}
-          {' · '}
-          <span dir="auto">{t('screenPage.zone', { name: entry.zoneId })}</span>
+          {entry.zoneName && (
+            <>
+              {' · '}
+              <span dir="auto">{t('screenPage.zone', { name: entry.zoneName })}</span>
+            </>
+          )}
         </p>
       </div>
     </Card>

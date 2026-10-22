@@ -138,14 +138,40 @@ describe.runIf(integrationEnabled)('operations: screen status and uptime', () =>
     expect(status.nowPlaying).toEqual([
       {
         zoneId: 'main',
+        zoneName: null, // a playlist alone has no zones
         kind: 'media',
         id: image,
         name: 'Open day',
         mediaKind: 'image',
         thumbnailUrl: `/api/v1/orgs/${orgId}/media/${image}/thumbnail`,
       },
-      { zoneId: 'side', kind: 'widget', id: clock, name: 'Lobby clock', widgetType: 'clock' },
+      {
+        zoneId: 'side',
+        zoneName: null,
+        kind: 'widget',
+        id: clock,
+        name: 'Lobby clock',
+        widgetType: 'clock',
+      },
     ]);
+
+    // A layout: each item is shown with the name of its zone.
+    const layout = (
+      await editor.post(api('/layouts'), {
+        name: 'Lobby',
+        width: 1920,
+        height: 1080,
+        zones: [{ name: 'Main area', x: 0, y: 0, w: 1920, h: 1080 }],
+      })
+    ).json<{ layout: { id: string; zones: { id: string }[] } }>().layout;
+    await heartbeat(deviceToken, {
+      layoutId: layout.id,
+      nowPlaying: [{ zoneId: layout.zones[0]!.id, kind: 'widget', ref: clock }],
+    });
+    const later = (await viewer.get(api(`/screens/${screenId}/status`))).json<{
+      status: { nowPlaying: { zoneName: string | null }[] };
+    }>().status;
+    expect(later.nowPlaying.map((entry) => entry.zoneName)).toEqual(['Main area']);
     expect(status.uptime.hours).toHaveLength(24);
     // A screen that just connected is up, not "no data".
     expect(status.uptime.day).toBe(1);

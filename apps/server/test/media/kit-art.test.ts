@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Client } from '../support/harness.js';
 import {
   createHarness,
@@ -63,6 +63,16 @@ describe.runIf(mediaIntegrationEnabled)('starter kit art', () => {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
+
+  it('creates the kit without art at once when the storage is down', async () => {
+    await setup();
+    const put = vi.spyOn(h.storage!, 'put').mockRejectedValue(new Error('storage is down'));
+    const res = await editor.post(api('/starter-kits/restaurant'), { locale: 'en' });
+    expect(res.statusCode).toBe(201);
+    // One failed write, not one per picture (each would wait for its retries).
+    expect(put).toHaveBeenCalledTimes(1);
+    expect(await art(editor, orgId)).toEqual([]);
+  });
 
   it('adds the art of a kit to the media library once, and points the designs at it', async () => {
     await setup();

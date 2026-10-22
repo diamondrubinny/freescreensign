@@ -25,8 +25,20 @@ All notable changes to Rubinny. The format follows
   - the Docker images: OCI labels (license, source, author).
 - The license's attribution term (LICENSING.md, AGPL-3.0 section 7(b)) covers all of these.
 
+### Fixed
+
+- The screen page showed a technical zone id ("Zone 81884cf8-…") under "Showing now"; it shows
+  the zone's name, or no zone for a playlist alone.
+- Creating a starter kit while the media storage is down took minutes (each picture waited for
+  its retries); the kit is now created at once, without its pictures.
+- The designer drew a grey box behind transparent pictures (the kits' illustrations); it shows
+  the canvas behind them, like the screens do.
+
 ### Changed
 
+- The dashboard pictures in the READMEs are taken on a demo installation by
+  `pnpm --filter @rubinny/cms screens`, in Hebrew and English (new: the menu editor, the kits and
+  the About page).
 - Building from source needs Node.js 22.22.2 or later (or 24.15 or later), for jsdom 30 in the
   tests. The Docker images are not affected.
 

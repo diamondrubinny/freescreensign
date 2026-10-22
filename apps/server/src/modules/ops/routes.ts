@@ -19,13 +19,21 @@ import { uptimeSummary } from './uptime.js';
 type NowPlayingDto =
   | {
       zoneId: string;
+      zoneName: string | null;
       kind: 'media';
       id: string;
       name: string;
       mediaKind: 'image' | 'video';
       thumbnailUrl: string | null;
     }
-  | { zoneId: string; kind: 'widget'; id: string; name: string; widgetType: string };
+  | {
+      zoneId: string;
+      zoneName: string | null;
+      kind: 'widget';
+      id: string;
+      name: string;
+      widgetType: string;
+    };
 
 const screenParams = z.object({ orgId: z.uuid(), screenId: z.uuid() });
 const HOUR_MS = 60 * 60 * 1000;
@@ -115,6 +123,18 @@ export function opsRoutes(app: FastifyInstance, ctx: AppContext) {
         .executeTakeFirst();
       layout = { kind: 'layout', name: row?.name ?? null };
     }
+    // Zone names for "now playing" (a layout's zones; a playlist alone has none).
+    const zoneNames = new Map<string, string>();
+    if (layout?.kind === 'layout' && layoutId) {
+      const zones = await ctx.db
+        .selectFrom('layout_zones')
+        .innerJoin('layouts', 'layouts.id', 'layout_zones.layout_id')
+        .select(['layout_zones.id', 'layout_zones.name'])
+        .where('layout_zones.layout_id', '=', layoutId)
+        .where('layouts.org_id', '=', org.id)
+        .execute();
+      for (const zone of zones) zoneNames.set(zone.id, zone.name);
+    }
 
     const shot = await ctx.db
       .selectFrom('screen_screenshots')
@@ -146,6 +166,7 @@ export function opsRoutes(app: FastifyInstance, ctx: AppContext) {
             return [
               {
                 zoneId: item.zoneId,
+                zoneName: zoneNames.get(item.zoneId) ?? null,
                 kind: 'media' as const,
                 id: row.id,
                 name: row.name,
@@ -162,6 +183,7 @@ export function opsRoutes(app: FastifyInstance, ctx: AppContext) {
           return [
             {
               zoneId: item.zoneId,
+              zoneName: zoneNames.get(item.zoneId) ?? null,
               kind: 'widget' as const,
               id: row.id,
               name: row.name,

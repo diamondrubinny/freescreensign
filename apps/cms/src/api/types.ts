@@ -339,13 +339,22 @@ export interface ScheduleDetail {
 export type NowPlayingEntry =
   | {
       zoneId: string;
+      /** The zone's name in the layout (none for a playlist alone). */
+      zoneName: string | null;
       kind: 'media';
       id: string;
       name: string;
       mediaKind: 'image' | 'video';
       thumbnailUrl: string | null;
     }
-  | { zoneId: string; kind: 'widget'; id: string; name: string; widgetType: string };
+  | {
+      zoneId: string;
+      zoneName: string | null;
+      kind: 'widget';
+      id: string;
+      name: string;
+      widgetType: string;
+    };
 
 export interface ScreenStatus {
   online: boolean;

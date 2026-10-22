@@ -22,8 +22,8 @@ export function AboutPage() {
       <p className="mb-6">{t('about.intro')}</p>
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
         <dt className="font-medium">{t('about.version')}</dt>
-        <dd dir="ltr" className="text-start">
-          {__CMS_VERSION__}
+        <dd>
+          <bdi dir="ltr">{__CMS_VERSION__}</bdi>
         </dd>
         <dt className="font-medium">{t('about.license')}</dt>
         <dd>{t('about.licenseText')}</dd>

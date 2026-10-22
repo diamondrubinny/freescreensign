@@ -68,7 +68,10 @@ async function artMedia(
       });
       ids.set(name, row.id);
     } catch (error) {
-      log.warn({ err: error, art: name }, 'starter kit art not added');
+      // Storage that fails once is likely down: each further attempt would wait for its
+      // retries again (minutes for a kit). The kit is created without the rest of its art.
+      log.warn({ err: error, art: name }, 'starter kit art not added; skipping the rest');
+      break;
     }
   }
   return ids;
