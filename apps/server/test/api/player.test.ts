@@ -3,6 +3,7 @@ import type { WebSocket } from 'ws';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parseManifest, type ManifestV1 } from '@rubinny/shared';
 import type { Db } from '../../src/db/database.js';
+import { isOlderVersion, SERVER_VERSION } from '../../src/lib/version.js';
 import {
   Client,
   createHarness,
@@ -313,6 +314,43 @@ describe.runIf(integrationEnabled)('screens, pairing and the player API', () => 
     await admin.delete(api(`/screens/${screenId}`));
     await inbox.next('revoked');
     expect(await closing).toBe(4401);
+  });
+
+  it('asks a player older than the server to reload, every 10 minutes at most', async () => {
+    const { deviceToken } = await pair();
+    await h.app.ready();
+    const ws = await h.app.injectWS('/player/v1/ws');
+    const inbox = collect(ws);
+    ws.send(JSON.stringify({ type: 'auth', token: deviceToken }));
+    await inbox.next('hello');
+    const heartbeat = (playerVersion: string) =>
+      h.app.inject({
+        method: 'POST',
+        url: '/player/v1/heartbeat',
+        headers: { authorization: `Bearer ${deviceToken}` },
+        payload: { playerVersion },
+      });
+
+    // The same version, a newer one (development) or a non-release version: nothing.
+    for (const version of [SERVER_VERSION, '99.0.0', 'dev']) {
+      expect((await heartbeat(version)).statusCode).toBe(200);
+    }
+    // An older one: one reload, not one per heartbeat.
+    await heartbeat('0.1.0');
+    await inbox.next('reload');
+    await heartbeat('0.1.0');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(inbox.messages.filter((m) => m.type === 'reload')).toEqual([]);
+    ws.close();
+  });
+
+  it('compares release versions', () => {
+    expect(isOlderVersion('0.6.0', '0.7.0')).toBe(true);
+    expect(isOlderVersion('0.9.9', '0.10.0')).toBe(true);
+    expect(isOlderVersion('0.7.0', '0.7.0')).toBe(false);
+    expect(isOlderVersion('1.0.0', '0.7.0')).toBe(false);
+    expect(isOlderVersion('0.6', '0.7.0')).toBe(false);
+    expect(isOlderVersion('0.6.0', 'unknown')).toBe(false);
   });
 
   it('closes unauthenticated websockets', async () => {

@@ -17,6 +17,7 @@ import { getWidgetData } from '../widgets/data.js';
 import { reportScreenBack } from '../ops/alerts.js';
 import { recordUptime } from '../ops/uptime.js';
 import { deviceCredential, verifiedCredentials } from '../../lib/rate-limit-key.js';
+import { isOlderVersion, SERVER_VERSION } from '../../lib/version.js';
 
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
 const WS_AUTH_TIMEOUT_MS = 5000;
@@ -168,6 +169,17 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('id', '=', screen.id)
       .execute();
     await recordUptime(ctx.db, screen.id);
+    // A player older than the server (the server was upgraded while the page kept running)
+    // is asked to reload, so it gets the matching player code: an old player may not know
+    // newer widgets and design settings. At most every 10 minutes: the request is lost when the
+    // socket is not connected yet (right after the upgrade), and a stale cache cannot loop.
+    if (body.playerVersion && isOlderVersion(body.playerVersion, SERVER_VERSION)) {
+      const key = `player-update:${screen.id}`;
+      if (!(await ctx.cache.get(key))) {
+        await ctx.cache.set(key, '1', 600);
+        await ctx.events.publish(screen.id, { type: 'reload' });
+      }
+    }
     // Back after an offline alert: tell the admins (in the background, best effort).
     void reportScreenBack(
       { db: ctx.db, mailer: ctx.mailer, publicUrl: ctx.env.PUBLIC_URL },

@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { statfs } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { sql } from 'kysely';
@@ -7,6 +6,7 @@ import type { ClamavVersion } from '../../lib/clamav.js';
 import { runHealthChecks, type HealthCheck } from '../../lib/health-checks.js';
 import { HttpError } from '../../lib/http-error.js';
 import { LIMITS } from '../../lib/limiter.js';
+import { SERVER_VERSION } from '../../lib/version.js';
 import { requireAuth } from '../auth/guards.js';
 import { ONLINE_WINDOW_MS } from '../screens/routes.js';
 
@@ -36,16 +36,6 @@ export interface OperatorProbes {
   /** Free and total bytes of the server's disk. */
   disk?: () => Promise<{ freeBytes: number; totalBytes: number }>;
 }
-
-/** Version of this server, from its package.json (read once). */
-const VERSION = (() => {
-  try {
-    const raw = readFileSync(new URL('../../../package.json', import.meta.url), 'utf8');
-    return (JSON.parse(raw) as { version?: string }).version ?? 'unknown';
-  } catch {
-    return 'unknown';
-  }
-})();
 
 const rootDisk = async () => {
   const stats = await statfs('/');
@@ -120,7 +110,7 @@ export function operatorRoutes(
     return {
       status: {
         checkedAt: new Date(now).toISOString(),
-        version: { server: VERSION, migration: migration?.name ?? null },
+        version: { server: SERVER_VERSION, migration: migration?.name ?? null },
         services: {
           state: health.ready ? 'ok' : 'error',
           checks: health.checks,
