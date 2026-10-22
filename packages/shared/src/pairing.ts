@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: MIT
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 /**
  * Pairing codes are shown on a new screen and typed by a user in the CMS.
  * The alphabet omits look-alike characters (0, O, 1, I, L) so codes are easy

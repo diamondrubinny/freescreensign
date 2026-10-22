@@ -18,6 +18,8 @@
 		Cross-Origin-Resource-Policy "same-origin"
 		-Server
 		-Via
+		# The attribution (LICENSING.md); no version, so it tells attackers nothing.
+		X-Powered-By "Rubinny (open source)"
 	}
 
 	# Explicit, ordered routing (first match wins).

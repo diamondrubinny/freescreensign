@@ -6,6 +6,25 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The attribution "Powered by Rubinny · Open source" ("מופעל על ידי Rubinny · קוד פתוח") in
+  every part of Rubinny, from one source (`packages/shared/src/attribution.ts`):
+  - a header in every source file (copyright, creator, SPDX license, source link), checked in CI
+    by `pnpm attribution`;
+  - a notice at the top of every built JS and CSS file of the dashboard and the player, checked
+    after the build;
+  - the dashboard: the footer of every page, a new About page (`/about`) with the version,
+    license and source code, and a `generator` meta tag;
+  - the player: the pairing, loading and "nothing to show" screens (never over the content an
+    organization shows), and a line in the browser console;
+  - the desktop, Android and Samsung/LG apps: their setup screens (and the desktop's About
+    panel);
+  - the server: an `X-Powered-By: Rubinny (open source)` header on every response (no version),
+    a public `GET /api/v1/about`, and a line in the server and worker logs;
+  - the Docker images: OCI labels (license, source, author).
+- The license's attribution term (LICENSING.md, AGPL-3.0 section 7(b)) covers all of these.
+
 ### Changed
 
 - Building from source needs Node.js 22.22.2 or later (or 24.15 or later), for jsdom 30 in the

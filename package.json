@@ -15,7 +15,8 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "attribution": "node scripts/headers.mjs",
+    "check": "pnpm format:check && pnpm attribution && pnpm lint && pnpm typecheck && pnpm test",
     "e2e": "pnpm --filter @rubinny/cms e2e"
   },
   "devDependencies": {

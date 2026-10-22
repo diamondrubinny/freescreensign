@@ -1,6 +1,12 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import helmet from '@fastify/helmet';
+import { ATTRIBUTION, POWERED_BY_HEADER } from '@rubinny/shared';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
@@ -116,6 +122,8 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   app.addHook('onSend', async (request, reply) => {
     reply.header('x-request-id', request.id);
+    // The attribution (LICENSING.md); no version, so it tells attackers nothing.
+    reply.header('x-powered-by', POWERED_BY_HEADER);
   });
 
   await app.register(helmet, {
@@ -168,6 +176,17 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
 
   registerErrorHandling(app);
   healthRoutes(app, { checks: options.checks ?? [] });
+  // Public: what this software is and where its source code is (no version, no settings).
+  app.get('/api/v1/about', () => ({
+    name: ATTRIBUTION.name,
+    description: ATTRIBUTION.description,
+    poweredBy: ATTRIBUTION.poweredBy,
+    openSource: true,
+    license: ATTRIBUTION.license,
+    author: ATTRIBUTION.author,
+    copyright: ATTRIBUTION.copyright,
+    sourceUrl: ATTRIBUTION.sourceUrl,
+  }));
 
   if (options.services) {
     const { mailer, ...services } = options.services;

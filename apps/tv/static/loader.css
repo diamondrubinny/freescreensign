@@ -1,3 +1,10 @@
+/*
+ * Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+ * Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+ */
+
 /* Loader of the TV apps; plain CSS for Chromium 69 (no min(), clamp() or :focus-visible). */
 :root {
   color-scheme: dark;
@@ -76,4 +83,10 @@ button:focus {
 }
 [hidden] {
   display: none !important;
+}
+
+/* The attribution (LICENSING.md). */
+.attribution {
+  margin-top: 2rem;
+  font-size: 0.875rem;
 }

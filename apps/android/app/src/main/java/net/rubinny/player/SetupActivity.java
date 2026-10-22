@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 package net.rubinny.player;
 
 import android.app.Activity;
@@ -91,6 +96,8 @@ public final class SetupActivity extends Activity {
         bootButton.setOnClickListener(view -> allowStartOnBoot());
         form.addView(bootButton);
         form.addView(spaced(text(R.string.setup_admin_hint, 16)));
+        // The attribution (LICENSING.md).
+        form.addView(spaced(text(R.string.attribution, 14)));
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFitsSystemWindows(true);

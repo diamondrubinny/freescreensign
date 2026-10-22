@@ -13,4 +13,5 @@
     <string name="setup_boot_unavailable">אין במכשיר הזה הגדרה כזו. במקום זאת, בחרו ב-Rubinny Player כאפליקציית הבית (הגדרות › אפליקציות › אפליקציות ברירת מחדל › אפליקציית בית).</string>
     <string name="setup_boot_ready">הנגן ייפתח לבד אחרי הפעלה מחדש.</string>
     <string name="setup_admin_hint">כדי לחזור לעמוד הזה מהנגן, לוחצים על \"חזרה\" חמש פעמים ברצף.</string>
+    <string name="attribution">מופעל על ידי Rubinny · קוד פתוח\ngithub.com/diamondrubinny/freescreensign</string>
 </resources>

@@ -1,4 +1,10 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 import type { ManifestAlert, ManifestLayout, ManifestZoneAction, Wall } from '@rubinny/shared';
+import { ATTRIBUTION } from '@rubinny/shared';
 import { itemKey, type PlayableItem } from './sequence';
 import type { WidgetRuntime } from './widgets/runtime';
 
@@ -169,6 +175,17 @@ export class DomRenderer implements Renderer {
       p.dir = 'auto';
       panel.append(p);
     }
+    // The attribution (LICENSING.md): on the screens that show no customer content.
+    const credit = document.createElement('p');
+    credit.className = 'attribution';
+    credit.setAttribute('data-testid', 'attribution');
+    for (const text of [ATTRIBUTION.poweredBy.he, ATTRIBUTION.poweredBy.en]) {
+      const line = document.createElement('span');
+      line.dir = 'auto';
+      line.textContent = text;
+      credit.append(line);
+    }
+    panel.append(credit);
     this.#stage.append(panel);
     this.#message = panel;
   }

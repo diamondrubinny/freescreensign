@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ManifestLayout, ManifestWidget } from '@rubinny/shared';
 import { defineWidget } from '@rubinny/widget-sdk';
@@ -530,6 +535,19 @@ describe('DomRenderer', () => {
     Object.defineProperty(stage, 'clientHeight', { value: 750 });
     return { r, root };
   }
+
+  it('credits Rubinny on the pairing and idle screens, never over content', () => {
+    const { r, root } = renderer();
+    r.showMessage({ title: 'חיבור מסך · Pair this screen', lines: [], code: 'ABC-123' });
+    const credit = root.querySelector('[data-testid="attribution"]')!;
+    expect(credit.textContent).toContain('מופעל על ידי Rubinny · קוד פתוח');
+    expect(credit.textContent).toContain('Powered by Rubinny · Open source');
+    r.showMessage({ title: 'אין תוכן להצגה · Nothing to show', lines: [] });
+    expect(root.querySelectorAll('[data-testid="attribution"]')).toHaveLength(1);
+    // The customer's content is shown without it.
+    r.mountLayout(layout);
+    expect(root.querySelector('[data-testid="attribution"]')).toBeNull();
+  });
 
   it('letterboxes the canvas and positions zones', () => {
     const { r, root } = renderer();

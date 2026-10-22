@@ -1,4 +1,9 @@
 # syntax=docker/dockerfile:1
+# Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+# Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+# SPDX-License-Identifier: AGPL-3.0-only
+# https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 # Build context: repository root.  docker build -f apps/server/Dockerfile .
 
 ARG NODE_IMAGE=node:24-alpine
@@ -19,6 +24,13 @@ RUN pnpm --filter "@rubinny/server..." build \
  && pnpm --filter @rubinny/server deploy --prod --legacy /out
 
 FROM ${NODE_IMAGE} AS runtime
+# The attribution (LICENSING.md), readable with "docker inspect".
+LABEL org.opencontainers.image.title="Rubinny server" \
+      org.opencontainers.image.description="Rubinny — free and open-source digital signage: API server and media worker. Powered by Rubinny · Open source." \
+      org.opencontainers.image.authors="Diamond Rubinny" \
+      org.opencontainers.image.vendor="Rubinny (open source)" \
+      org.opencontainers.image.licenses="AGPL-3.0-only" \
+      org.opencontainers.image.source="https://github.com/diamondrubinny/freescreensign"
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000

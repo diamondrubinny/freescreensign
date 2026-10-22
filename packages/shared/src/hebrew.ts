@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: MIT
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 /**
  * Hebrew numerals (gematria) for Hebrew-calendar dates, e.g. 5787 → "תשפ״ז",
  * 15 → "ט״ו", 16 → "ט״ז" (the traditional forms avoid spelling divine names).

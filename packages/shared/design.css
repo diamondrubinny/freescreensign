@@ -1,4 +1,11 @@
 /*
+ * Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+ * Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+ * SPDX-License-Identifier: MIT
+ * https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+ */
+
+/*
  * Animations of design elements (packages/shared/src/design.ts, designAnimationCss), used by
  * the player and the dashboard's preview. Transform and opacity only: smooth on TV screens.
  */

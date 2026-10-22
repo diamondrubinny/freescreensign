@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../src/app.js';
@@ -75,7 +80,35 @@ describe('security headers', () => {
     expect(res.headers['x-content-type-options']).toBe('nosniff');
     expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
     expect(res.headers['referrer-policy']).toBe('no-referrer');
-    expect(res.headers['x-powered-by']).toBeUndefined();
+    // Only the attribution: no framework, no version.
+    expect(res.headers['x-powered-by']).toBe('Rubinny (open source)');
+  });
+
+  it('names Rubinny in every response, without a version (the attribution)', async () => {
+    const server = await make();
+    for (const url of ['/health', '/nope']) {
+      const res = await server.inject({ method: 'GET', url });
+      expect(res.headers['x-powered-by'], url).toBe('Rubinny (open source)');
+    }
+  });
+
+  it('says what the software is and where its source code is, publicly', async () => {
+    const res = await (await make()).inject({ method: 'GET', url: '/api/v1/about' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({
+      name: 'Rubinny',
+      description: 'Free and open-source digital signage',
+      poweredBy: {
+        he: 'מופעל על ידי Rubinny · קוד פתוח',
+        en: 'Powered by Rubinny · Open source',
+      },
+      openSource: true,
+      license: 'AGPL-3.0-only',
+      author: 'Diamond Rubinny',
+      copyright: 'Copyright (C) 2026 The Rubinny Authors',
+      sourceUrl: 'https://github.com/diamondrubinny/freescreensign',
+    });
+    expect(JSON.stringify(res.json())).not.toMatch(/\d+\.\d+\.\d+/); // no version
   });
 
   it('generates request ids and ignores client-supplied ones', async () => {

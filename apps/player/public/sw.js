@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 // Rubinny player service worker: keeps the player app itself available offline.
 // Media is cached separately by the player (Cache Storage, sha256-verified).
 const SHELL_CACHE = 'rubinny-player-shell-v1';

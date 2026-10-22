@@ -13,4 +13,5 @@
     <string name="setup_boot_unavailable">This device has no such setting. Choose Rubinny Player as the home app instead (Settings › Apps › Default apps › Home app).</string>
     <string name="setup_boot_ready">The player will open by itself after a restart.</string>
     <string name="setup_admin_hint">To return to this page from the player, press Back five times quickly.</string>
+    <string name="attribution">Powered by Rubinny · Open source\ngithub.com/diamondrubinny/freescreensign</string>
 </resources>

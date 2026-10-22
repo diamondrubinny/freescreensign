@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 /**
  * Pictures of the starter kits by trade on a screen, in Hebrew and English:
  *   docs/screenshots/kits/<kit>-<locale>.webp   (1600×900, for the READMEs)

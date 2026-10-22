@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { sql, type ControlledTransaction } from 'kysely';

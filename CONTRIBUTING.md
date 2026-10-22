@@ -94,6 +94,9 @@ Look at the pictures before committing them: they are what people see first.
 - UI: semantic HTML, keyboard accessible, RTL-safe (CSS logical properties), WCAG 2.1 AA.
 - Code, identifiers and comments in English; user-facing text through i18n (Hebrew + English).
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/).
+- Every source file starts with the Rubinny attribution header: run
+  `node scripts/headers.mjs --fix` after adding files (CI checks it with `pnpm attribution`).
+  The attribution must be kept (LICENSING.md).
 
 ## Pull requests
 

@@ -14,13 +14,21 @@ Each `package.json` states its license in the `license` field.
 The following additional terms apply to all AGPL-licensed parts of Rubinny,
 as permitted by Section 7 of the GNU Affero General Public License v3:
 
-1. **Attribution (Section 7(b)).** Any interactive user interface of the
-   management dashboard (CMS) of the Program or of a work based on it must
-   keep, in its Appropriate Legal Notices, a reasonably visible notice reading
-   "Powered by Rubinny" together with a link to the Rubinny source code
-   repository and the copyright notices. A footer or an "About" screen is
-   sufficient. This term does **not** require any notice on the content shown
-   on signage screens/players.
+1. **Attribution (Section 7(b)).** The Program and any work based on it must
+   keep the following author attributions and legal notices:
+   - in the Appropriate Legal Notices of every interactive user interface (the
+     management dashboard, the setup screens of the desktop, Android and TV
+     apps, and the player's pairing and idle screens), a reasonably visible
+     notice reading "Powered by Rubinny · Open source" (or its Hebrew
+     equivalent "מופעל על ידי Rubinny · קוד פתוח"), together with a link to
+     the Rubinny source code repository and the copyright notices; a footer or
+     an "About" screen is sufficient for the dashboard;
+   - the attribution header at the top of each source file, and the
+     attribution notice at the top of each built file.
+
+   This term does **not** require any notice on the content shown on signage
+   screens while they play an organization's content.
+
 2. **Marking modified versions (Section 7(c)).** Modified versions must be
    marked in reasonable ways as different from the original version (for
    example "based on Rubinny") and must not misrepresent their origin.

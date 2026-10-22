@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 /**
  * Checks the built player against the oldest engine it supports, Chromium 69 (Samsung Tizen 5.5,
  * LG webOS Signage 6.0; docs/phases/14-tizen-webos.md): the JavaScript must parse as ES2019 and

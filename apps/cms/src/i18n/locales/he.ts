@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 /** Hebrew is the source of truth; other locales must match this shape (checked by TypeScript). */
 export const he = {
   app: { name: 'Rubinny', tagline: 'שילוט דיגיטלי חופשי בקוד פתוח' },
@@ -42,7 +47,7 @@ export const he = {
     menu: 'תפריט',
   },
   footer: {
-    poweredBy: 'Powered by Rubinny',
+    about: 'אודות',
     sourceCode: 'קוד המקור',
     createdBy: 'נוצר על ידי Diamond Rubinny',
     accessibility: 'הצהרת נגישות',
@@ -51,6 +56,17 @@ export const he = {
     terms: 'תנאי שימוש',
     privacySettings: 'הגדרות פרטיות ועוגיות',
     footerNav: 'קישורים משפטיים',
+  },
+  about: {
+    title: 'אודות Rubinny',
+    intro:
+      'Rubinny היא מערכת שילוט דיגיטלי חינמית בקוד פתוח: מעצבים תוכן, בונים תבניות ומנהלים מסכים מלוח ניהול אחד.',
+    version: 'גרסה',
+    license: 'רישיון',
+    licenseText: 'GNU AGPL-3.0 עם תנאי ייחוס; חבילות ה-SDK ברישיון MIT.',
+    source: 'קוד המקור',
+    createdBy: 'נוצר על ידי',
+    keep: 'הקרדיט "מופעל על ידי Rubinny" והקישור לקוד המקור חייבים להישאר בכל גרסה (תנאי הרישיון).',
   },
   roles: { OWNER: 'בעלים', ADMIN: 'מנהל/ת', EDITOR: 'עורך/ת', VIEWER: 'צופה' },
   fields: {

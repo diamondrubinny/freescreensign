@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 import { expectAccessible, totp } from './helpers';
@@ -66,7 +71,7 @@ test('first-run setup creates the administrator (RTL, accessible)', async ({ pag
   await expect(page).toHaveURL(/\/setup$/);
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
   await expect(page.locator('html')).toHaveAttribute('lang', 'he');
-  await expect(page.getByTestId('powered-by')).toContainText('Powered by Rubinny');
+  await expect(page.getByTestId('powered-by')).toContainText('מופעל על ידי Rubinny · קוד פתוח');
   await expect(page.getByTestId('created-by')).toHaveText('נוצר על ידי Diamond Rubinny');
   await expectAccessible(page, 'setup');
 
@@ -202,6 +207,8 @@ test('a screen pairs with a code, plays a playlist and updates live', async ({ p
   const player = await device.newPage();
   await player.goto('/player/');
   const codeText = await player.getByTestId('pairing-code').textContent({ timeout: 15_000 });
+  // The attribution on the pairing screen (never over the customer's content).
+  await expect(player.getByTestId('attribution')).toContainText('Powered by Rubinny · Open source');
   const code = codeText?.trim() ?? '';
   expect(code).toMatch(/^[A-Z2-9]{3}-[A-Z2-9]{3}$/);
 
@@ -910,6 +917,20 @@ test('security headers are present on the CMS', async ({ request }) => {
   expect(res.headers()['cache-control']).toBe('no-cache');
   expect(res.headers()['cross-origin-opener-policy']).toBe('same-origin');
   expect(res.headers()['cross-origin-resource-policy']).toBe('same-origin');
+  // The attribution, without a version (LICENSING.md).
+  expect(res.headers()['x-powered-by']).toBe('Rubinny (open source)');
+  const api = await request.get('/api/v1/about');
+  expect(api.headers()['x-powered-by']).toBe('Rubinny (open source)');
+  expect(await api.json()).toMatchObject({ name: 'Rubinny', openSource: true });
+});
+
+test('the About page credits Rubinny, with its license and source code', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('link', { name: 'אודות', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'אודות Rubinny' })).toBeVisible();
+  await expect(page.getByTestId('about-powered-by')).toHaveText('מופעל על ידי Rubinny · קוד פתוח');
+  await expect(page.locator('meta[name="generator"]')).toHaveAttribute('content', /Rubinny/);
+  await expectAccessible(page, 'about');
 });
 
 /** Main pages: navigation link and page heading (null: any level-1 heading). */

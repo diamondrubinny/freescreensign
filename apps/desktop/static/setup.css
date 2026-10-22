@@ -1,3 +1,10 @@
+/*
+ * Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+ * Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+ */
+
 :root {
   color-scheme: dark;
   font-family: system-ui, 'Segoe UI', Arial, sans-serif;
@@ -54,4 +61,10 @@ button {
   color: #fca5a5;
   font-weight: 600;
   min-height: 1.5em;
+}
+
+/* The attribution (LICENSING.md). */
+.attribution {
+  margin-top: 2rem;
+  font-size: 0.875rem;
 }

@@ -1,4 +1,11 @@
 /*
+ * Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+ * Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+ */
+
+/*
  * Runs on old TV engines too (Chromium 69, docs/phases/14-tizen-webos.md): every min(), max()
  * and clamp() size has a plain fallback on the line before, which older engines keep.
  */
@@ -233,6 +240,19 @@ body,
 .message .brand svg {
   width: 1.6em;
   height: 1.6em;
+}
+.message .attribution {
+  position: absolute;
+  bottom: 4vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4vh;
+  font-size: 2vh;
+  font-size: max(13px, min(2vh, 28px));
+  /* AA contrast on the dark background. */
+  color: rgb(255 255 255 / 0.72);
 }
 .message .waiting {
   display: flex;

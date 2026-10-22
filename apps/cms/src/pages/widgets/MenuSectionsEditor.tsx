@@ -1,3 +1,8 @@
+// Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+// Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+// SPDX-License-Identifier: AGPL-3.0-only
+// https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+
 import { MENU_MAX_ITEMS, MENU_TAGS, type MenuTag } from '@rubinny/shared';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
