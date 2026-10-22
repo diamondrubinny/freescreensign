@@ -1197,7 +1197,7 @@ const office = (): StarterKit => {
                 text: pick(
                   locale,
                   'קבלת אורחים בקומה 3 · נא להירשם בעמדה או בקוד ה־QR',
-                  'Reception on floor 3 · Please sign in at the desk or with the QR code',
+                  'Reception on floor 3 · Sign in at the desk or by QR code',
                 ),
                 x,
                 y: 500,

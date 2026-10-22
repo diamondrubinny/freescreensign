@@ -88,6 +88,8 @@ export const designTextSchema = z.object({
   italic: z.boolean().default(false),
   color: color.default('#ffffff'),
   align: z.enum(['start', 'center', 'end']).default('center'),
+  /** Where the text sits in its box, top to bottom. */
+  valign: z.enum(['top', 'middle', 'bottom']).default('top'),
   lineHeight: z.number().min(0.8).max(3).default(1.2),
   font: z.enum(DESIGN_FONTS).default('heebo'),
   /** Extra space between letters, in em. */
@@ -219,6 +221,14 @@ export function designElementStyle(element: DesignElement): Record<string, strin
         : 'none',
       borderRadius: `${String(element.radius)}px`,
     });
+    if (element.valign !== 'top') {
+      // The text is the box's only content, so a column flexbox moves it down.
+      Object.assign(style, {
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: element.valign === 'middle' ? 'center' : 'flex-end',
+      });
+    }
     // Text in a box casts its shadow from the box; bare text from the letters.
     if (element.shadow) {
       style[boxed ? 'boxShadow' : 'textShadow'] = shadowCss(element.shadow);

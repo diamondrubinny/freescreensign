@@ -26,6 +26,7 @@ describe('design effects', () => {
     expect(style.backgroundImage).toBe('none');
     expect(style.letterSpacing).toBe('normal');
     expect(style.textShadow).toBeUndefined();
+    expect(style.display).toBeUndefined(); // text stays at the top of its box
     expect(designAnimationCss(t!, true)).toBeNull();
     expect(designCanvasStyle(config).backgroundImage).toBe('none');
   });
@@ -136,5 +137,19 @@ describe('design effects', () => {
     for (const name of DESIGN_LOOP_ANIMATIONS.filter((n) => n !== 'none')) {
       expect(css, name).toContain(`@keyframes rd-loop-${name} `);
     }
+  });
+
+  it('places text in the middle or at the bottom of its box', () => {
+    const parse = (valign: string) =>
+      designConfigSchema.parse({ elements: [{ ...text, valign }] }).elements[0]!;
+    expect(designElementStyle(parse('middle'))).toMatchObject({
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+    });
+    expect(designElementStyle(parse('bottom')).justifyContent).toBe('flex-end');
+    expect(
+      designConfigSchema.safeParse({ elements: [{ ...text, valign: 'baseline' }] }).success,
+    ).toBe(false);
   });
 });

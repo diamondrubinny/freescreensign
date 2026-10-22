@@ -32,6 +32,7 @@ export function textElement(design: Design, text: string): Element {
     italic: false,
     color: '#ffffff',
     align: 'center',
+    valign: 'top',
     lineHeight: 1.2,
     font: 'heebo',
     letterSpacing: 0,

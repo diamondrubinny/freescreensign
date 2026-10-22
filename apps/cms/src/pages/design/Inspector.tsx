@@ -257,6 +257,22 @@ export function Inspector({
                 </select>
               )}
             </Row>
+            <Row label={t('designer.valign')}>
+              {(id) => (
+                <select
+                  id={id}
+                  value={element.valign}
+                  onChange={(event) => {
+                    onElement({ valign: event.target.value as 'top' | 'middle' | 'bottom' });
+                  }}
+                  className={small}
+                >
+                  <option value="top">{t('designer.valignTop')}</option>
+                  <option value="middle">{t('designer.valignMiddle')}</option>
+                  <option value="bottom">{t('designer.valignBottom')}</option>
+                </select>
+              )}
+            </Row>
             <NumberRow
               label={t('designer.lineHeight')}
               value={element.lineHeight}

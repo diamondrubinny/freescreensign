@@ -68,7 +68,12 @@ export function design(
   };
 }
 
-export const text = (props: Element): Element => ({ kind: 'text', ...props });
+/** Text; in a box (a button, a badge) it sits in the middle of the box. */
+export const text = (props: Element): Element => ({
+  kind: 'text',
+  ...(props.background || props.backgroundGradient ? { valign: 'middle' } : {}),
+  ...props,
+});
 export const shape = (props: Element): Element => ({ kind: 'shape', ...props });
 export const image = (art: ArtName, props: Element): Element => ({
   kind: 'image',
