@@ -1,0 +1,67 @@
+name: Publish release
+
+# "Run workflow" publishes a draft release made by release.yml, as the latest release, and can
+# remove one obsolete draft. Only people with write access can run it, and only on the default
+# branch. It refuses anything that is not a draft, and a draft whose title is not
+# "Rubinny <version>". Publishing creates the tag on the commit the draft was built from.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Draft to publish (e.g. v0.7.0)'
+        required: true
+        type: string
+      remove_draft:
+        description: 'Optional: an obsolete draft to delete (e.g. v0.6.0)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.ref_name == github.event.repository.default_branch
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+      REMOVE: ${{ inputs.remove_draft }}
+    steps:
+      - name: Check the inputs
+        run: |
+          for value in "$TAG" "$REMOVE"; do
+            [ -z "$value" ] || printf '%s' "$value" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              || { echo "Not a release tag: $value"; exit 1; }
+          done
+          [ "$TAG" != "$REMOVE" ] || { echo "The same tag to publish and to delete"; exit 1; }
+      - name: Publish the draft as the latest release
+        run: |
+          # Drafts have no tag yet, so look them up in the list of releases.
+          release() {
+            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq ".[] | select(.tag_name == \"$1\") | {id, draft, name}"
+          }
+          found="$(release "$TAG")"
+          [ -n "$found" ] || { echo "No release $TAG"; exit 1; }
+          [ "$(echo "$found" | jq -r .draft)" = true ] || { echo "$TAG is not a draft"; exit 1; }
+          [ "$(echo "$found" | jq -r .name)" = "Rubinny ${TAG#v}" ] \
+            || { echo "$TAG was not made by release.yml"; exit 1; }
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/releases/$(echo "$found" | jq -r .id)" \
+            -F draft=false -f make_latest=true --jq '"Published: " + .html_url'
+          if [ -n "$REMOVE" ]; then
+            old="$(release "$REMOVE")"
+            [ -n "$old" ] || { echo "No release $REMOVE (nothing to delete)"; exit 0; }
+            [ "$(echo "$old" | jq -r .draft)" = true ] \
+              || { echo "$REMOVE is published; not deleting it"; exit 1; }
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$(echo "$old" | jq -r .id)"
+            echo "Deleted the draft $REMOVE"
+          fi
