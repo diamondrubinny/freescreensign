@@ -1,21 +1,80 @@
-import type { FastifyInstance } from 'fastify';
+import { Readable } from 'node:stream';
+import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
+import sharp from 'sharp';
 import { z } from 'zod';
 import { parseWidgetConfig, templateZones } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
+import { ingestMedia } from '../../media/ingest.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
-import { STARTER_KITS, STARTER_KIT_IDS, sampleCountdownTarget } from './kits.js';
+import { ART, ART_ATTRIBUTION, ART_SOURCE_URL, artSvg, type ArtName } from './art.js';
+import { artNames, resolveArt } from './kit-design.js';
+import { ALL_STARTER_KITS, STARTER_KIT_IDS, sampleCountdownTarget } from './kits.js';
 
 const CANVAS = { width: 1920, height: 1080 };
+
+const isArt = (name: string): name is ArtName => Object.hasOwn(ART, name);
+
+/**
+ * Media for the art a kit uses: the organization's earlier copy when it has one, otherwise
+ * the piece drawn as a PNG and ingested like any upload (scanned, processed). A piece that
+ * cannot be added (no media storage, storage quota) is left out; the kit still works.
+ */
+async function artMedia(
+  ctx: AppContext,
+  log: FastifyBaseLogger,
+  input: { orgId: string; userId: string; locale: 'he' | 'en'; names: string[] },
+): Promise<Map<string, string>> {
+  const ids = new Map<string, string>();
+  const media = ctx.media;
+  if (!media) return ids;
+  for (const name of input.names) {
+    if (!isArt(name)) continue;
+    const filename = `rubinny-art-${name}.png`;
+    const existing = await ctx.db
+      .selectFrom('media')
+      .select('id')
+      .where('org_id', '=', input.orgId)
+      .where('original_filename', '=', filename)
+      .where('attribution', '=', ART_ATTRIBUTION)
+      .where('deleted_at', 'is', null)
+      .where('status', 'not in', ['blocked', 'failed'])
+      .executeTakeFirst();
+    if (existing) {
+      ids.set(name, existing.id);
+      continue;
+    }
+    try {
+      const png = await sharp(Buffer.from(artSvg(name)))
+        .png()
+        .toBuffer();
+      const piece = ART[name];
+      const row = await ingestMedia(ctx, media, {
+        orgId: input.orgId,
+        userId: input.userId,
+        filename,
+        name: input.locale === 'he' ? piece.nameHe : piece.name,
+        stream: Readable.from([png]),
+        kinds: ['image'],
+        sourceUrl: ART_SOURCE_URL,
+        attribution: ART_ATTRIBUTION,
+      });
+      ids.set(name, row.id);
+    } catch (error) {
+      log.warn({ err: error, art: name }, 'starter kit art not added');
+    }
+  }
+  return ids;
+}
 
 export function kitRoutes(app: FastifyInstance, ctx: AppContext) {
   const viewer = { preHandler: orgGuard(ctx, 'VIEWER') };
   const editor = { preHandler: orgGuard(ctx, 'EDITOR') };
 
   app.get('/api/v1/orgs/:orgId/starter-kits', viewer, () => ({
-    kits: STARTER_KITS.map((kit) => ({ id: kit.id, template: kit.template })),
+    kits: ALL_STARTER_KITS.map((kit) => ({ id: kit.id, template: kit.template })),
   }));
 
   /** Creates a ready-made screen: widgets, one playlist per zone and the layout, atomically. */
@@ -30,19 +89,27 @@ export function kitRoutes(app: FastifyInstance, ctx: AppContext) {
       z.object({ locale: z.enum(['he', 'en']).default('he') }),
       request.body,
     );
-    const kit = STARTER_KITS.find((k) => k.id === kitId);
+    const kit = ALL_STARTER_KITS.find((k) => k.id === kitId);
     if (!kit) throw new HttpError(404, 'NOT_FOUND', 'Resource not found');
 
-    const widgets = kit.widgets
-      .filter((widget) => widget.type !== 'weather' || ctx.env.WEATHER_API_URL)
-      .map((widget) => {
-        const raw = { ...widget.config[locale] };
-        if (widget.type === 'countdown') raw.target = sampleCountdownTarget();
-        const parsed = parseWidgetConfig(widget.type, raw);
-        // Kits are static data covered by tests; an invalid one is a programming error.
-        if (!parsed.success) throw new Error(`Invalid starter kit widget ${kit.id}/${widget.key}`);
-        return { ...widget, parsed: parsed.config };
-      });
+    const chosen = kit.widgets.filter(
+      (widget) => widget.type !== 'weather' || ctx.env.WEATHER_API_URL,
+    );
+    const art = await artMedia(ctx, request.log, {
+      orgId: org.id,
+      userId: user.id,
+      locale,
+      names: [...new Set(chosen.flatMap((widget) => artNames(widget.config[locale])))],
+    });
+    const widgets = chosen.map((widget) => {
+      let raw = { ...widget.config[locale] };
+      if (widget.type === 'design') raw = resolveArt(raw, art);
+      if (widget.type === 'countdown') raw.target = sampleCountdownTarget();
+      const parsed = parseWidgetConfig(widget.type, raw);
+      // Kits are static data covered by tests; an invalid one is a programming error.
+      if (!parsed.success) throw new Error(`Invalid starter kit widget ${kit.id}/${widget.key}`);
+      return { ...widget, parsed: parsed.config };
+    });
 
     const layoutId = await ctx.db.transaction().execute(async (trx) => {
       const widgetIds = new Map<string, string>();
@@ -84,19 +151,21 @@ export function kitRoutes(app: FastifyInstance, ctx: AppContext) {
             .returning('id')
             .executeTakeFirstOrThrow();
           playlistId = playlist.id;
-          const items = spec.widgets.flatMap((key) => {
+          const items = spec.widgets.flatMap((item) => {
+            const { key, durationMs } =
+              typeof item === 'string' ? { key: item, durationMs: null } : item;
             const id = widgetIds.get(key);
-            return id ? [id] : [];
+            return id ? [{ widgetId: id, durationMs }] : [];
           });
           if (items.length > 0) {
             await trx
               .insertInto('playlist_items')
               .values(
-                items.map((widgetId, index) => ({
+                items.map((item, index) => ({
                   playlist_id: playlist.id,
                   position: index,
-                  widget_id: widgetId,
-                  duration_ms: null,
+                  widget_id: item.widgetId,
+                  duration_ms: item.durationMs,
                 })),
               )
               .execute();
@@ -126,7 +195,7 @@ export function kitRoutes(app: FastifyInstance, ctx: AppContext) {
       actorUserId: user.id,
       targetType: 'layout',
       targetId: layoutId,
-      meta: { starterKit: kit.id },
+      meta: { starterKit: kit.id, art: art.size },
     });
     return reply.status(201).send({ layout: { id: layoutId } });
   });

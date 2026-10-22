@@ -697,7 +697,7 @@ export const en: Messages = {
         spicy: 'Spicy',
         'gluten-free': 'Gluten free',
         new: 'New',
-        recommended: "Chef's pick",
+        recommended: 'Recommended',
       },
       addItem: 'Add an item to {{section}}',
       addSection: 'Add a section',
@@ -725,6 +725,7 @@ export const en: Messages = {
       'header-main-footer': 'Header, main and footer',
       'grid-2x2': '2×2 grid',
       'three-rows': 'Three rows',
+      showcase: 'Showcase: main, side panel and ticker',
     },
     zoneNames: {
       main: 'Main',
@@ -785,7 +786,44 @@ export const en: Messages = {
     kitsIntro:
       'One click creates a designed screen: layout, playlists and widgets with sample text you can edit.',
     createKit: 'Create kit',
+    kitsTradeTitle: 'By trade',
+    kitsGeneralTitle: 'General',
+    kitPreview: 'The {{name}} kit on a screen',
     kits: {
+      restaurant: {
+        name: 'Restaurant',
+        description:
+          'A classic menu with prices and tags, a dish of the day with an illustration, and an offers bar.',
+      },
+      cafe: {
+        name: 'Café',
+        description:
+          'A chalkboard price list, morning deals with illustrations, a clock and the opening hours.',
+      },
+      cinema: {
+        name: 'Cinema',
+        description:
+          "Poster slides with showtimes, a popcorn combo, today's showtimes and a QR code for tickets.",
+      },
+      retail: {
+        name: 'Shop and sales',
+        description:
+          'An animated -50% sale, a countdown, a new-collection slide and a members club with a QR code.',
+      },
+      office: {
+        name: 'Office lobby',
+        description:
+          "A welcome screen, today's meetings by room, clock, weather, visitor sign-in and staff notices.",
+      },
+      hotel: {
+        name: 'Hotel and events',
+        description: "An elegant welcome, today's activities, a clock, guest Wi-Fi and services.",
+      },
+      community: {
+        name: 'Community and school',
+        description:
+          'A family festival with balloons and confetti, a countdown, weekly classes and updates.',
+      },
       lobby: {
         name: 'Lobby',
         description: 'Main content, clock with Hebrew date, QR and an updates bar.',

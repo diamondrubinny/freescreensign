@@ -812,22 +812,24 @@ body,
   white-space: nowrap;
   color: var(--w-accent, currentColor);
 }
-.w-menu-desc {
+.w-menu-meta {
   margin: 0.1em 0 0;
   font-size: 0.72em;
-  opacity: 0.8;
 }
-.w-menu-tags {
-  margin: 0.2em 0 0;
-  font-size: 0.6em;
+.w-menu-desc {
+  margin-inline-end: 0.5em;
+  opacity: 0.82;
 }
 .w-menu-tag {
   display: inline-block;
-  margin-inline-end: 0.4em;
-  padding: 0.05em 0.55em;
-  border: 0.12em solid currentColor;
+  margin-inline-end: 0.35em;
+  padding: 0 0.5em;
+  border: 0.1em solid currentColor;
   border-radius: 999px;
+  font-size: 0.82em;
   font-weight: 700;
+  line-height: 1.35;
+  vertical-align: 0.05em;
 }
 .w-menu-tag-vegan,
 .w-menu-tag-vegetarian {

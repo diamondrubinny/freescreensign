@@ -556,7 +556,18 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
 
   it('creates every starter kit as a valid, ready-to-show layout', async () => {
     const { kits } = (await viewer.get(api('/starter-kits'))).json<{ kits: { id: string }[] }>();
-    expect(kits.map((k) => k.id)).toEqual(['lobby', 'menu', 'info']);
+    expect(kits.map((k) => k.id)).toEqual([
+      'lobby',
+      'menu',
+      'info',
+      'restaurant',
+      'cafe',
+      'cinema',
+      'retail',
+      'office',
+      'hotel',
+      'community',
+    ]);
     const { deviceToken, screenId } = await pair();
     for (const [index, kit] of kits.entries()) {
       const res = await editor.post(api(`/starter-kits/${kit.id}`), {
@@ -572,11 +583,21 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
     const detail = (await viewer.get(api('/layouts'))).json<{
       layouts: { name: string; zoneCount: number }[];
     }>();
-    expect(detail.layouts.map((l) => [l.name, l.zoneCount]).sort()).toEqual([
-      ['Menu board', 4],
-      ['לובי', 3],
-      ['לוח מודעות', 3],
-    ]);
+    // Without media storage the kits come without their art, and still work.
+    expect(detail.layouts.map((l) => [l.name, l.zoneCount]).sort()).toEqual(
+      [
+        ['לובי', 3],
+        ['Menu board', 4],
+        ['לוח מודעות', 3],
+        ['Restaurant — Vine Bistro', 3],
+        ['בית קפה — קפה בוקר', 3],
+        ['Cinema — Lumen Cinema', 3],
+        ['חנות ומבצעים', 3],
+        ['Office lobby — Orion Tech', 3],
+        ['מלון ואירועים — מלון גליל', 3],
+        ['Community and school — Neve Gan Center', 3],
+      ].sort(),
+    );
     expect((await viewer.post(api('/starter-kits/lobby'), {})).statusCode).toBe(403);
     expect((await editor.post(api('/starter-kits/nope'), {})).statusCode).toBe(400);
   });

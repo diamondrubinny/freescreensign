@@ -1,4 +1,5 @@
 import type { LayoutTemplateId, WidgetType } from '@rubinny/shared';
+import { INDUSTRY_KITS } from './industry-kits.js';
 
 type Locale = 'he' | 'en';
 type Localized<T> = Record<Locale, T>;
@@ -16,8 +17,14 @@ export interface StarterKit {
   name: Localized<string>;
   background: string;
   widgets: KitWidget[];
-  /** One playlist per template zone (by zone name); an empty list is for the user's media. */
-  zones: Record<string, { playlist: Localized<string>; widgets: string[] }>;
+  /**
+   * One playlist per template zone (by zone name); an empty list is for the user's media.
+   * An item is a widget key, or a key with how long it stays on screen.
+   */
+  zones: Record<
+    string,
+    { playlist: Localized<string>; widgets: (string | { key: string; durationMs: number })[] }
+  >;
 }
 
 /**
@@ -207,7 +214,9 @@ export const STARTER_KITS: readonly StarterKit[] = [
   },
 ];
 
-export const STARTER_KIT_IDS = STARTER_KITS.map((kit) => kit.id);
+/** The general kits above, then the kits by trade (industry-kits.ts). */
+export const ALL_STARTER_KITS: readonly StarterKit[] = [...STARTER_KITS, ...INDUSTRY_KITS];
+export const STARTER_KIT_IDS = ALL_STARTER_KITS.map((kit) => kit.id);
 
 /** The countdown sample targets two weeks ahead (a date in the past would show "done"). */
 export function sampleCountdownTarget(now = new Date()): string {

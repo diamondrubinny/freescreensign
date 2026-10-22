@@ -30,12 +30,23 @@ const CANVAS = {
   portrait: { width: 1080, height: 1920 },
 } as const;
 
-/** Starter kits (content lives on the server; see apps/server/src/modules/kits). */
+/**
+ * Starter kits (content lives on the server; see apps/server/src/modules/kits). Each has a
+ * picture of it on a screen in public/kits (made by scripts/showcase).
+ */
 const KITS = [
-  { id: 'lobby', template: 'l-bar' },
-  { id: 'menu', template: 'grid-2x2' },
-  { id: 'info', template: 'header-main-footer' },
+  { id: 'restaurant', template: 'showcase', trade: true },
+  { id: 'cafe', template: 'showcase', trade: true },
+  { id: 'cinema', template: 'showcase', trade: true },
+  { id: 'retail', template: 'l-bar', trade: true },
+  { id: 'office', template: 'l-bar', trade: true },
+  { id: 'hotel', template: 'showcase', trade: true },
+  { id: 'community', template: 'header-main-footer', trade: true },
+  { id: 'lobby', template: 'l-bar', trade: false },
+  { id: 'menu', template: 'grid-2x2', trade: false },
+  { id: 'info', template: 'header-main-footer', trade: false },
 ] as const;
+type Kit = (typeof KITS)[number];
 
 /** Template zones in percent → a 160×90 thumbnail. */
 function TemplateThumb({
@@ -57,6 +68,61 @@ function TemplateThumb({
         h: (z.h / 100) * h,
       }))}
     />
+  );
+}
+
+/** A kit with its picture on a screen (or its zones when there is no picture). */
+function KitCard({
+  kit,
+  loading,
+  disabled,
+  onCreate,
+}: {
+  kit: Kit;
+  loading: boolean;
+  disabled: boolean;
+  onCreate: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const [noPicture, setNoPicture] = useState(false);
+  const name = t(`layouts.kits.${kit.id}.name`);
+  return (
+    <Card as="li" className="flex flex-col overflow-hidden">
+      {noPicture ? (
+        <div className="bg-gradient-to-br from-brand-900 to-gray-900 p-4">
+          <TemplateThumb template={kit.template} />
+        </div>
+      ) : (
+        <img
+          src={`/kits/${kit.id}-${i18n.language === 'en' ? 'en' : 'he'}.webp`}
+          alt={t('layouts.kitPreview', { name })}
+          width={640}
+          height={360}
+          loading="lazy"
+          className="aspect-video w-full bg-gray-900 object-cover"
+          onError={() => {
+            setNoPicture(true);
+          }}
+        />
+      )}
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <h4 className="flex items-center gap-2 text-lg font-bold">
+          <Sparkles aria-hidden="true" className="size-4 text-amber-600 dark:text-amber-400" />
+          {name}
+        </h4>
+        <p className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+          {t(`layouts.kits.${kit.id}.description`)}
+        </p>
+        <Button
+          loading={loading}
+          disabled={disabled}
+          aria-label={`${t('layouts.createKit')} ${name}`}
+          onClick={onCreate}
+        >
+          {t('layouts.createKit')}
+        </Button>
+      </div>
+    </Card>
   );
 }
 
@@ -118,37 +184,26 @@ export function LayoutsPage() {
             title={t('layouts.kitsTitle')}
             description={t('layouts.kitsIntro')}
           />
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {KITS.map((k) => (
-              <Card as="li" key={k.id} className="flex flex-col overflow-hidden">
-                <div className="bg-gradient-to-br from-brand-900 to-gray-900 p-4">
-                  <TemplateThumb template={k.template} />
-                </div>
-                <div className="flex flex-1 flex-col gap-2 p-4">
-                  <h3 className="flex items-center gap-2 text-lg font-bold">
-                    <Sparkles
-                      aria-hidden="true"
-                      className="size-4 text-amber-600 dark:text-amber-400"
-                    />
-                    {t(`layouts.kits.${k.id}.name`)}
-                  </h3>
-                  <p className="flex-1 text-sm text-gray-700 dark:text-gray-300">
-                    {t(`layouts.kits.${k.id}.description`)}
-                  </p>
-                  <Button
+          {[true, false].map((trade) => (
+            <div key={String(trade)} className="mb-6">
+              <h3 className="mb-3 text-lg font-bold">
+                {t(trade ? 'layouts.kitsTradeTitle' : 'layouts.kitsGeneralTitle')}
+              </h3>
+              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {KITS.filter((k) => k.trade === trade).map((k) => (
+                  <KitCard
+                    key={k.id}
+                    kit={k}
                     loading={kit.isPending && kit.variables === k.id}
                     disabled={kit.isPending}
-                    aria-label={`${t('layouts.createKit')} ${t(`layouts.kits.${k.id}.name`)}`}
-                    onClick={() => {
+                    onCreate={() => {
                       kit.mutate(k.id);
                     }}
-                  >
-                    {t('layouts.createKit')}
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </ul>
+                  />
+                ))}
+              </ul>
+            </div>
+          ))}
         </section>
       )}
 
@@ -165,7 +220,7 @@ export function LayoutsPage() {
             >
               <fieldset>
                 <legend className="mb-2 font-medium">{t('layouts.template')}</legend>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
                   {LAYOUT_TEMPLATE_IDS.map((id) => (
                     <label
                       key={id}

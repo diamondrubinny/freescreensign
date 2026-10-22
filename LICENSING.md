@@ -46,3 +46,12 @@ file. They are served from your own server, with no requests to font services.
 | Frank Ruhl Libre | `@fontsource-variable/frank-ruhl-libre` | Hebrew, Latin         |
 | Secular One      | `@fontsource/secular-one`               | Hebrew, Latin         |
 | Bebas Neue       | `@fontsource/bebas-neue`                | Latin only            |
+
+## Rubinny Art Pack
+
+The illustrations and backgrounds of the starter kits (restaurant, café, cinema, shop, office,
+hotel, community) are original artwork drawn in code for Rubinny, in
+`apps/server/src/modules/kits/art.ts`. They are dedicated to the public domain under
+[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/): use them for anything, no
+attribution needed. They contain no photos and no third-party material. The names of
+places in the kits ("Vine Bistro", "Lumen Cinema", "Orion Tech" and the like) are invented.

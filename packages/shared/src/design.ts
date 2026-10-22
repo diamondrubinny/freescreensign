@@ -138,8 +138,9 @@ export const DESIGN_MAX_ELEMENTS = 100;
 
 export const designConfigSchema = z
   .object({
-    width: z.number().int().min(320).max(7680).default(1920),
-    height: z.number().int().min(320).max(7680).default(1080),
+    /** From 100 px, so thin strips (a header, a banner) can be designs too. */
+    width: z.number().int().min(100).max(7680).default(1920),
+    height: z.number().int().min(100).max(7680).default(1080),
     background: color.default('#111827'),
     backgroundGradient: designGradientSchema.optional(),
     backgroundMediaId: z.uuid().optional(),

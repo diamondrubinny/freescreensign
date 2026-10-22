@@ -152,7 +152,7 @@ export const MENU_TAG_LABELS: Record<'he' | 'en', Record<MenuTag, string>> = {
     spicy: 'Spicy',
     'gluten-free': 'Gluten free',
     new: 'New',
-    recommended: "Chef's pick",
+    recommended: 'Recommended',
   },
 };
 export const MENU_CURRENCIES = ['none', 'ILS', 'USD', 'EUR', 'GBP'] as const;

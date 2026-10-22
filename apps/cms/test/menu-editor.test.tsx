@@ -51,7 +51,7 @@ describe('menu editor', () => {
   it('allows at most four tags per item', async () => {
     const user = userEvent.setup();
     render(<MenuSectionsEditor name="sections" initial={undefined} errors={{}} />);
-    for (const tag of ['Vegan', 'Spicy', 'New', "Chef's pick"]) {
+    for (const tag of ['Vegan', 'Spicy', 'New', 'Recommended']) {
       await user.click(screen.getByLabelText(tag));
     }
     expect(screen.getByLabelText('Gluten free')).toBeDisabled();

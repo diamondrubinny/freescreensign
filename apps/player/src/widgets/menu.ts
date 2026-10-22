@@ -60,22 +60,21 @@ export const menuWidget = defineWidget<WidgetConfig<'menu'>>({
           el('span', { className: 'w-menu-name' }, el('bdi', { text: item.name })),
           el('span', { className: 'w-menu-dots' }),
         );
-        if (price)
-          row.append(el('span', { className: 'w-menu-price' }, el('bdi', { text: price })));
-        const entry = el('li', { className: 'w-menu-item' }, row);
-        if (item.description) {
-          entry.append(el('p', { className: 'w-menu-desc', text: item.description }));
+        if (price) {
+          // In the menu's direction: a Hebrew list of times reads from the right.
+          row.append(el('span', { className: 'w-menu-price' }, el('bdi', { text: price, dir })));
         }
-        if (item.tags.length > 0) {
-          entry.append(
-            el(
-              'p',
-              { className: 'w-menu-tags' },
-              ...item.tags.map((tag) =>
-                el('span', { className: `w-menu-tag w-menu-tag-${tag}`, text: tags[tag] }),
-              ),
-            ),
-          );
+        const entry = el('li', { className: 'w-menu-item' }, row);
+        // Description and tags share one line, so long menus stay larger.
+        if (item.description || item.tags.length > 0) {
+          const meta = el('p', { className: 'w-menu-meta' });
+          if (item.description) {
+            meta.append(el('span', { className: 'w-menu-desc', text: item.description }));
+          }
+          for (const tag of item.tags) {
+            meta.append(el('span', { className: `w-menu-tag w-menu-tag-${tag}`, text: tags[tag] }));
+          }
+          entry.append(meta);
         }
         list.append(entry);
       }

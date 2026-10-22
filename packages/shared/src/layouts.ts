@@ -119,6 +119,7 @@ export const LAYOUT_TEMPLATE_IDS = [
   'l-bar',
   'grid-2x2',
   'three-rows',
+  'showcase',
 ] as const;
 export type LayoutTemplateId = (typeof LAYOUT_TEMPLATE_IDS)[number];
 
@@ -156,6 +157,12 @@ const TEMPLATES: Record<
     { name: 'top', x: 0, y: 0, w: 100, h: 30 },
     { name: 'middle', x: 0, y: 30, w: 100, h: 50 },
     { name: 'bottom', x: 0, y: 80, w: 100, h: 20 },
+  ],
+  /** A wide main zone, a side panel and a ticker (menus with a dish of the day, cinemas). */
+  showcase: [
+    { name: 'main', x: 0, y: 0, w: 62, h: 88 },
+    { name: 'side', x: 62, y: 0, w: 38, h: 88 },
+    { name: 'ticker', x: 0, y: 88, w: 100, h: 12 },
   ],
 };
 
