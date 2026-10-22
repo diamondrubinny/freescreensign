@@ -96,28 +96,33 @@ English, and every picture in it is original art drawn for the project
 - **Hebrew-first and accessible**: RTL, dark mode, keyboard navigation, accessibility menu;
   every page is tested with axe-core (WCAG 2.1 AA target).
 
-![The designer: canvas with selection handles, toolbar, properties and layers](docs/screenshots/cms-designer.png)
+![The designer: a design with an illustration on its canvas, the toolbar, and the properties of the canvas and its layers](docs/screenshots/cms-designer-en.png)
 
 <details>
 <summary>More screenshots</summary>
 
-| Screen status: now playing, uptime, clock                                                             | Proof-of-play report with CSV export                                             |
-| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| ![A screen page with status, uptime and what each zone shows](docs/screenshots/cms-screen-status.png) | ![The play report: plays and time per content](docs/screenshots/cms-reports.png) |
+| The menu / price list editor                                                                  | Ready-made kits by trade                                                                           |
+| --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| ![The menu editor: sections, items, prices and tags](docs/screenshots/cms-menu-editor-en.png) | ![The layouts page with the kits by trade and their pictures](docs/screenshots/cms-layouts-en.png) |
 
-| Scheduling with the weekly timeline                                                            |
-| ---------------------------------------------------------------------------------------------- |
-| ![The schedule editor with entries and the weekly timeline](docs/screenshots/cms-schedule.png) |
+| Screen status: now playing, uptime, clock                                                                | Proof-of-play report with CSV export                                                |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| ![A screen page with status, uptime and what each zone shows](docs/screenshots/cms-screen-status-en.png) | ![The play report: plays and time per content](docs/screenshots/cms-reports-en.png) |
 
-| Dashboard                                        | Dark mode                                                          |
-| ------------------------------------------------ | ------------------------------------------------------------------ |
-| ![Dashboard](docs/screenshots/cms-dashboard.png) | ![Dashboard in dark mode](docs/screenshots/cms-dashboard-dark.png) |
+| Scheduling with the weekly timeline                                                               | Widgets                                              |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| ![The schedule editor with entries and the weekly timeline](docs/screenshots/cms-schedule-en.png) | ![Widgets page](docs/screenshots/cms-widgets-en.png) |
 
-| Layouts and ready-made kits                       | Widgets                                           |
-| ------------------------------------------------- | ------------------------------------------------- |
-| ![Layouts page](docs/screenshots/cms-layouts.png) | ![Widgets page](docs/screenshots/cms-widgets.png) |
+| Dashboard                                           | Dark mode                                                             |
+| --------------------------------------------------- | --------------------------------------------------------------------- |
+| ![Dashboard](docs/screenshots/cms-dashboard-en.png) | ![Dashboard in dark mode](docs/screenshots/cms-dashboard-dark-en.png) |
 
-Mobile: <br>![The dashboard on a phone with the menu open](docs/screenshots/cms-mobile.png)
+| About: credit, license and source code               | Mobile                                                                             |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| ![The About page](docs/screenshots/cms-about-en.png) | ![The dashboard on a phone with the menu open](docs/screenshots/cms-mobile-en.png) |
+
+The pictures are taken by `pnpm --filter @rubinny/cms screens` on a demo installation (see
+[CONTRIBUTING.md](CONTRIBUTING.md)).
 
 </details>
 

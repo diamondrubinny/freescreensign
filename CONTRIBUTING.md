@@ -85,6 +85,14 @@ pnpm --filter @rubinny/showcase screens   # PLAYWRIGHT_CHROMIUM_PATH=... for a c
 
 Look at the pictures before committing them: they are what people see first.
 
+The dashboard pictures (`docs/screenshots/cms-*.png`) come from a demo installation: on a
+stack with an empty database (`deploy/e2e-reset.sh`), run once per language:
+
+```bash
+SCREENS_LOCALE=he E2E_SETUP_TOKEN=… pnpm --filter @rubinny/cms screens   # cms-<page>.png
+SCREENS_LOCALE=en E2E_SETUP_TOKEN=… pnpm --filter @rubinny/cms screens   # cms-<page>-en.png
+```
+
 ## Code standards
 
 - TypeScript strict mode; no `any` without a comment explaining why.
