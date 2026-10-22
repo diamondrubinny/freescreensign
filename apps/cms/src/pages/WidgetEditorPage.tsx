@@ -27,6 +27,7 @@ import { useFormErrors } from '../lib/use-form-errors';
 import { useDuplicate } from '../lib/use-duplicate';
 import { useOrgRole } from '../lib/use-org-role';
 import { DesignPage } from './design/DesignPage';
+import { MenuSectionsEditor } from './widgets/MenuSectionsEditor';
 import {
   WIDGET_FIELDS,
   readWidgetConfig,
@@ -41,10 +42,13 @@ function ConfigField({
   field,
   initial,
   error,
+  allErrors,
 }: {
   field: WidgetFieldSpec;
   initial: unknown;
   error: string | undefined;
+  /** Every configuration error by path (nested fields such as menu items). */
+  allErrors: Record<string, string>;
 }) {
   const { t } = useTranslation();
   const id = useId();
@@ -60,6 +64,23 @@ function ConfigField({
     'aria-describedby': describedBy,
   } as const;
   const text = typeof initial === 'string' || typeof initial === 'number' ? String(initial) : '';
+
+  if (field.kind === 'menuSections') {
+    const prefix = `${field.key}.`;
+    const nested = Object.fromEntries(
+      Object.entries(allErrors)
+        .filter(([path]) => path === field.key || path.startsWith(prefix))
+        .map(([path, message]) => [path === field.key ? '' : path.slice(prefix.length), message]),
+    );
+    return (
+      <section aria-labelledby={`${id}-heading`} className="flex flex-col gap-2">
+        <h3 id={`${id}-heading`} className="font-bold">
+          {label}
+        </h3>
+        <MenuSectionsEditor name={field.key} initial={initial} errors={nested} />
+      </section>
+    );
+  }
 
   if (field.kind === 'checkbox') {
     return (
@@ -445,6 +466,7 @@ export function WidgetEditorPage() {
               field={field}
               initial={initial[field.key]}
               error={fieldErrors[field.key]}
+              allErrors={fieldErrors}
             />
           ))}
         </fieldset>

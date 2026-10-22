@@ -79,6 +79,7 @@ describe('parseWidgetConfig', () => {
       'webpage',
       'countdown',
       'table',
+      'menu',
       'design',
     ]);
   });

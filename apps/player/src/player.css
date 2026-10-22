@@ -741,3 +741,156 @@ body,
   inset: 0;
   object-fit: cover;
 }
+
+/* Menu / price list. Sizes in em of .w-menu-content, which shrinks until it fits. */
+.w-menu {
+  display: flex;
+  padding: calc(var(--zone-h, 300px) * 0.05) calc(var(--zone-w, 400px) * 0.04);
+}
+.w-menu-content {
+  width: 100%;
+  max-height: 100%;
+  font-size: calc(var(--zone-h, 300px) * 0.05);
+  line-height: 1.3;
+}
+.w-menu-head {
+  margin-bottom: 0.8em;
+  text-align: center;
+}
+.w-menu-title {
+  margin: 0;
+  font-size: 2.1em;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.w-menu-subtitle {
+  margin: 0.25em 0 0;
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+.w-menu-body {
+  column-gap: 2.2em;
+  column-fill: balance;
+}
+.w-menu-section {
+  margin: 0 0 1em;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+}
+.w-menu-section-title {
+  margin: 0 0 0.45em;
+  font-size: 1.15em;
+  font-weight: 800;
+  color: var(--w-accent, currentColor);
+}
+.w-menu-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.w-menu-item {
+  margin: 0 0 0.55em;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+}
+.w-menu-row {
+  display: flex;
+  align-items: baseline;
+}
+.w-menu-name {
+  font-weight: 700;
+}
+.w-menu-dots {
+  flex: 1;
+  min-width: 1em;
+  margin: 0 0.4em;
+  border-bottom: 0.1em dotted currentColor;
+  opacity: 0.45;
+}
+.w-menu-price {
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--w-accent, currentColor);
+}
+.w-menu-desc {
+  margin: 0.1em 0 0;
+  font-size: 0.72em;
+  opacity: 0.8;
+}
+.w-menu-tags {
+  margin: 0.2em 0 0;
+  font-size: 0.6em;
+}
+.w-menu-tag {
+  display: inline-block;
+  margin-inline-end: 0.4em;
+  padding: 0.05em 0.55em;
+  border: 0.12em solid currentColor;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.w-menu-tag-vegan,
+.w-menu-tag-vegetarian {
+  color: #86efac;
+}
+.w-menu-tag-spicy {
+  color: #fca5a5;
+}
+.w-menu-tag-new,
+.w-menu-tag-recommended {
+  color: var(--w-accent, currentColor);
+}
+
+/* Modern: an accent bar under each section title. */
+.w-menu-modern .w-menu-section-title {
+  padding-bottom: 0.2em;
+  border-bottom: 0.12em solid var(--w-accent, currentColor);
+}
+
+/* Classic: serif, centered titles between thin lines. */
+.w-menu-classic .w-menu-head,
+.w-menu-classic .w-menu-section-title {
+  text-align: center;
+}
+.w-menu-classic .w-menu-title {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.w-menu-classic .w-menu-section-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.w-menu-classic .w-menu-section-title::before,
+.w-menu-classic .w-menu-section-title::after {
+  content: '';
+  flex: 1;
+  height: 0.06em;
+  margin: 0 0.6em;
+  background: var(--w-accent, currentColor);
+  opacity: 0.6;
+}
+.w-menu-classic .w-menu-name {
+  font-weight: 600;
+}
+
+/* Chalkboard: a dark board with a soft chalk haze and hand-drawn feeling lines. */
+.w-menu-chalkboard {
+  background-image:
+    radial-gradient(ellipse at 20% 10%, rgb(255 255 255 / 0.08), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgb(255 255 255 / 0.06), transparent 50%);
+  box-shadow: inset 0 0 0 calc(var(--zone-h, 300px) * 0.015) #5b3a1e;
+}
+.w-menu-chalkboard .w-menu-title {
+  font-weight: 700;
+  transform: rotate(-1deg);
+}
+.w-menu-chalkboard .w-menu-section-title {
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.2em;
+}
+.w-menu-chalkboard .w-menu-dots {
+  border-bottom-style: dashed;
+}

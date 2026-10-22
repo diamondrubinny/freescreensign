@@ -127,6 +127,93 @@ export const tableConfigSchema = z.object({
   accent: color.default('#1d4ed8'),
 });
 
+export const MENU_TAGS = [
+  'vegan',
+  'vegetarian',
+  'spicy',
+  'gluten-free',
+  'new',
+  'recommended',
+] as const;
+export type MenuTag = (typeof MENU_TAGS)[number];
+/** Tag names shown on screens (the player has no translation files). */
+export const MENU_TAG_LABELS: Record<'he' | 'en', Record<MenuTag, string>> = {
+  he: {
+    vegan: 'טבעוני',
+    vegetarian: 'צמחוני',
+    spicy: 'חריף',
+    'gluten-free': 'ללא גלוטן',
+    new: 'חדש',
+    recommended: 'מומלץ',
+  },
+  en: {
+    vegan: 'Vegan',
+    vegetarian: 'Vegetarian',
+    spicy: 'Spicy',
+    'gluten-free': 'Gluten free',
+    new: 'New',
+    recommended: "Chef's pick",
+  },
+};
+export const MENU_CURRENCIES = ['none', 'ILS', 'USD', 'EUR', 'GBP'] as const;
+export const MENU_MAX_ITEMS = 80;
+
+const menuItemSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(200).optional(),
+  /** A number is shown as a price in the menu's currency; other text as is (e.g. "17:30 · 20:00"). */
+  price: z.string().trim().max(40).optional(),
+  tags: z.array(z.enum(MENU_TAGS)).max(4).default([]),
+});
+
+/** A menu or price list: sections of items, laid out in columns and sized to fit the zone. */
+export const menuConfigSchema = z
+  .object({
+    title: z.string().trim().max(120).optional(),
+    subtitle: z.string().trim().max(200).optional(),
+    sections: z
+      .array(
+        z.object({
+          title: z.string().trim().max(80).default(''),
+          items: z.array(menuItemSchema).max(40).default([]),
+        }),
+      )
+      .min(1)
+      .max(8),
+    columns: z.number().int().min(1).max(3).default(2),
+    style: z.enum(['modern', 'classic', 'chalkboard']).default('modern'),
+    currency: z.enum(MENU_CURRENCIES).default('ILS'),
+    locale: z.enum(['he', 'en']).default('he'),
+    textColor: color.default('#fdf6ec'),
+    background: color.default('#1c1917'),
+    accent: color.default('#d4a373'),
+  })
+  .refine(
+    (menu) =>
+      menu.sections.reduce((count, section) => count + section.items.length, 0) <= MENU_MAX_ITEMS,
+    { message: `At most ${String(MENU_MAX_ITEMS)} items`, path: ['sections'] },
+  );
+
+/**
+ * A menu price for display: "42" or "42.5" becomes "₪42" / "$42.50" in the menu's language;
+ * anything else (times, "market price") is shown as written.
+ */
+export function formatMenuPrice(
+  price: string | undefined,
+  currency: (typeof MENU_CURRENCIES)[number],
+  locale: 'he' | 'en',
+): string {
+  const text = price?.trim() ?? '';
+  if (!/^\d{1,7}(\.\d{1,2})?$/.test(text) || currency === 'none') return text;
+  const value = Number(text);
+  return new Intl.NumberFormat(locale === 'he' ? 'he-IL' : 'en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export const WIDGET_CONFIG_SCHEMAS = {
   clock: clockConfigSchema,
   text: textConfigSchema,
@@ -137,6 +224,7 @@ export const WIDGET_CONFIG_SCHEMAS = {
   webpage: webpageConfigSchema,
   countdown: countdownConfigSchema,
   table: tableConfigSchema,
+  menu: menuConfigSchema,
   design: designConfigSchema,
 } as const;
 

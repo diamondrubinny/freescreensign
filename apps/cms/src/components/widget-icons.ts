@@ -10,6 +10,7 @@ import {
   Table2,
   TextCursorInput,
   Type,
+  UtensilsCrossed,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ export const WIDGET_ICONS: Record<
   webpage: { icon: Globe, tone: 'green' },
   countdown: { icon: CalendarClock, tone: 'amber' },
   table: { icon: Table2, tone: 'green' },
+  menu: { icon: UtensilsCrossed, tone: 'amber' },
   design: { icon: Palette, tone: 'rose' },
 };
 

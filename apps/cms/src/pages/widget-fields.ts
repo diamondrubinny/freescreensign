@@ -22,6 +22,8 @@ export type WidgetFieldSpec = { key: string; label: FieldLabel; hint?: FieldLabe
   | { kind: 'checkbox' }
   | { kind: 'select'; options: { value: string; label: FieldLabel }[] }
   | { kind: 'color' }
+  /** Menu sections and items (pages/widgets/MenuSectionsEditor), sent as JSON. */
+  | { kind: 'menuSections' }
 );
 
 const colors = (text: 'textColor' | 'foreground' = 'textColor'): WidgetFieldSpec[] => [
@@ -249,6 +251,38 @@ export const WIDGET_FIELDS: Record<WidgetType, WidgetFieldSpec[]> = {
     ...colors(),
     { key: 'accent', label: 'accent', kind: 'color' },
   ],
+  menu: [
+    { key: 'title', label: 'titleOptional', kind: 'text', maxLength: 120 },
+    { key: 'subtitle', label: 'subtitle', kind: 'text', maxLength: 200 },
+    { key: 'sections', label: 'menuSections', kind: 'menuSections' },
+    {
+      key: 'style',
+      label: 'menuStyle',
+      kind: 'select',
+      options: [
+        { value: 'modern', label: 'styleModern' },
+        { value: 'classic', label: 'styleClassic' },
+        { value: 'chalkboard', label: 'styleChalkboard' },
+      ],
+    },
+    { key: 'columns', label: 'menuColumns', kind: 'number', min: 1, max: 3, step: 1 },
+    {
+      key: 'currency',
+      label: 'currency',
+      hint: 'currencyHint',
+      kind: 'select',
+      options: [
+        { value: 'ILS', label: 'currencyIls' },
+        { value: 'USD', label: 'currencyUsd' },
+        { value: 'EUR', label: 'currencyEur' },
+        { value: 'GBP', label: 'currencyGbp' },
+        { value: 'none', label: 'currencyNone' },
+      ],
+    },
+    locale,
+    ...colors(),
+    { key: 'accent', label: 'menuAccent', kind: 'color' },
+  ],
   // Designs have their own visual editor (pages/design).
   design: [],
 };
@@ -278,6 +312,14 @@ export function readWidgetConfig(type: WidgetType, data: FormData): Record<strin
     const raw = data.get(field.key);
     const text = typeof raw === 'string' ? raw.trim() : '';
     if (text === '') continue;
+    if (field.kind === 'menuSections') {
+      try {
+        config[field.key] = JSON.parse(text) as unknown;
+      } catch {
+        config[field.key] = text; // the server reports it
+      }
+      continue;
+    }
     if (field.kind === 'number') {
       const number = Number(text);
       config[field.key] = Number.isFinite(number) ? number * (field.scale ?? 1) : text;

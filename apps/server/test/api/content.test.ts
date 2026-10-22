@@ -162,6 +162,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'webpage',
       'countdown',
       'table',
+      'menu',
       'design',
     ]);
 
@@ -335,6 +336,48 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
     await editor.delete(api(`/layouts/${layout.id}`));
     const fallback = (await playerGet('/player/v1/manifest', deviceToken)).json<ManifestV1>();
     expect(fallback.layouts[0]!.id).toBe('default');
+  });
+
+  it('saves menus with nested validation and sends them to screens', async () => {
+    const config = {
+      title: 'תפריט',
+      currency: 'ILS',
+      sections: [
+        {
+          title: 'עיקריות',
+          items: [
+            { name: 'פסטה', price: '58', tags: ['vegan'] },
+            { name: 'סטייק', price: '98' },
+          ],
+        },
+      ],
+    };
+    const menu = await createWidget('menu', config);
+    expect(menu.config).toMatchObject({ columns: 2, style: 'modern', locale: 'he' });
+
+    const bad = await editor.post(api('/widgets'), {
+      type: 'menu',
+      name: 'x',
+      config: { sections: [{ items: [{ name: '', tags: ['nope'] }] }] },
+    });
+    expect(bad.statusCode).toBe(400);
+    const paths = bad
+      .json<{ error: { fields: { path: string }[] } }>()
+      .error.fields.map((field) => field.path);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        'config.sections.0.items.0.name',
+        'config.sections.0.items.0.tags.0',
+      ]),
+    );
+
+    const playlist = await createPlaylist('Menu', [{ widgetId: menu.id, durationMs: 20_000 }]);
+    const { deviceToken, screenId } = await pair();
+    await editor.patch(api(`/screens/${screenId}`), { playlistId: playlist });
+    const manifest = (await playerGet('/player/v1/manifest', deviceToken)).json<ManifestV1>();
+    expect(parseManifest(manifest).success).toBe(true);
+    const sent = manifest.widgets.find((widget) => widget.id === menu.id);
+    expect(sent).toMatchObject({ type: 'menu', config: { title: 'תפריט' } });
   });
 
   it('turns CSV and JSON sources into tables for the player', async () => {

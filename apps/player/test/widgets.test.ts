@@ -431,6 +431,47 @@ describe('built-in widgets', () => {
     await flush();
   });
 
+  it('menu: sections in columns, prices in the currency, tags, names kept as text', () => {
+    const { container, ok } = mount({
+      id: 'm',
+      type: 'menu',
+      config: {
+        title: 'תפריט',
+        columns: 3,
+        style: 'classic',
+        currency: 'USD',
+        locale: 'en',
+        sections: [
+          {
+            title: 'Mains',
+            items: [
+              { name: '<b>Steak</b>', price: '42.5', description: 'Grilled', tags: ['spicy'] },
+              { name: 'Showtime', price: '17:30 · 20:00' },
+              { name: 'No price' },
+            ],
+          },
+        ],
+      },
+    });
+    expect(ok).toBe(true);
+    const root = container.querySelector<HTMLElement>('.w-menu')!;
+    expect(root.classList.contains('w-menu-classic')).toBe(true);
+    expect(root.dir).toBe('ltr');
+    expect(root.style.fontFamily).toContain('Frank Ruhl Libre');
+    expect(
+      container.querySelector<HTMLElement>('.w-menu-body')!.style.getPropertyValue('column-count'),
+    ).toBe('3');
+    expect(container.querySelector('.w-menu-section-title')?.textContent).toBe('Mains');
+    const names = [...container.querySelectorAll('.w-menu-name')].map((node) => node.textContent);
+    expect(names).toEqual(['<b>Steak</b>', 'Showtime', 'No price']);
+    expect(container.querySelector('.w-menu-name b')).toBeNull();
+    const prices = [...container.querySelectorAll('.w-menu-price')].map((node) => node.textContent);
+    expect(prices).toEqual(['$42.50', '17:30 · 20:00']);
+    expect(container.querySelector('.w-menu-tag-spicy')?.textContent).toBe('Spicy');
+    expect(container.querySelector('.w-menu-desc')?.textContent).toBe('Grilled');
+    expect(mount({ id: 'm', type: 'menu', config: { sections: [] } }).ok).toBe(false);
+  });
+
   it('rejects invalid configuration and unknown types without throwing', () => {
     expect(mount({ id: 'x', type: 'qr', config: { url: 'javascript:alert(1)' } }).ok).toBe(false);
     expect(mount({ id: 'x', type: 'nope', config: {} }).ok).toBe(false);
