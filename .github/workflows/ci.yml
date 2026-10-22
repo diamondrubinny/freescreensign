@@ -45,11 +45,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Install ffmpeg (media processing tests)
-        # A stalled package mirror once used up the whole job: retry, and give up on a stall.
-        timeout-minutes: 8
+        # A static build from a pinned image (Docker Hub), not apt: the Ubuntu package mirror of
+        # the runners has at times been too slow to fetch ffmpeg's 60 MB of packages in minutes.
+        timeout-minutes: 5
         run: |
-          apt_opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
-          sudo apt-get $apt_opts update && sudo apt-get $apt_opts install -y --no-install-recommends ffmpeg
+          id="$(docker create mwader/static-ffmpeg:9.0.2-1@sha256:f5d100184884eb3e82b0eb14bb5ebf98da99826ac824989720297fb9ef21c822 /ffmpeg)"
+          for tool in ffmpeg ffprobe; do
+            docker cp "$id:/$tool" "$RUNNER_TEMP/$tool"
+            sudo install -m 0755 "$RUNNER_TEMP/$tool" "/usr/local/bin/$tool"
+          done
+          docker rm "$id" > /dev/null
+          ffmpeg -version | head -1
       - name: Start object storage and ClamAV (media integration tests)
         run: |
           docker run -d --name ci-s3 -p 8333:8333 \
