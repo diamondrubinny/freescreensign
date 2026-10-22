@@ -6,6 +6,11 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Building from source needs Node.js 22.22.2 or later (or 24.15 or later), for jsdom 30 in the
+  tests. The Docker images are not affected.
+
 ## [0.7.0] - 2026-10-22
 
 Screens that look professionally designed: seven starter kits by trade with original art, a

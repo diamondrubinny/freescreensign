@@ -12,9 +12,6 @@ updates:
       # The types follow the oldest supported runtime (.nvmrc, engines): Node 22.
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
-      # jsdom 30 needs Node 22.22.2 or later; the engines field allows 22.22.0.
-      - dependency-name: jsdom
-        update-types: ['version-update:semver-major']
     groups:
       dev-tooling:
         dependency-type: development
