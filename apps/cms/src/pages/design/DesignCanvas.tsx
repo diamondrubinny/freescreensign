@@ -1,4 +1,4 @@
-import { designElementStyle } from '@rubinny/shared';
+import { designCanvasStyle, designElementStyle } from '@rubinny/shared';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { snap, type Design, type Element } from './model';
@@ -160,12 +160,7 @@ export function DesignCanvas({
     >
       <div
         className="absolute top-0 left-0 origin-top-left"
-        style={{
-          width: `${String(design.width)}px`,
-          height: `${String(design.height)}px`,
-          transform: `scale(${String(scale)})`,
-          backgroundColor: design.background,
-        }}
+        style={{ ...designCanvasStyle(design), transform: `scale(${String(scale)})` }}
       >
         {design.backgroundMediaId && (
           <img
@@ -213,6 +208,12 @@ export function DesignCanvas({
                   draggable={false}
                   className="pointer-events-none block size-full bg-gray-300"
                   style={{ objectFit: element.fit, borderRadius: `${String(element.radius)}px` }}
+                />
+              )}
+              {element.kind === 'image' && element.overlay && (
+                <div
+                  className="w-design-overlay pointer-events-none"
+                  style={{ backgroundColor: element.overlay }}
                 />
               )}
               {selected &&

@@ -58,6 +58,7 @@ describe('design widget', () => {
             h: 1,
             fit: 'cover',
             radius: 0,
+            alt: '',
             rotation: 0,
             opacity: 1,
           },

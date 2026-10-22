@@ -363,6 +363,74 @@ describe('built-in widgets', () => {
     expect(images[1]?.style.objectFit).toBe('contain');
   });
 
+  it('design: gradients, shadows, fonts, overlays and animations on a wrapper', async () => {
+    const uuid = '3f8a6b1e-2c4d-4e5f-8a9b-0c1d2e3f4a5b';
+    const config = {
+      width: 1000,
+      height: 500,
+      background: '#000000',
+      backgroundGradient: {
+        type: 'linear',
+        angle: 90,
+        stops: [
+          { color: '#111111', at: 0 },
+          { color: '#222222', at: 100 },
+        ],
+      },
+      elements: [
+        {
+          id: 't',
+          kind: 'text',
+          x: 100,
+          y: 50,
+          w: 400,
+          h: 100,
+          text: 'SALE',
+          rotation: 10,
+          font: 'secular-one',
+          outline: { color: '#000000', width: 2 },
+          animation: { enter: 'pop', delay: 100, duration: 500, loop: 'pulse' },
+        },
+        { id: 'i', kind: 'image', x: 0, y: 0, w: 10, h: 10, mediaId: uuid, overlay: '#00000080' },
+      ],
+    };
+    const { container } = mount({ id: 'd', type: 'design', config });
+    const canvas = container.querySelector<HTMLElement>('.w-design-canvas')!;
+    expect(canvas.style.backgroundImage).toContain('linear-gradient(90deg');
+    const wrapper = container.querySelector<HTMLElement>('.w-design-anim')!;
+    expect(wrapper.style.left).toBe('100px');
+    expect(wrapper.style.animation).toContain('rd-enter-pop');
+    const text = wrapper.querySelector<HTMLElement>('.w-design-text')!;
+    // The element keeps its rotation; the wrapper animates and holds the position.
+    expect(text.style.transform).toBe('rotate(10deg)');
+    expect(text.style.left).toBe('0px');
+    expect(text.style.fontFamily).toContain('Secular One');
+    expect(text.style.getPropertyValue('-webkit-text-stroke')).toBe('2px #000000');
+    const overlay = container.querySelector<HTMLElement>('.w-design-image .w-design-overlay')!;
+    expect(overlay.style.backgroundColor).not.toBe('');
+
+    // Reduced motion (the screen's setting) or animations off: no wrapper.
+    const still = runtime({});
+    const calm = new WidgetRuntime({
+      registry: BUILT_IN_WIDGETS,
+      fetchData: () => Promise.reject(new Error('none')),
+      mediaUrl: () => Promise.resolve(null),
+      timezone: () => 'Asia/Jerusalem',
+      now: () => NOW,
+      reducedMotion: () => true,
+    });
+    expect(
+      mount({ id: 'd', type: 'design', config }, calm).container.querySelector('.w-design-anim'),
+    ).toBeNull();
+    expect(
+      mount(
+        { id: 'd', type: 'design', config: { ...config, animate: false } },
+        still,
+      ).container.querySelector('.w-design-anim'),
+    ).toBeNull();
+    await flush();
+  });
+
   it('rejects invalid configuration and unknown types without throwing', () => {
     expect(mount({ id: 'x', type: 'qr', config: { url: 'javascript:alert(1)' } }).ok).toBe(false);
     expect(mount({ id: 'x', type: 'nope', config: {} }).ok).toBe(false);

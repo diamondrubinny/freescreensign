@@ -4,6 +4,7 @@ import {
   Circle,
   Copy,
   ImagePlus,
+  Play,
   Redo2,
   Square,
   Trash2,
@@ -16,6 +17,7 @@ import type { MediaItem } from '../../api/types';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/ui';
 import { DesignCanvas } from './DesignCanvas';
+import { DesignPreview } from './DesignPreview';
 import { useHistory } from './history';
 import { ImagePicker } from './ImagePicker';
 import { Inspector } from './Inspector';
@@ -55,6 +57,9 @@ export function DesignEditor({
   const design = history.value;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [picker, setPicker] = useState<'add' | 'replace' | 'background' | null>(null);
+  /** Each click replays the animated preview (a new key remounts it). */
+  const [replay, setReplay] = useState(0);
+  const animated = design.animate && design.elements.some((element) => element.animation);
   const selected = design.elements.find((e) => e.id === selectedId) ?? null;
 
   useEffect(() => {
@@ -228,6 +233,30 @@ export function DesignEditor({
             elementLabel={elementLabel}
           />
           <p className="text-sm text-gray-700 dark:text-gray-300">{t('designer.keyboardHint')}</p>
+          {animated && (
+            <div className="flex flex-col gap-2">
+              <div>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setReplay((count) => count + 1);
+                  }}
+                >
+                  <Play aria-hidden="true" />
+                  {t('designer.playPreview')}
+                </Button>
+              </div>
+              {replay > 0 && (
+                <DesignPreview
+                  key={replay}
+                  design={design}
+                  orgId={orgId}
+                  animate
+                  label={t('designer.playPreview')}
+                />
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-4">

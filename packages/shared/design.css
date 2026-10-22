@@ -1,0 +1,95 @@
+/*
+ * Animations of design elements (packages/shared/src/design.ts, designAnimationCss), used by
+ * the player and the dashboard's preview. Transform and opacity only: smooth on TV screens.
+ */
+@keyframes rd-enter-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rd-enter-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30%);
+  }
+}
+@keyframes rd-enter-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-30%);
+  }
+}
+@keyframes rd-enter-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(30%);
+  }
+}
+@keyframes rd-enter-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-30%);
+  }
+}
+@keyframes rd-enter-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+@keyframes rd-enter-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes rd-loop-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+@keyframes rd-loop-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4%);
+  }
+}
+@keyframes rd-loop-sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+/* Image overlay (a color over the picture). */
+.w-design-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+/* Screens and viewers that ask for less motion get none. */
+@media (prefers-reduced-motion: reduce) {
+  .w-design-anim {
+    animation: none !important;
+  }
+}

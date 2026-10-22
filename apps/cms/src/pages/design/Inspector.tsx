@@ -1,87 +1,18 @@
-import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/Button';
-import { inputClass } from '../../components/ui';
+import {
+  AnimationFields,
+  CheckRow,
+  ColorRow,
+  FontRow,
+  GradientFields,
+  NumberRow,
+  OutlineFields,
+  Row,
+  ShadowFields,
+  small,
+} from './InspectorFields';
 import { CANVAS_PRESETS, type Design, type Element } from './model';
-
-const small = `${inputClass} w-full px-2! py-1!`;
-
-function Row({ label, children }: { label: string; children: (id: string) => ReactNode }) {
-  const id = useId();
-  return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      {children(id)}
-    </div>
-  );
-}
-
-function NumberRow({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <Row label={label}>
-      {(id) => (
-        <input
-          id={id}
-          type="number"
-          dir="ltr"
-          min={min}
-          max={max}
-          step={step}
-          value={Number.isFinite(value) ? value : ''}
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            if (event.target.value !== '' && Number.isFinite(next)) {
-              onChange(Math.min(max, Math.max(min, next)));
-            }
-          }}
-          className={small}
-        />
-      )}
-    </Row>
-  );
-}
-
-function ColorRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <Row label={label}>
-      {(id) => (
-        <input
-          id={id}
-          type="color"
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value);
-          }}
-          className="h-9 w-full rounded-lg border border-gray-400 dark:border-gray-600"
-        />
-      )}
-    </Row>
-  );
-}
 
 /**
  * Properties of the selected element (or of the canvas when nothing is selected).
@@ -144,6 +75,13 @@ export function Inspector({
             onDesign({ background });
           }}
         />
+        <GradientFields
+          label={t('designer.gradient')}
+          value={design.backgroundGradient}
+          onChange={(backgroundGradient) => {
+            onDesign({ backgroundGradient });
+          }}
+        />
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={onPickBackground}>
             {t('designer.backgroundImage')}
@@ -154,10 +92,35 @@ export function Inspector({
             </Button>
           )}
         </div>
+        <CheckRow
+          label={t('designer.animate')}
+          checked={design.animate}
+          onChange={(animate) => {
+            onDesign({ animate });
+          }}
+        />
+        <p className="text-sm text-gray-700 dark:text-gray-300">{t('designer.animateHint')}</p>
         <p className="text-sm text-gray-700 dark:text-gray-300">{t('designer.selectHint')}</p>
       </div>
     );
   }
+
+  const effects = (
+    <>
+      <ShadowFields
+        value={element.shadow}
+        onChange={(shadow) => {
+          onElement({ shadow });
+        }}
+      />
+      <AnimationFields
+        value={element.animation}
+        onChange={(animation) => {
+          onElement({ animation });
+        }}
+      />
+    </>
+  );
 
   const geometry = (
     <div className="grid grid-cols-2 gap-2">
@@ -239,6 +202,12 @@ export function Inspector({
               />
             )}
           </Row>
+          <FontRow
+            value={element.font}
+            onChange={(font) => {
+              onElement({ font });
+            }}
+          />
           <div className="grid grid-cols-2 gap-2">
             <NumberRow
               label={t('designer.fontSize')}
@@ -298,6 +267,16 @@ export function Inspector({
                 onElement({ lineHeight });
               }}
             />
+            <NumberRow
+              label={t('designer.letterSpacing')}
+              value={element.letterSpacing}
+              min={-0.1}
+              max={1}
+              step={0.01}
+              onChange={(letterSpacing) => {
+                onElement({ letterSpacing });
+              }}
+            />
             <Row label={t('designer.italic')}>
               {(id) => (
                 <input
@@ -311,33 +290,69 @@ export function Inspector({
                 />
               )}
             </Row>
-          </div>
-          <Row label={t('designer.textBackground')}>
-            {(id) => (
-              <div className="flex items-center gap-2">
+            <Row label={t('designer.uppercase')}>
+              {(id) => (
                 <input
                   id={id}
                   type="checkbox"
-                  checked={element.background !== undefined}
+                  checked={element.uppercase}
                   onChange={(event) => {
-                    onElement({ background: event.target.checked ? '#000000' : undefined });
+                    onElement({ uppercase: event.target.checked });
                   }}
                   className="size-5"
                 />
-                {element.background !== undefined && (
-                  <input
-                    type="color"
-                    aria-label={t('designer.textBackgroundColor')}
-                    value={element.background}
-                    onChange={(event) => {
-                      onElement({ background: event.target.value });
-                    }}
-                    className="h-9 flex-1 rounded-lg border border-gray-400"
-                  />
-                )}
-              </div>
+              )}
+            </Row>
+          </div>
+          <OutlineFields
+            value={element.outline}
+            onChange={(outline) => {
+              onElement({ outline });
+            }}
+          />
+          <Row label={t('designer.textBackground')}>
+            {(id) => (
+              <input
+                id={id}
+                type="checkbox"
+                checked={element.background !== undefined}
+                onChange={(event) => {
+                  onElement({ background: event.target.checked ? '#000000b3' : undefined });
+                }}
+                className="size-5"
+              />
             )}
           </Row>
+          {element.background !== undefined && (
+            <div className="grid grid-cols-2 gap-2">
+              <ColorRow
+                label={t('designer.textBackgroundColor')}
+                value={element.background}
+                alpha
+                onChange={(background) => {
+                  onElement({ background });
+                }}
+              />
+              <NumberRow
+                label={t('designer.boxRadius')}
+                value={element.radius}
+                min={0}
+                max={8192}
+                onChange={(radius) => {
+                  onElement({ radius });
+                }}
+              />
+            </div>
+          )}
+          {element.background !== undefined && (
+            <GradientFields
+              label={t('designer.boxGradient')}
+              value={element.backgroundGradient}
+              onChange={(backgroundGradient) => {
+                onElement({ backgroundGradient });
+              }}
+            />
+          )}
         </>
       )}
       {element.kind === 'image' && (
@@ -371,6 +386,46 @@ export function Inspector({
               }}
             />
           </div>
+          <Row label={t('designer.alt')}>
+            {(id) => (
+              <input
+                id={id}
+                dir="auto"
+                maxLength={300}
+                value={element.alt}
+                onChange={(event) => {
+                  onElement({ alt: event.target.value }, true);
+                }}
+                onBlur={onCommit}
+                className={small}
+              />
+            )}
+          </Row>
+          <Row label={t('designer.overlay')}>
+            {(id) => (
+              <input
+                id={id}
+                type="checkbox"
+                checked={element.overlay !== undefined}
+                onChange={(event) => {
+                  onElement({ overlay: event.target.checked ? '#00000066' : undefined });
+                }}
+                className="size-5"
+              />
+            )}
+          </Row>
+          {element.overlay !== undefined && (
+            <div className="grid grid-cols-2 gap-2">
+              <ColorRow
+                label={t('designer.overlayColor')}
+                value={element.overlay}
+                alpha
+                onChange={(overlay) => {
+                  onElement({ overlay });
+                }}
+              />
+            </div>
+          )}
         </>
       )}
       {element.kind === 'shape' && (
@@ -393,6 +448,7 @@ export function Inspector({
           <ColorRow
             label={t('designer.fill')}
             value={element.fill}
+            alpha
             onChange={(fill) => {
               onElement({ fill });
             }}
@@ -415,8 +471,27 @@ export function Inspector({
               onElement({ strokeWidth, stroke: element.stroke ?? '#ffffff' });
             }}
           />
+          {element.strokeWidth > 0 && (
+            <ColorRow
+              label={t('designer.strokeColor')}
+              value={element.stroke ?? '#ffffff'}
+              onChange={(stroke) => {
+                onElement({ stroke });
+              }}
+            />
+          )}
         </div>
       )}
+      {element.kind === 'shape' && (
+        <GradientFields
+          label={t('designer.gradient')}
+          value={element.gradient}
+          onChange={(gradient) => {
+            onElement({ gradient });
+          }}
+        />
+      )}
+      {effects}
       {geometry}
     </div>
   );

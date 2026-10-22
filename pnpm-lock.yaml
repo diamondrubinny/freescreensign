@@ -50,7 +50,19 @@ importers:
 
   apps/cms:
     dependencies:
+      '@fontsource-variable/frank-ruhl-libre':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource-variable/heebo':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/rubik':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/bebas-neue':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/secular-one':
         specifier: 5.3.0
         version: 5.3.0
       '@rubinny/shared':
@@ -135,7 +147,19 @@ importers:
 
   apps/player:
     dependencies:
+      '@fontsource-variable/frank-ruhl-libre':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource-variable/heebo':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/rubik':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/bebas-neue':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/secular-one':
         specifier: 5.3.0
         version: 5.3.0
       '@rubinny/shared':
@@ -799,8 +823,20 @@ packages:
   '@fastify/websocket@11.3.4':
     resolution: {integrity: sha512-firnJtEOv6pfdoXIzFDMbd+omgWwFNfLtdM8JejNFr/9lT/9DHkEhjTShuRFeE4phqrevD2B3JRW0v6uyzWhHQ==}
 
+  '@fontsource-variable/frank-ruhl-libre@5.3.0':
+    resolution: {integrity: sha512-BgE4pEPDSXfg7741yQYdxB7XShRgdMTYoP4sdoRXfo0FCDWlQdDUm+o1xPcISC8+TTmC6ytvq+u/QmnpQ+EhpQ==}
+
   '@fontsource-variable/heebo@5.3.0':
     resolution: {integrity: sha512-gaCKIbnx83+Za844O2dn4XYoAitS2jjBSj08bELHfCIL5gKMBDWl82oWte2CEBrnXwNMVJNd3ojZqFOd9+mCFg==}
+
+  '@fontsource-variable/rubik@5.3.0':
+    resolution: {integrity: sha512-yQUf8qle24MJYA+EuauyF+cqjjN6I715nGjitt3sGmwZA0XfA4fWJcLq1C/diREZl4Qzn1E80nLMc0ipC/a4Lg==}
+
+  '@fontsource/bebas-neue@5.3.0':
+    resolution: {integrity: sha512-nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw==}
+
+  '@fontsource/secular-one@5.3.0':
+    resolution: {integrity: sha512-T9g2sz5egZ8DrZOMCbefurb98ZIJV50lexM83Mxk3rkvrZKIseyzH5PAbtRNtwTGXwPqlXORokFOStIZXixqvg==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -4899,7 +4935,15 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  '@fontsource-variable/frank-ruhl-libre@5.3.0': {}
+
   '@fontsource-variable/heebo@5.3.0': {}
+
+  '@fontsource-variable/rubik@5.3.0': {}
+
+  '@fontsource/bebas-neue@5.3.0': {}
+
+  '@fontsource/secular-one@5.3.0': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

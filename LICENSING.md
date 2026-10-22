@@ -32,3 +32,17 @@ as permitted by Section 7 of the GNU Affero General Public License v3:
 > first public release.
 
 Copyright (C) 2026 The Rubinny Authors.
+
+## Bundled fonts
+
+The player and the dashboard bundle these fonts from npm (Fontsource), each under the
+[SIL Open Font License 1.1](https://openfontlicense.org); each package carries its license
+file. They are served from your own server, with no requests to font services.
+
+| Font             | Package                                 | Scripts               |
+| ---------------- | --------------------------------------- | --------------------- |
+| Heebo            | `@fontsource-variable/heebo`            | Hebrew, Latin         |
+| Rubik            | `@fontsource-variable/rubik`            | Hebrew, Latin, others |
+| Frank Ruhl Libre | `@fontsource-variable/frank-ruhl-libre` | Hebrew, Latin         |
+| Secular One      | `@fontsource/secular-one`               | Hebrew, Latin         |
+| Bebas Neue       | `@fontsource/bebas-neue`                | Latin only            |

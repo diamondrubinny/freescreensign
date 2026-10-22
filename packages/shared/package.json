@@ -1,17 +1,19 @@
 {
   "name": "@rubinny/shared",
   "version": "0.6.0",
-  "description": "Shared schemas and types for Rubinny (manifest spec, pairing, roles).",
+  "description": "Shared schemas and types for Rubinny (player manifest, widgets, layouts, designs, pairing, roles).",
   "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./design.css": "./design.css"
   },
   "files": [
     "dist",
+    "design.css",
     "LICENSE"
   ],
   "scripts": {
@@ -23,5 +25,7 @@
   "dependencies": {
     "zod": "4.6.7"
   },
-  "sideEffects": false
+  "sideEffects": [
+    "*.css"
+  ]
 }

@@ -1,6 +1,11 @@
 @import 'tailwindcss';
-/* Heebo (SIL OFL 1.1), bundled locally: no third-party font requests. */
+/* Fonts (SIL OFL 1.1), bundled locally: no third-party font requests. Design animations. */
 @import '@fontsource-variable/heebo';
+@import '@fontsource-variable/rubik';
+@import '@fontsource-variable/frank-ruhl-libre';
+@import '@fontsource/secular-one';
+@import '@fontsource/bebas-neue';
+@import '@rubinny/shared/design.css';
 
 /* Design tokens. "brand" is an indigo scale; all text pairings used in the UI
    keep at least 4.5:1 contrast in light and dark mode. */

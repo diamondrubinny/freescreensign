@@ -25,7 +25,7 @@ afterEach(() => {
 
 describe('snapping', () => {
   it('snaps to the canvas center and edges within the threshold', () => {
-    const design = { width: 1000, height: 500, background: '#000000', elements: [] };
+    const design = { width: 1000, height: 500, background: '#000000', elements: [], animate: true };
     expect(snap({ x: 446, y: 3, w: 100, h: 50 }, design, [], 8)).toEqual({
       x: 450,
       y: 0,

@@ -1,4 +1,6 @@
 import {
+  designAnimationCss,
+  designCanvasStyle,
   designConfigSchema,
   designElementStyle,
   designFit,
@@ -7,20 +9,27 @@ import {
 import { defineWidget, el } from '@rubinny/widget-sdk';
 import { onLayout } from './fit';
 
+/** Sets camelCase styles as CSS properties (keeps prefixed ones such as -webkit-text-stroke). */
+function applyStyle(node: HTMLElement, style: Record<string, string>) {
+  for (const [key, value] of Object.entries(style)) {
+    node.style.setProperty(
+      key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`),
+      value,
+    );
+  }
+}
+
 /**
  * Free-form slide: the canvas is laid out at its design size and scaled to the
  * zone (aspect ratio kept). Styles come from @rubinny/shared, like in the editor.
+ * Animations run on a wrapper around each element, so its rotation stays its own.
  */
 export const designWidget = defineWidget<DesignConfig>({
   type: 'design',
   parseConfig: (config) => designConfigSchema.parse(config),
   render(container, config, ctx) {
     const canvas = el('div', { className: 'w-design-canvas' });
-    Object.assign(canvas.style, {
-      width: `${String(config.width)}px`,
-      height: `${String(config.height)}px`,
-      backgroundColor: config.background,
-    });
+    applyStyle(canvas, designCanvasStyle(config));
     const root = el('div', { className: 'w-design' }, canvas);
     container.append(root);
 
@@ -41,14 +50,36 @@ export const designWidget = defineWidget<DesignConfig>({
     }
     for (const element of config.elements) {
       const node = el('div', { className: `w-design-el w-design-${element.kind}` });
-      Object.assign(node.style, designElementStyle(element));
+      const style = designElementStyle(element);
       if (element.kind === 'text') {
         node.dir = 'auto';
         node.textContent = element.text;
       } else if (element.kind === 'image') {
         node.append(image(element.mediaId, element.fit));
+        if (element.overlay) {
+          const overlay = el('div', { className: 'w-design-overlay' });
+          overlay.style.backgroundColor = element.overlay;
+          node.append(overlay);
+        }
       }
-      canvas.append(node);
+      const animation = designAnimationCss(element, config.animate && !ctx.reducedMotion);
+      if (animation) {
+        // The wrapper takes the element's box; the element fills it.
+        const wrapper = el('div', { className: 'w-design-anim' }, node);
+        applyStyle(wrapper, {
+          position: 'absolute',
+          left: style.left ?? '0',
+          top: style.top ?? '0',
+          width: style.width ?? '0',
+          height: style.height ?? '0',
+          animation,
+        });
+        applyStyle(node, { ...style, left: '0', top: '0' });
+        canvas.append(wrapper);
+      } else {
+        applyStyle(node, style);
+        canvas.append(node);
+      }
     }
 
     onLayout(ctx.signal, () => {

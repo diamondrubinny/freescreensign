@@ -33,6 +33,10 @@ export function textElement(design: Design, text: string): Element {
     color: '#ffffff',
     align: 'center',
     lineHeight: 1.2,
+    font: 'heebo',
+    letterSpacing: 0,
+    uppercase: false,
+    radius: 0,
   };
 }
 
@@ -78,6 +82,7 @@ export function imageElement(
     opacity: 1,
     fit: 'cover',
     radius: 0,
+    alt: '',
   };
 }
 
