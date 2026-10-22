@@ -14,6 +14,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/node_modules/**',
       '**/.turbo/**',
+      '**/.cache/**',
     ],
   },
   js.configs.recommended,
@@ -59,6 +60,11 @@ export default tseslint.config(
   },
   {
     files: ['apps/player/**/*.ts', 'apps/tv/src/**/*.ts', 'apps/tv/test/**/*.ts'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
+  {
+    // Showcase: the kit page and the callbacks the screenshot script runs in the page.
+    files: ['apps/showcase/src/**/*.{ts,mjs}'],
     languageOptions: { globals: { ...globals.browser } },
   },
   {

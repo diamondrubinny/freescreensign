@@ -1,0 +1,20 @@
+{
+  "name": "@rubinny/showcase",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Pictures of the starter kits on a screen, for the READMEs and the dashboard (a tool; not shipped).",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "screens": "node src/screens.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@rubinny/shared": "workspace:*",
+    "esbuild": "0.28.2",
+    "sharp": "0.35.5",
+    "tsx": "4.23.15"
+  }
+}
