@@ -30,6 +30,19 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
+## 0.6 → 0.7
+
+- **Nothing to do:** no migrations. The new kits, the menu widget and the designer's effects
+  are available after the upgrade.
+- **Screens update on their own.** Content made with 0.7 (menus, the new kits, designs with
+  gradients, transparency or small canvases) needs the 0.7 player; a 0.6 player shows nothing
+  in its place. From 0.7 the server asks an older player to reload when it reports in, so web,
+  desktop, Android, Samsung and LG players get the new code within minutes (at most about 10).
+  A screen that is off during the upgrade gets it when it starts. To check, the screen's page
+  shows "Player version" 0.7.0; **Reload player** on that page updates it at once.
+- **Kit pictures need media storage** (as uploads do). Without it, kits are created without
+  their art.
+
 ## 0.4 → 0.6
 
 0.5.0 was not published: upgrade from 0.4.1 straight to 0.6.0.

@@ -9,7 +9,7 @@ and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Sponsor](#support-the-project)
 
-> **Status: actively developed (v0.6).** All nine planned phases are done, with releases since
+> **Status: actively developed (v0.7).** All nine planned phases are done, with releases since
 > 0.1. It is ready to evaluate and pilot; before production use, go through the
 > [production checklist](docs/PRODUCTION-CHECKLIST.md), which also lists what still needs a
 > professional review.
@@ -22,7 +22,6 @@ Pick your trade and get a finished screen in one click: designed slides, a menu 
 a ticker and, where it fits, a clock, a countdown or a QR code. Every kit comes in Hebrew or
 English, and every picture in it is original art drawn for the project
 ([Rubinny Art Pack](LICENSING.md), CC0). Change any text, price or color in the dashboard.
-The kits by trade arrive with version 0.7.
 
 |                                                             Cinema                                                              |                                                                   Café                                                                   |
 | :-----------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------: |
@@ -179,9 +178,12 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-Now: v0.6.0, with time windows for playlist items, screen groups, a time zone per screen, a
-server status page for the operator ([plan and results](docs/phases/13-next-plan.md)), and
-Samsung and LG screens ([plan](docs/phases/14-tizen-webos.md), not yet verified on a device); 0.4 added touch screens, video walls and
+Now: v0.7.0, with seven starter kits by trade and original art, a menu / price list widget,
+and a designer with gradients, shadows, fonts and animations
+([plan and results](docs/phases/15-showcase.md)). 0.6 added time windows for playlist items,
+screen groups, a time zone per screen, a server status page for the operator
+([plan and results](docs/phases/13-next-plan.md)), and Samsung and LG screens
+([plan](docs/phases/14-tizen-webos.md), not yet verified on a device); 0.4 added touch screens, video walls and
 writing suggestions with your own AI key, 0.3 SSO (OpenID Connect) and content approval, 0.2
 data tables, emergency alerts, row-level security and arm64 images.
 See the [roadmap](docs/PLAN.md).

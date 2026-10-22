@@ -6,6 +6,44 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-22
+
+Screens that look professionally designed: seven starter kits by trade with original art, a
+menu / price list widget, and a designer with gradients, shadows, fonts and animations.
+Upgrading from 0.6: see [docs/UPGRADING.md](docs/UPGRADING.md#06--07) (nothing to do; screens
+update their player on their own).
+
+### Added
+
+- Starter kits by trade, in Hebrew and English: restaurant, café, cinema, retail, office,
+  hotel and community center. Each one creates designed slides, a menu or schedule, a ticker
+  and, where it fits, a clock, a countdown or a QR code, on the new "showcase" template (a
+  main zone, a side zone and a ticker). The kits page groups them "By trade" and "General",
+  with a picture of each.
+- Rubinny Art Pack: 18 original illustrations and backgrounds (CC0) used by the kits. When a
+  kit is created they go through the normal media pipeline, scan included, and are stored
+  once per organization. Without media storage, kits are created without pictures.
+- Menu / price list widget: sections and items (name, description, price, tags such as vegan,
+  spicy, new or recommended), 1 to 3 columns, modern, classic or chalkboard style, and prices
+  in shekels, dollars, euros or pounds formatted for the language (or plain text, for times).
+  Edited in an accessible section editor. Needs the 0.7 player.
+- Designer: linear and radial gradients, shadows and glows, colors with transparency,
+  outlined text, letter spacing, capitals, a color overlay on pictures, alternative text,
+  the vertical position of text in its box, and entrance and looping animations per element
+  (a design can switch them off, and screens that ask for reduced motion never play them).
+- Four fonts besides Heebo, bundled with the player (no third-party requests): Rubik, Frank
+  Ruhl Libre, Secular One and Bebas Neue (Latin only; Hebrew falls back to Heebo).
+- Designer templates "Special of the day" and "Premiere".
+- Screens update themselves after a server upgrade: a player older than the server is asked to
+  reload (at most every 10 minutes), so it never runs older code than the content needs.
+- `apps/showcase`: a development tool that takes the kit pictures for the READMEs and the
+  dashboard with the player's own code.
+
+### Changed
+
+- Designs can be as small as 100 px on each side (was 320), for headers and strips.
+- New README introduction and gallery of the kits, in both languages.
+
 ## [0.6.0] - 2026-10-21
 
 Time windows for playlist items, screen groups, a time zone per screen, a server status page
