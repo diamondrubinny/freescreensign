@@ -13,6 +13,8 @@
 
 ![ערכת המסעדה על מסך: תפריט עם מחירים ותגיות, מנת היום עם צלחת מאוירת ופס עם שעת שמחה](docs/screenshots/kits/restaurant-he.webp)
 
+▶ **סרטון של 30 שניות:** [לרוחב](docs/video/rubinny-ad-he-16x9.mp4) · [לאורך](docs/video/rubinny-ad-he-9x16.mp4) (באנגלית: [לרוחב](docs/video/rubinny-ad-en-16x9.mp4) · [לאורך](docs/video/rubinny-ad-en-9x16.mp4))
+
 <div dir="rtl">
 
 ## מוכן לעסק שלכם

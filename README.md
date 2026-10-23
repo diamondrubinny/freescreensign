@@ -16,6 +16,10 @@ and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
 
 ![The restaurant kit on a screen: a menu with prices and dietary tags, a dish of the day with an illustrated plate, and a happy-hour ticker](docs/screenshots/kits/restaurant-en.webp)
 
+▶ **30-second video:** [landscape](docs/video/rubinny-ad-en-16x9.mp4) ·
+[vertical](docs/video/rubinny-ad-en-9x16.mp4) (Hebrew: [landscape](docs/video/rubinny-ad-he-16x9.mp4) ·
+[vertical](docs/video/rubinny-ad-he-9x16.mp4))
+
 ## Ready for your venue
 
 Pick your trade and get a finished screen in one click: designed slides, a menu or schedule,
