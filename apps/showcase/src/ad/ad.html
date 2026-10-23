@@ -1,0 +1,658 @@
+<!doctype html>
+<!--
+  Rubinny — free and open-source digital signage. Powered by Rubinny · Open source.
+  Copyright (C) 2026 The Rubinny Authors. Created by Diamond Rubinny.
+  SPDX-License-Identifier: AGPL-3.0-only
+  https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
+-->
+
+<!--
+  The 30-second video ad. ad.mjs opens this page with ?lang=he|en&format=wide|tall and calls
+  window.seek(seconds) for every frame: all motion is a function of time, so each frame is
+  exact and the same on every run.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Rubinny — video ad</title>
+    <style>
+      @font-face {
+        font-family: 'Heebo';
+        src: url('heebo-hebrew.woff2') format('woff2');
+        font-weight: 100 900;
+        unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+      }
+      @font-face {
+        font-family: 'Heebo';
+        src: url('heebo-latin.woff2') format('woff2');
+        font-weight: 100 900;
+      }
+      :root {
+        --ink: #ffffff;
+        --muted: #c7d2fe;
+        --accent: #3b82f6;
+        --brand: #1d4ed8;
+        --warm: #f5b971;
+        --panel: rgba(255, 255, 255, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #0a0f24;
+      }
+      #stage {
+        position: relative;
+        overflow: hidden;
+        font-family: 'Heebo', sans-serif;
+        color: var(--ink);
+        background: linear-gradient(160deg, #0a0f24 0%, #0f1a45 55%, #0a0f24 100%);
+      }
+      .wide #stage {
+        width: 1920px;
+        height: 1080px;
+      }
+      .tall #stage {
+        width: 1080px;
+        height: 1920px;
+      }
+      .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.55;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        opacity: 0;
+      }
+      .center {
+        justify-content: center;
+        text-align: center;
+      }
+      .head {
+        text-align: center;
+        padding: 0 60px;
+      }
+      .wide .head {
+        margin-top: 64px;
+      }
+      .tall .head {
+        margin-top: 150px;
+      }
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+      h1 {
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        line-height: 1.1;
+      }
+      .wide h1 {
+        font-size: 76px;
+      }
+      .tall h1 {
+        font-size: 88px;
+      }
+      .sub {
+        color: var(--muted);
+        font-weight: 400;
+        margin-top: 14px;
+      }
+      .wide .sub {
+        font-size: 40px;
+      }
+      .tall .sub {
+        font-size: 48px;
+      }
+      .big {
+        font-weight: 800;
+        line-height: 1.15;
+      }
+      .wide .big {
+        font-size: 128px;
+      }
+      .tall .big {
+        font-size: 120px;
+      }
+      .line {
+        display: block;
+        will-change: transform, opacity;
+      }
+      .accent {
+        color: var(--warm);
+      }
+
+      /* Devices */
+      .tv {
+        position: relative;
+        background: #05070f;
+        border: 16px solid #1b2133;
+        border-radius: 18px;
+        box-shadow:
+          0 40px 90px rgba(0, 0, 0, 0.55),
+          0 0 0 2px #2a3350;
+        overflow: hidden;
+        aspect-ratio: 16 / 9;
+      }
+      .tv img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .stand {
+        width: 22%;
+        height: 26px;
+        margin: 0 auto;
+        background: linear-gradient(#232a40, #141a2c);
+        border-radius: 0 0 12px 12px;
+      }
+      .browser {
+        position: absolute;
+        background: #fff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow:
+          0 40px 90px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(255, 255, 255, 0.15);
+      }
+      .bar {
+        height: 44px;
+        background: #e8ecf5;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 18px;
+        direction: ltr;
+      }
+      .bar i {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: #c2c9d8;
+      }
+      .bar span {
+        margin-left: 18px;
+        height: 26px;
+        flex: 0 1 380px;
+        border-radius: 13px;
+        background: #fff;
+        color: #64748b;
+        font-size: 15px;
+        line-height: 26px;
+        padding: 0 14px;
+      }
+      .view {
+        position: relative;
+        overflow: hidden;
+      }
+      .view img {
+        position: absolute;
+        display: block;
+      }
+      .phone {
+        position: absolute;
+        background: #0b0f1c;
+        border: 12px solid #1b2133;
+        border-radius: 46px;
+        overflow: hidden;
+        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6);
+      }
+      .phone img {
+        display: block;
+        width: 100%;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
+      }
+      .chip {
+        border-radius: 999px;
+        background: var(--panel);
+        border: 2px solid rgba(255, 255, 255, 0.18);
+        font-weight: 600;
+        padding: 10px 28px;
+      }
+      .wide .chip {
+        font-size: 34px;
+      }
+      .tall .chip {
+        font-size: 40px;
+      }
+      .chip.on {
+        background: var(--warm);
+        border-color: var(--warm);
+        color: #2a1606;
+      }
+      .logo {
+        border-radius: 28%;
+        box-shadow: 0 30px 80px rgba(29, 78, 216, 0.55);
+      }
+      .checks {
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+        margin-top: 60px;
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-weight: 600;
+      }
+      .wide .check {
+        font-size: 44px;
+      }
+      .tall .check {
+        font-size: 50px;
+      }
+      .check b {
+        flex: none;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #16a34a;
+        display: grid;
+        place-items: center;
+      }
+      .url {
+        direction: ltr;
+        font-weight: 500;
+        color: var(--muted);
+        margin-top: 34px;
+        padding: 12px 30px;
+        border-radius: 14px;
+        background: var(--panel);
+      }
+      .wide .url {
+        font-size: 38px;
+      }
+      .tall .url {
+        font-size: 36px;
+      }
+      .powered {
+        position: absolute;
+        bottom: 60px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: var(--muted);
+        font-size: 30px;
+      }
+      .clock {
+        position: absolute;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+        border: 10px solid var(--warm);
+      }
+      .clock i {
+        position: absolute;
+        left: 50%;
+        bottom: 50%;
+        background: #0f172a;
+        border-radius: 6px;
+        transform-origin: 50% 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div class="blob" id="blob1"></div>
+      <div class="blob" id="blob2"></div>
+      <div class="blob" id="blob3"></div>
+      <div id="scenes"></div>
+    </div>
+    <script>
+      'use strict';
+      const params = new URLSearchParams(location.search);
+      const LANG = params.get('lang') === 'en' ? 'en' : 'he';
+      const TALL = params.get('format') === 'tall';
+      document.documentElement.lang = LANG;
+      document.documentElement.dir = LANG === 'he' ? 'rtl' : 'ltr';
+      document.body.className = TALL ? 'tall' : 'wide';
+      const W = TALL ? 1080 : 1920;
+      const H = TALL ? 1920 : 1080;
+      const RTL = LANG === 'he';
+      const sfx = LANG === 'en' ? '-en' : '';
+
+      // window.AD_POWERED_BY is set by ad.mjs from packages/shared/src/attribution.ts.
+      const TEXT = {
+        he: {
+          s1: ['המסכים שלכם.', 'התוכן שלכם.'],
+          tagline: 'שילוט דיגיטלי · חינם · קוד פתוח',
+          s3: 'ערכה מוכנה לכל עסק',
+          kits: ['מסעדה', 'בית קפה', 'קולנוע', 'חנות'],
+          s4: 'מעצבים בקלות',
+          s4sub: 'תפריטים, מחירים ומבצעים',
+          s5: 'התוכן הנכון בשעה הנכונה',
+          s5sub: 'תזמון לפי ימים ושעות',
+          s6: 'כל המסכים במקום אחד',
+          devices: ['דפדפן', 'Windows', 'Linux', 'Android', 'Raspberry Pi', 'Samsung', 'LG'],
+          s7: ['מתקינים על השרת שלכם.', 'הנתונים נשארים אצלכם.'],
+          checks: ['אימות דו-שלבי', 'סריקת וירוסים לכל קובץ', 'עברית ואנגלית, מימין לשמאל'],
+          end: 'חינם וקוד פתוח',
+        },
+        en: {
+          s1: ['Your screens.', 'Your content.'],
+          tagline: 'Digital signage · Free · Open source',
+          s3: 'A ready-made kit for every business',
+          kits: ['Restaurant', 'Café', 'Cinema', 'Shop'],
+          s4: 'Design with ease',
+          s4sub: 'Menus, prices and offers',
+          s5: 'The right content at the right time',
+          s5sub: 'Schedules by day and hour',
+          s6: 'All your screens in one place',
+          devices: ['Browser', 'Windows', 'Linux', 'Android', 'Raspberry Pi', 'Samsung', 'LG'],
+          s7: ['Runs on your own server.', 'Your data stays with you.'],
+          checks: [
+            'Two-step verification',
+            'Virus scan for every upload',
+            'Hebrew and English, RTL',
+          ],
+          end: 'Free and open source',
+        },
+      }[LANG];
+      const URL_TEXT = 'github.com/diamondrubinny/freescreensign';
+      const LOGO =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#1d4ed8"/><rect x="12" y="16" width="40" height="26" rx="3" fill="#fff"/><rect x="28" y="42" width="8" height="8" fill="#fff"/><rect x="20" y="48" width="24" height="4" rx="2" fill="#fff"/></svg>';
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+        );
+
+      /* ---------- Timing helpers ---------- */
+      const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+      const out3 = (x) => 1 - Math.pow(1 - clamp(x), 3);
+      const inOut = (x) => {
+        x = clamp(x);
+        return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+      };
+      /** 0 → 1 over `d` seconds from `a`, eased. */
+      const p = (t, a, d) => out3((t - a) / d);
+      /** A scene's visibility: fades in from `s`, out before `e`. */
+      const life = (t, s, e, fi = 0.5, fo = 0.45) =>
+        t < s || t > e ? 0 : Math.min(out3((t - s) / fi), clamp((e - t) / fo));
+      const set = (el, opacity, transform) => {
+        el.style.opacity = String(opacity);
+        el.style.transform = transform || 'none';
+      };
+      /** A line that rises into place from `a`. */
+      const rise = (el, t, a, d = 0.6, dist = 40) => {
+        const k = p(t, a, d);
+        set(el, k, `translateY(${(1 - k) * dist}px)`);
+      };
+
+      /* ---------- Scenes ---------- */
+      const root = document.getElementById('scenes');
+      const scene = (html, cls = '') => {
+        const el = document.createElement('section');
+        el.className = `scene ${cls}`;
+        el.innerHTML = html;
+        root.appendChild(el);
+        return el;
+      };
+      const q = (el, sel) => el.querySelector(sel);
+      const qa = (el, sel) => [...el.querySelectorAll(sel)];
+      // The dashboard pictures are 1440×960; show the page's content, without the side menu
+      // (on the right in Hebrew, on the left in English), so it is large enough to read.
+      const CROP = { x: RTL ? 0.02 : 0.24, y: 0.05, w: 0.74, h: 0.95 };
+      const browser = (src, id) =>
+        `<div class="browser" id="${id}"><div class="bar"><i></i><i></i><i></i><span>rubinny.example</span></div>
+          <div class="view" style="aspect-ratio:${CROP.w * 1440} / ${CROP.h * 960}">
+            <img src="${src}" alt="" style="width:${100 / CROP.w}%;left:${(-CROP.x / CROP.w) * 100}%;top:${(-CROP.y / CROP.h) * 100}%" />
+          </div></div>`;
+
+      // 1 · Hook (0–3 s)
+      const s1 = scene(
+        `<p class="big"><span class="line">${esc(TEXT.s1[0])}</span><span class="line accent">${esc(TEXT.s1[1])}</span></p>`,
+        'center',
+      );
+      // 2 · Logo (3–7 s)
+      const logoSize = TALL ? 260 : 230;
+      const s2 = scene(
+        `<div class="line logo" style="width:${logoSize}px;height:${logoSize}px">${LOGO.replace('<svg', `<svg width="${logoSize}" height="${logoSize}"`)}</div>
+         <p class="big line" style="margin-top:36px;direction:ltr">Rubinny</p>
+         <p class="sub line">${esc(TEXT.tagline)}</p>`,
+        'center',
+      );
+      // 3 · Kits (7–12 s)
+      const kits = ['restaurant', 'cafe', 'cinema', 'retail'];
+      const tvW = TALL ? 980 : 1180;
+      const s3 = scene(
+        `<div class="head"><h1 class="line">${esc(TEXT.s3)}</h1></div>
+         <div class="line" style="width:${tvW}px;margin-top:${TALL ? 400 : 44}px">
+           <div class="tv">${kits.map((k) => `<img src="kit-${k}${sfx === '' ? '-he' : '-en'}.webp" alt="" />`).join('')}</div>
+           <div class="stand"></div>
+         </div>
+         <div class="chips" style="margin-top:${TALL ? 140 : 34}px;max-width:${W - 120}px">${TEXT.kits.map((k) => `<span class="chip">${esc(k)}</span>`).join('')}</div>`,
+      );
+      // 4 · Designer and menu editor (12–16 s)
+      const s4 = scene(
+        `<div class="head"><h1 class="line">${esc(TEXT.s4)}</h1><p class="sub line">${esc(TEXT.s4sub)}</p></div>
+         ${browser(`cms-designer${sfx}.png`, 'b4a')}${browser(`cms-menu-editor${sfx}.png`, 'b4b')}`,
+      );
+      // 5 · Schedule (16–20 s)
+      const s5 = scene(
+        `<div class="head"><h1 class="line">${esc(TEXT.s5)}</h1><p class="sub line">${esc(TEXT.s5sub)}</p></div>
+         ${browser(`cms-schedule${sfx}.png`, 'b5')}
+         <div class="clock" id="clock"><i id="hh"></i><i id="mm"></i></div>`,
+      );
+      // 6 · Screens (20–24 s)
+      const s6 = scene(
+        `<div class="head"><h1 class="line">${esc(TEXT.s6)}</h1></div>
+         ${browser(`cms-dashboard${sfx}.png`, 'b6')}
+         <div class="phone" id="ph6"><img src="cms-mobile${sfx}.png" alt="" /></div>
+         <div class="chips" id="dev6" style="position:absolute;left:60px;right:60px">${TEXT.devices.map((d) => `<span class="chip">${esc(d)}</span>`).join('')}</div>`,
+      );
+      // 7 · Your server (24–27 s)
+      const s7 = scene(
+        `<p class="big" style="font-size:${TALL ? 96 : 88}px"><span class="line">${esc(TEXT.s7[0])}</span><span class="line accent">${esc(TEXT.s7[1])}</span></p>
+         <div class="checks">${TEXT.checks.map((c) => `<div class="check line"><b><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></b>${esc(c)}</div>`).join('')}</div>`,
+        'center',
+      );
+      // 8 · End card (27–30 s)
+      const endLogo = TALL ? 220 : 180;
+      const s8 = scene(
+        `<div class="line logo" style="width:${endLogo}px;height:${endLogo}px">${LOGO.replace('<svg', `<svg width="${endLogo}" height="${endLogo}"`)}</div>
+         <p class="big line" style="margin-top:30px;direction:ltr">Rubinny</p>
+         <p class="sub line" style="font-weight:600;color:#fff">${esc(TEXT.end)}</p>
+         <p class="url line">${URL_TEXT}</p>
+         <p class="powered line" id="pw"></p>`,
+        'center',
+      );
+
+      /* ---------- Layout that depends on the format ---------- */
+      const place = (el, x, y, w) => {
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.style.width = `${w}px`;
+      };
+      const side = (x, w) => (RTL ? x : W - x - w); // mirror horizontal positions for LTR
+      if (TALL) {
+        place(q(s4, '#b4a'), side(160, 860), 480, 860);
+        place(q(s4, '#b4b'), side(60, 860), 1060, 860);
+        place(q(s5, '#b5'), 60, 600, 960);
+        place(q(s6, '#b6'), 60, 440, 960);
+        place(q(s6, '#ph6'), side(640, 360), 830, 360);
+        q(s6, '#dev6').style.top = '1690px';
+      } else {
+        place(q(s4, '#b4a'), side(860, 820), 250, 820);
+        place(q(s4, '#b4b'), side(240, 820), 300, 820);
+        place(q(s5, '#b5'), (W - 860) / 2, 240, 860);
+        place(q(s6, '#b6'), side(640, 820), 200, 820);
+        place(q(s6, '#ph6'), side(420, 300), 290, 300);
+        q(s6, '#dev6').style.top = '975px';
+      }
+      const clock = q(s5, '#clock');
+      const clockSize = TALL ? 230 : 190;
+      Object.assign(clock.style, {
+        width: `${clockSize}px`,
+        height: `${clockSize}px`,
+        top: `${TALL ? 1480 : 640}px`,
+        left: `${TALL ? side(60, clockSize) : RTL ? 1500 : 230}px`,
+      });
+      for (let hour = 0; hour < 12; hour++) {
+        const tick = document.createElement('b');
+        const long = hour % 3 === 0;
+        Object.assign(tick.style, {
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          width: long ? '8px' : '5px',
+          height: long ? '22px' : '14px',
+          marginLeft: long ? '-4px' : '-2.5px',
+          background: long ? '#0f172a' : '#94a3b8',
+          borderRadius: '3px',
+          transformOrigin: '50% 0',
+          transform: `rotate(${hour * 30}deg) translateY(${clockSize / 2 - 10 - (long ? 22 : 14)}px)`,
+        });
+        clock.appendChild(tick);
+      }
+      const hh = q(s5, '#hh');
+      const mm = q(s5, '#mm');
+      Object.assign(hh.style, {
+        width: '12px',
+        height: `${clockSize * 0.24}px`,
+        marginLeft: '-6px',
+      });
+      Object.assign(mm.style, {
+        width: '8px',
+        height: `${clockSize * 0.36}px`,
+        marginLeft: '-4px',
+      });
+
+      /* ---------- Background ---------- */
+      const blobs = [
+        { el: document.getElementById('blob1'), c: '#1d4ed8', r: 0.55, x: 0.2, y: 0.25 },
+        { el: document.getElementById('blob2'), c: '#7c3aed', r: 0.45, x: 0.85, y: 0.7 },
+        { el: document.getElementById('blob3'), c: '#f59e0b', r: 0.3, x: 0.6, y: 0.1 },
+      ];
+      for (const b of blobs) {
+        const size = Math.max(W, H) * b.r;
+        Object.assign(b.el.style, { width: `${size}px`, height: `${size}px`, background: b.c });
+        b.size = size;
+      }
+
+      /* ---------- The frame at time t ---------- */
+      window.seek = (t) => {
+        blobs.forEach((b, i) => {
+          const x = b.x * W + Math.sin(t * 0.35 + i * 2) * W * 0.06 - b.size / 2;
+          const y = b.y * H + Math.cos(t * 0.3 + i) * H * 0.05 - b.size / 2;
+          b.el.style.transform = `translate(${x}px, ${y}px)`;
+          b.el.style.opacity = String(i === 2 ? 0.18 + 0.12 * clamp((t - 7) / 3) : 0.5);
+        });
+
+        // 1
+        set(s1, life(t, 0, 3, 0.01), `scale(${1 + 0.03 * clamp(t / 3)})`);
+        qa(s1, '.line').forEach((el, i) => rise(el, t, 0.15 + i * 0.85, 0.7, 60));
+
+        // 2
+        set(s2, life(t, 3, 7));
+        {
+          const [logo, name, tag] = qa(s2, '.line');
+          const k = p(t, 3.1, 0.8);
+          set(logo, k, `scale(${0.6 + 0.4 * k}) rotate(${(1 - k) * -12}deg)`);
+          rise(name, t, 3.5, 0.7);
+          rise(tag, t, 4.1, 0.7);
+        }
+
+        // 3: four kits, each shown ~1.25 s with a slow zoom
+        set(s3, life(t, 7, 12));
+        {
+          const [title, tv] = qa(s3, '.line');
+          rise(title, t, 7.1);
+          const k = p(t, 7.2, 0.9);
+          set(tv, k, `translateY(${(1 - k) * 80}px) scale(${0.94 + 0.06 * k})`);
+          const slot = 1.25;
+          const imgs = qa(s3, '.tv img');
+          const chips = qa(s3, '.chip');
+          imgs.forEach((img, i) => {
+            const start = 7 + i * slot;
+            const fade = i === 0 ? 1 : clamp((t - start) / 0.35);
+            const visible = t >= start || i === 0 ? fade : 0;
+            img.style.opacity = String(visible);
+            img.style.transform = `scale(${1 + 0.06 * clamp((t - start) / (slot + 0.4))})`;
+            const current = t >= start && (i === imgs.length - 1 || t < start + slot);
+            chips[i].classList.toggle('on', current);
+            rise(chips[i], t, 7.5 + i * 0.12, 0.5, 24);
+          });
+        }
+
+        // 4: designer, then the menu editor slides over it
+        set(s4, life(t, 12, 16));
+        {
+          qa(s4, '.head .line').forEach((el, i) => rise(el, t, 12.1 + i * 0.3));
+          const a = q(s4, '#b4a');
+          const b = q(s4, '#b4b');
+          const ka = p(t, 12.3, 0.9);
+          set(a, ka, `translateY(${(1 - ka) * 90}px) scale(${1 - 0.04 * p(t, 13.9, 0.8)})`);
+          const kb = p(t, 13.9, 0.9);
+          set(b, kb, `translate(${(RTL ? -1 : 1) * (1 - kb) * 140}px, ${(1 - kb) * 60}px)`);
+        }
+
+        // 5: schedule, with a clock that runs through a day
+        set(s5, life(t, 16, 20));
+        {
+          qa(s5, '.head .line').forEach((el, i) => rise(el, t, 16.1 + i * 0.3));
+          const k = p(t, 16.3, 0.9);
+          set(q(s5, '#b5'), k, `translateY(${(1 - k) * 90}px)`);
+          const kc = p(t, 16.9, 0.7);
+          set(clock, kc, `scale(${0.5 + 0.5 * kc})`);
+          const hours = 7 + inOut((t - 16.9) / 2.8) * 16; // 07:00 → 23:00
+          hh.style.transform = `rotate(${(hours % 12) * 30}deg)`;
+          mm.style.transform = `rotate(${(hours % 1) * 360}deg)`;
+        }
+
+        // 6: dashboard, phone and the players
+        set(s6, life(t, 20, 24));
+        {
+          rise(q(s6, '.head .line'), t, 20.1);
+          const k = p(t, 20.3, 0.9);
+          set(q(s6, '#b6'), k, `translateY(${(1 - k) * 90}px)`);
+          const kp = p(t, 20.9, 0.9);
+          set(
+            q(s6, '#ph6'),
+            kp,
+            `translateY(${(1 - kp) * 160}px) rotate(${(RTL ? -1 : 1) * (1 - kp) * 6}deg)`,
+          );
+          qa(s6, '#dev6 .chip').forEach((chip, i) => rise(chip, t, 21.4 + i * 0.12, 0.45, 24));
+        }
+
+        // 7: your server, your data
+        set(s7, life(t, 24, 27));
+        qa(s7, '.big .line').forEach((el, i) => rise(el, t, 24.1 + i * 0.45));
+        qa(s7, '.check').forEach((el, i) => rise(el, t, 25 + i * 0.3, 0.5, 30));
+
+        // 8: end card, held to the last frame
+        set(s8, life(t, 27, 99, 0.6, 1));
+        qa(s8, '.line').forEach((el, i) => rise(el, t, 27.1 + i * 0.22, 0.6, 30));
+      };
+
+      /** Resolves when every picture and font is ready. */
+      window.ready = async () => {
+        document.getElementById('pw').textContent = window.AD_POWERED_BY || '';
+        await Promise.all([
+          document.fonts.load('800 40px Heebo', 'אב Ab'),
+          document.fonts.load('400 40px Heebo', 'אב Ab'),
+        ]);
+        await document.fonts.ready;
+        await Promise.all([...document.images].map((img) => img.decode()));
+        window.seek(0);
+      };
+    </script>
+  </body>
+</html>

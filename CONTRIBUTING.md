@@ -93,6 +93,16 @@ SCREENS_LOCALE=he E2E_SETUP_TOKEN=… pnpm --filter @rubinny/cms screens   # cms
 SCREENS_LOCALE=en E2E_SETUP_TOKEN=… pnpm --filter @rubinny/cms screens   # cms-<page>-en.png
 ```
 
+The 30-second video ad (`docs/video/`, Hebrew and English, 16:9 and 9:16) is made from these
+pictures, with original synthesized music (`apps/showcase/src/ad/`). After new pictures, make
+it again (it needs `ffmpeg` with libx264 on the PATH and takes a few minutes per video):
+
+```bash
+pnpm --filter @rubinny/shared build
+pnpm --filter @rubinny/showcase ad            # all four; or: ... ad he wide
+AD_STILLS=2,9,15 pnpm --filter @rubinny/showcase ad he wide   # only those frames, to check
+```
+
 ## Code standards
 
 - TypeScript strict mode; no `any` without a comment explaining why.
