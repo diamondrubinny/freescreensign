@@ -191,7 +191,9 @@ curl -k https://localhost/health  # {"status":"ok"}
 - [שלב 6 — תזמון](docs/phases/06-scheduling.md) · [שלב 7 — תפעול](docs/phases/07-ops.md) · [שלב 8 — נגנים לכל מכשיר](docs/phases/08-wrappers.md) · [שלב 9 — הקשחה ושחרור](docs/phases/09-release.md) · [התקנת נגנים](docs/players.he.md) · [שדרוג התקנה קיימת](docs/UPGRADING.md)
 - [תרומה לפרויקט](CONTRIBUTING.md) · [אבטחה](SECURITY.md) · [רישוי](LICENSING.md)
 
-**עכשיו:** גרסה v0.7.0 ([תוכנית ותוצאות](docs/phases/15-showcase.md)). חדש בה:
+**עכשיו:** גרסה v0.7.1. נוסף בה הקרדיט "מופעל על ידי Rubinny · קוד פתוח" בכל חלקי המערכת ([תוכנית ותוצאות](docs/phases/16-attribution.md)).
+
+ב-0.7 נוספו ([תוכנית ותוצאות](docs/phases/15-showcase.md)):
 
 - שבע ערכות מוכנות לפי תחום, עם איורים מקוריים.
 - ווידג'ט תפריט ומחירון.

@@ -183,7 +183,8 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-Now: v0.7.0, with seven starter kits by trade and original art, a menu / price list widget,
+Now: v0.7.1, which adds the attribution "Powered by Rubinny · Open source" in every part of
+Rubinny ([plan and results](docs/phases/16-attribution.md)). 0.7 brought seven starter kits by trade and original art, a menu / price list widget,
 and a designer with gradients, shadows, fonts and animations
 ([plan and results](docs/phases/15-showcase.md)). 0.6 added time windows for playlist items,
 screen groups, a time zone per screen, a server status page for the operator

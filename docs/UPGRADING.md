@@ -21,7 +21,7 @@ by the release workflow of this repository. To verify them before running:
 
 ```bash
 for image in server worker web; do
-  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.6.0" \
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.7.1" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@'
 done
@@ -30,7 +30,17 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
+## 0.7.0 → 0.7.1
+
+- **Nothing to do:** no migrations and no new settings. Screens update their player on their
+  own, as in 0.7.0; the screen's page then shows "Player version" 0.7.1.
+- **Building from source** needs Node.js 22.22.2 or later (or 24.15 or later). The Docker
+  images are not affected.
+
 ## 0.6 → 0.7
+
+0.6.0 was not published as a release: upgrade from 0.4.1 straight to 0.7.0 (both sections
+below apply).
 
 - **Nothing to do:** no migrations. The new kits, the menu widget and the designer's effects
   are available after the upgrade.
@@ -45,7 +55,8 @@ release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
 ## 0.4 → 0.6
 
-0.5.0 was not published: upgrade from 0.4.1 straight to 0.6.0.
+0.5.0 and 0.6.0 were not published: from 0.4.1, upgrade straight to 0.7 (this section and
+the one above).
 
 - **Nothing to do for most installations:** three migrations (time windows of playlist
   items, screen groups with row-level security, the operator and backup records) run when

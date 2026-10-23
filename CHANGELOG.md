@@ -4,7 +4,11 @@ All notable changes to Rubinny. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) (0.x: anything may still change).
 
-## [Unreleased]
+## [0.7.1] - 2026-10-23
+
+The attribution "Powered by Rubinny · Open source" in every part of Rubinny, fixes, and updated
+dependencies. Upgrading from 0.7.0: see [docs/UPGRADING.md](docs/UPGRADING.md#070--071)
+(nothing to do).
 
 ### Added
 
@@ -41,6 +45,9 @@ All notable changes to Rubinny. The format follows
   the About page).
 - Building from source needs Node.js 22.22.2 or later (or 24.15 or later), for jsdom 30 in the
   tests. The Docker images are not affected.
+- Updated dependencies: react-router 8.5, i18next 26.5, react-i18next 17.1, TanStack Query
+  5.104.4, Kysely 0.29.7, BullMQ 6.3.17, nodemailer 10.1.7, lucide-react 1.59, the Anthropic
+  SDK 0.135, jsdom 30 and development tools.
 
 ## [0.7.0] - 2026-10-22
 
@@ -80,11 +87,12 @@ update their player on their own).
 - Designs can be as small as 100 px on each side (was 320), for headers and strips.
 - New README introduction and gallery of the kits, in both languages.
 
-## [0.6.0] - 2026-10-21
+## 0.6.0 - 2026-10-21
 
 Time windows for playlist items, screen groups, a time zone per screen, a server status page
 for the operator, and Samsung and LG screens (not yet verified on a device). 0.5.0 was
-prepared but not published; this release replaces it.
+prepared but not published; this release replaces it. 0.6.0 itself was not published as a
+release either: its changes are in 0.7.0.
 Upgrading from 0.4: see [docs/UPGRADING.md](docs/UPGRADING.md#04--06) (usually nothing to do).
 
 ### Added
@@ -132,9 +140,10 @@ Fixes for content approval and privacy. Upgrading from 0.4: nothing to do (no mi
 - The cookie policy draft lists the SSO sign-in cookie (`__Secure-rubinny_oidc`, essential,
   deleted when sign-in ends).
 
-## [0.4.0] - 2026-10-18
+## 0.4.0 - 2026-10-18
 
 Touch screens, video walls and writing suggestions with the organization's own AI key.
+Not published as a release of its own: its changes are in 0.4.1.
 Upgrading from 0.3: see [docs/UPGRADING.md](docs/UPGRADING.md#03--04) (usually nothing to do).
 
 ### Added
@@ -156,10 +165,11 @@ Upgrading from 0.3: see [docs/UPGRADING.md](docs/UPGRADING.md#03--04) (usually n
   `@anthropic-ai/sdk`. Sending content to an AI provider requires legal review (DPA,
   transfers abroad).
 
-## [0.3.0] - 2026-10-16
+## 0.3.0 - 2026-10-16
 
 Sign-in through the organization (SSO) and content approval. Upgrading from 0.2: see
-[docs/UPGRADING.md](docs/UPGRADING.md#02--03) (usually nothing to do).
+[docs/UPGRADING.md](docs/UPGRADING.md#02--03) (usually nothing to do). Not published as a
+release of its own: its changes are in 0.4.1.
 
 ### Added
 
@@ -278,9 +288,8 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
-[0.6.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.6.0
+[0.7.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.7.1
+[0.7.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.7.0
 [0.4.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.4.1
-[0.4.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.4.0
-[0.3.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.3.0
 [0.2.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.2.0
 [0.1.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.1.0
