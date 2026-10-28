@@ -17,6 +17,14 @@ export class UnauthorizedError extends Error {
   }
 }
 
+/** The server says a widget's data no longer exists (404), e.g. its room was deleted. */
+export class WidgetDataGoneError extends Error {
+  constructor(widgetId: string) {
+    super(`widget data ${widgetId} is gone`);
+    this.name = 'WidgetDataGoneError';
+  }
+}
+
 export class PairingExpiredError extends Error {
   constructor() {
     super('Pairing code expired');
@@ -105,6 +113,7 @@ export class PlayerApi {
       cache: 'no-store',
     });
     if (res.status === 401) throw new UnauthorizedError();
+    if (res.status === 404) throw new WidgetDataGoneError(widgetId);
     if (!res.ok) throw new Error(`widget data ${widgetId} failed: ${String(res.status)}`);
     const body = (await res.json()) as { data?: unknown };
     if (body.data === undefined) throw new Error('widget data missing');

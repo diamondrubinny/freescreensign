@@ -99,7 +99,10 @@ export const calendarWidget = defineWidget<CalendarConfig>({
         const lastKey = last.toISOString().slice(0, 10);
         return { first: event.start, last: lastKey < event.start ? event.start : lastKey };
       }
-      return { first: dayKey(new Date(event.start)), last: dayKey(new Date(event.end)) };
+      // The end is exclusive: a meeting until midnight belongs to its own day only.
+      const start = Date.parse(event.start);
+      const end = Math.max(Date.parse(event.end) - 1, start);
+      return { first: dayKey(new Date(start)), last: dayKey(new Date(end)) };
     };
 
     const dayLabel = (key: string, todayKey: string, tomorrowKey: string) =>

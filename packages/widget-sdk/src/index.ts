@@ -22,7 +22,9 @@ export interface WidgetContext {
   /**
    * Data prepared by the Rubinny server for data widgets (e.g. RSS, weather).
    * Widgets never access the network directly. When the screen is offline the
-   * last known data is returned; rejects if none is available.
+   * last known data is returned; rejects if none is available. When the server says the
+   * data no longer exists (e.g. a deleted meeting room), the stored copy is dropped and the
+   * error's name is "WidgetDataGoneError".
    */
   fetchData<T>(): Promise<T>;
   /**

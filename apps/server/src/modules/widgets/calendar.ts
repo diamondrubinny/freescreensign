@@ -10,8 +10,8 @@ import type { CalendarData, CalendarEvent, WidgetConfig } from '@rubinny/shared'
  * Upcoming events of an iCal (.ics) calendar, for the calendar widget: recurring events are
  * expanded (with their exceptions and cancellations), times are resolved with the calendar's
  * own time zones, and only text is kept (titles and locations, trimmed). Bounded work: the
- * source is at most 1 MB (safeFetch), recurrences are expanded only inside the window, and
- * at most MAX_OCCURRENCES are produced in all.
+ * source is at most 1 MB (safeFetch), recurrences stop at the end of the window, at most
+ * MAX_OCCURRENCES are kept, and expansion takes at most MAX_STEPS steps in all.
  */
 
 export class CalendarParseError extends Error {
@@ -22,9 +22,14 @@ export class CalendarParseError extends Error {
 }
 
 const MAX_EVENTS = 200;
+/** Occurrences inside the window, in all. */
 const MAX_OCCURRENCES = 2000;
-/** Iterations of one recurring event (a daily rule from years ago skips its past quickly). */
+/** Steps of one recurring series: a daily series from 13 years ago still reaches today. */
 const MAX_ITERATIONS = 5000;
+/** Steps of all series together (a file full of old series stays cheap). */
+const MAX_STEPS = 100_000;
+/** Time zones that ical.js knows itself; a calendar never replaces them. */
+const BUILT_IN_ZONES = new Set(['UTC', 'Z', 'GMT']);
 const MAX_TEXT = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -60,6 +65,31 @@ function instant(time: ICAL.Time): number {
   return time.toJSDate().getTime();
 }
 
+/**
+ * A later start for a long-running daily or weekly series: a whole number of periods ahead,
+ * a week before the window, so the iterator does not walk years of past occurrences. Whole
+ * periods keep the weekday and the time of day (in the event's zone, so across daylight
+ * saving too). Not for a series with COUNT (it counts from the first occurrence) or with
+ * several rules or BYSETPOS, which keep their own start.
+ */
+function laterStart(event: ICAL.Event, fromMs: number): ICAL.Time | undefined {
+  const [property, ...more] = event.component.getAllProperties('rrule');
+  if (!property || more.length > 0) return undefined;
+  const rule = property.getFirstValue();
+  if (!(rule instanceof ICAL.Recur) || rule.count) return undefined;
+  if (rule.parts.BYSETPOS) return undefined;
+  const unit = rule.freq === 'DAILY' ? 1 : rule.freq === 'WEEKLY' ? 7 : 0;
+  if (unit === 0) return undefined;
+  const period = unit * Math.max(rule.interval, 1);
+  const start = event.startDate;
+  const behind = Math.floor((fromMs - instant(start)) / DAY_MS) - 7;
+  const periods = Math.floor(behind / period);
+  if (periods <= 0) return undefined;
+  const later = start.clone();
+  later.adjust(periods * period, 0, 0, 0);
+  return later;
+}
+
 export function parseCalendar(
   text: string,
   config: Pick<WidgetConfig<'calendar'>, 'days'>,
@@ -75,17 +105,41 @@ export function parseCalendar(
   }
   if (root.name !== 'vcalendar') throw new CalendarParseError('Not an iCal calendar');
 
-  // The calendar's own time zones, so TZID times convert correctly.
-  for (const zone of root.getAllSubcomponents('vtimezone')) {
-    try {
-      ICAL.TimezoneService.register(zone);
-    } catch {
-      // A malformed zone: its times are read as UTC/floating.
+  // The calendar's own time zones, so TZID times convert correctly. ical.js keeps zones in
+  // one registry for the whole process: they are registered for this (synchronous) parse
+  // only and removed after it, so one calendar's zones never change another's times.
+  const registered: string[] = [];
+  try {
+    for (const zone of root.getAllSubcomponents('vtimezone')) {
+      const tzid = zone.getFirstPropertyValue('tzid');
+      if (
+        typeof tzid !== 'string' ||
+        !tzid ||
+        BUILT_IN_ZONES.has(tzid) ||
+        ICAL.TimezoneService.has(tzid)
+      )
+        continue;
+      try {
+        ICAL.TimezoneService.register(zone);
+        registered.push(tzid);
+      } catch {
+        // A malformed zone: its times are read as UTC/floating.
+      }
     }
+    return expand(root, config, now);
+  } finally {
+    for (const tzid of registered) ICAL.TimezoneService.remove(tzid);
   }
+}
 
-  // Window: from the start of today (UTC, so all-day events of today stay) to `days` ahead.
-  const from = Math.floor(now.getTime() / DAY_MS) * DAY_MS;
+function expand(
+  root: ICAL.Component,
+  config: Pick<WidgetConfig<'calendar'>, 'days'>,
+  now: Date,
+): CalendarData {
+  // Window: from 24 hours ago (so today's all-day events stay in every time zone; screens
+  // drop what is over in their own) to `days` ahead.
+  const from = now.getTime() - DAY_MS;
   const to = now.getTime() + config.days * DAY_MS;
   const nowMs = now.getTime();
 
@@ -115,9 +169,8 @@ export function parseCalendar(
   }
 
   const events: CalendarEvent[] = [];
-  let produced = 0;
+  let steps = 0;
   const add = (item: ICAL.Event, start: ICAL.Time, end: ICAL.Time) => {
-    produced++;
     const status = clean(item.component.getFirstPropertyValue('status')).toUpperCase();
     if (status === 'CANCELLED') return;
     const startMs = instant(start);
@@ -136,18 +189,22 @@ export function parseCalendar(
   };
 
   for (const event of masters.values()) {
-    if (produced >= MAX_OCCURRENCES) break;
+    if (events.length >= MAX_OCCURRENCES || steps >= MAX_STEPS) break;
     if (!event.isRecurring()) {
       add(event, event.startDate, event.endDate);
       continue;
     }
     let iterator: ICAL.RecurExpansion;
     try {
-      iterator = event.iterator();
+      iterator = event.iterator(laterStart(event, from));
     } catch {
       continue;
     }
-    for (let i = 0; i < MAX_ITERATIONS && produced < MAX_OCCURRENCES; i++) {
+    for (
+      let i = 0;
+      i < MAX_ITERATIONS && steps < MAX_STEPS && events.length < MAX_OCCURRENCES;
+      i++, steps++
+    ) {
       let next: ICAL.Time;
       try {
         next = iterator.next();

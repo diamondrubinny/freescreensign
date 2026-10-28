@@ -6,6 +6,20 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Meeting rooms: a meeting that already started can be renamed or extended in the dashboard
+  (it was refused as "starting in the past"); "Book now" right after "End the meeting now"
+  no longer reports the room as busy; a screen whose room was deleted says the room is not
+  available instead of showing its last status and "Book now".
+- Events calendar: daily and weekly series that started years ago reach today again (they
+  could use up the expansion budget before the window), today's all-day events stay until
+  the end of the day in time zones west of UTC, and an event ending at midnight shows on its
+  own day only in the week view. A calendar's time zone definitions apply to that calendar
+  only (they could change the times of other organizations' calendars on the same server).
+- Booking at a screen: attempts count against the limits before anything else is done, and
+  room changes reach screens in one pass (in parallel) instead of one by one.
+
 ## [0.8.0] - 2026-10-28
 
 Meeting rooms with booking at the screen, an events calendar, a building directory and

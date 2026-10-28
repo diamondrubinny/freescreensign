@@ -54,10 +54,17 @@ async function bookableRoom(ctx: AppContext, screen: Screen, roomId: string) {
   return { id: room.id, pinHash: room.room_pin_hash };
 }
 
-/** Checks the PIN within the attempt limits; a correct PIN clears the failure counts. */
-async function checkPin(ctx: AppContext, screen: Screen, pinHash: string, pin: string) {
+/**
+ * Counts an attempt against the limits. Runs before anything else, so repeated attempts are
+ * refused before they cost a manifest build or a hash.
+ */
+async function countAttempt(ctx: AppContext, screen: Screen) {
   await ctx.limiter.hit(LIMITS.roomPinScreen, screen.id);
   await ctx.limiter.hit(LIMITS.roomPinOrg, screen.org_id);
+}
+
+/** Checks the PIN (after countAttempt); a correct PIN clears the failure counts. */
+async function checkPin(ctx: AppContext, screen: Screen, pinHash: string, pin: string) {
   if (await verifyPassword(pinHash, pin)) {
     await ctx.limiter.reset(LIMITS.roomPinScreen, screen.id);
     await ctx.limiter.reset(LIMITS.roomPinOrg, screen.org_id);
@@ -79,6 +86,7 @@ export function playerRoomRoutes(app: FastifyInstance, ctx: AppContext) {
     const screen = await requireScreen(ctx, request);
     const { roomId } = parse(roomParams, request.params);
     const body = parse(screenBookingSchema, request.body);
+    await countAttempt(ctx, screen);
     let room;
     try {
       room = await bookableRoom(ctx, screen, roomId);
@@ -90,8 +98,19 @@ export function playerRoomRoutes(app: FastifyInstance, ctx: AppContext) {
     await checkPin(ctx, screen, room.pinHash, body.pin);
     await ctx.limiter.hit(LIMITS.roomBookScreen, screen.id);
 
-    const startsAt = new Date();
+    // From the start of this minute, or from the end of a meeting that ended during it ("End
+    // now" a moment ago), so the two do not overlap.
+    const now = new Date();
+    let startsAt = new Date(now);
     startsAt.setSeconds(0, 0);
+    const ended = await ctx.db
+      .selectFrom('room_bookings')
+      .select((eb) => eb.fn.max('ends_at').as('endsAt'))
+      .where('room_id', '=', room.id)
+      .where('ends_at', '>', startsAt)
+      .where('ends_at', '<=', now)
+      .executeTakeFirst();
+    if (ended?.endsAt) startsAt = new Date(ended.endsAt);
     const endsAt = new Date(Date.now() + body.minutes * 60_000);
     endsAt.setSeconds(0, 0);
     let id: string;
@@ -133,6 +152,7 @@ export function playerRoomRoutes(app: FastifyInstance, ctx: AppContext) {
       request.params,
     );
     const body = parse(screenBookingEndSchema, request.body);
+    await countAttempt(ctx, screen);
     let room;
     try {
       room = await bookableRoom(ctx, screen, roomId);

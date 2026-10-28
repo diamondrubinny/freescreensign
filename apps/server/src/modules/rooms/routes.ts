@@ -291,7 +291,11 @@ export function roomRoutes(app: FastifyInstance, ctx: AppContext) {
       .select('id')
       .where('org_id', '=', org.id)
       .execute();
-    for (const room of rooms) await notifyRoomChanged(ctx, org.id, room.id);
+    await notifyRoomChanged(
+      ctx,
+      org.id,
+      rooms.map((room) => room.id),
+    );
     return { pinSet: pin !== null };
   });
 
@@ -404,7 +408,10 @@ export function roomRoutes(app: FastifyInstance, ctx: AppContext) {
       );
     }
     if (next.data.roomId !== booking.room_id) await loadRoom(org.id, next.data.roomId);
-    if (body.startsAt !== undefined) assertWhen(new Date(next.data.startsAt));
+    // Only a new start is checked: a meeting that already began can still be renamed or
+    // extended (the dashboard always sends the start).
+    const startsAt = new Date(next.data.startsAt);
+    if (startsAt.getTime() !== new Date(booking.starts_at).getTime()) assertWhen(startsAt);
     try {
       await ctx.db
         .updateTable('room_bookings')
@@ -429,10 +436,7 @@ export function roomRoutes(app: FastifyInstance, ctx: AppContext) {
       targetId: bookingId,
       meta: { fields: Object.keys(body) },
     });
-    await notifyRoomChanged(ctx, org.id, booking.room_id);
-    if (next.data.roomId !== booking.room_id) {
-      await notifyRoomChanged(ctx, org.id, next.data.roomId);
-    }
+    await notifyRoomChanged(ctx, org.id, [booking.room_id, next.data.roomId]);
     const updated = await loadBooking(org.id, bookingId);
     return { booking: bookingDto(updated, user.id, hasRole(org.role, 'ADMIN')) };
   });

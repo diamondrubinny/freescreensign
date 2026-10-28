@@ -3,11 +3,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
-import type { PlayerApi } from './api';
+import { WidgetDataGoneError, type PlayerApi } from './api';
 
 export interface WidgetDataStore {
   widgetData(widgetId: string): unknown;
   setWidgetData(widgetId: string, data: unknown): void;
+  forgetWidgetData(widgetId: string): void;
 }
 
 /**
@@ -29,6 +30,11 @@ export class WidgetDataClient {
       this.store.setWidgetData(widgetId, data);
       return data;
     } catch (error) {
+      // Gone for good (not a network problem): an old copy would show what no longer exists.
+      if (error instanceof WidgetDataGoneError) {
+        this.store.forgetWidgetData(widgetId);
+        throw error;
+      }
       const cached = this.store.widgetData(widgetId);
       if (cached !== null) return cached;
       throw error;

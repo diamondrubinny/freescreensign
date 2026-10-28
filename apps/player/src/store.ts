@@ -90,6 +90,9 @@ export const store = {
   setWidgetData: (widgetId: string, data: unknown) => {
     write(WIDGET_DATA_PREFIX + widgetId, JSON.stringify(data));
   },
+  forgetWidgetData: (widgetId: string) => {
+    write(WIDGET_DATA_PREFIX + widgetId, null);
+  },
   /** Removes stored data of widgets no longer in the manifest. */
   pruneWidgetData(keep: readonly string[]) {
     const wanted = new Set(keep.map((id) => WIDGET_DATA_PREFIX + id));

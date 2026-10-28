@@ -48,10 +48,10 @@ const DATA: CalendarData = {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-async function mount(config: object) {
+async function mount(config: object, data: CalendarData = DATA) {
   const runtime = new WidgetRuntime({
     registry: BUILT_IN_WIDGETS,
-    fetchData: () => Promise.resolve(DATA),
+    fetchData: () => Promise.resolve(data),
     mediaUrl: () => Promise.resolve(null),
     timezone: () => 'Asia/Jerusalem',
     now: () => NOW,
@@ -114,5 +114,27 @@ describe('calendar widget', () => {
     expect(texts(columns[0]!, '.w-cal-name')).toEqual(['יום ספורט', 'חוג ציור']);
     expect(texts(columns[4]!, '.w-cal-name')).toEqual(['<b>טיול</b>']);
     expect(texts(columns[6]!, '.w-cal-name')).toEqual([]);
+  });
+
+  it('shows a meeting that ends at midnight on its own day only', async () => {
+    const { container } = await mount(
+      { view: 'week' },
+      {
+        title: null,
+        events: [
+          {
+            title: 'ערב',
+            // Monday 2 Nov 22:00 until midnight in Jerusalem.
+            start: '2026-11-02T20:00:00Z',
+            end: '2026-11-02T22:00:00Z',
+            allDay: false,
+            location: null,
+          },
+        ],
+      },
+    );
+    const columns = container.querySelectorAll('.w-cal-col');
+    expect(texts(columns[1]!, '.w-cal-name')).toEqual(['ערב']);
+    expect(texts(columns[2]!, '.w-cal-name')).toEqual([]);
   });
 });

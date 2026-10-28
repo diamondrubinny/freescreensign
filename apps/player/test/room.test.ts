@@ -179,6 +179,39 @@ describe('room widget', () => {
     expect(fetchData).toHaveBeenCalledTimes(2);
   });
 
+  it('says the room is not available once it is deleted, instead of the old status', async () => {
+    let deleted = false;
+    const runtime = new WidgetRuntime({
+      registry: BUILT_IN_WIDGETS,
+      fetchData: () => {
+        if (!deleted) return Promise.resolve(status());
+        const gone = new Error('gone');
+        gone.name = 'WidgetDataGoneError';
+        return Promise.reject(gone);
+      },
+      mediaUrl: () => Promise.resolve(null),
+      timezone: () => 'Asia/Jerusalem',
+      now: () => NOW,
+      reducedMotion: () => false,
+    });
+    const container = document.createElement('div');
+    document.body.append(container);
+    runtime.mount(
+      { id: 'w', type: 'room', config: { roomId: ROOM } },
+      container,
+      new AbortController().signal,
+    );
+    await flush();
+    expect(buttons(container)).toHaveLength(3);
+    deleted = true;
+    roomHost.changed(ROOM);
+    await flush();
+    const root = container.querySelector('.w-room')!;
+    expect(root.classList.contains('w-room--unavailable')).toBe(true);
+    expect(text(root, '.w-room-state')).toBe('החדר אינו זמין');
+    expect(buttons(container)).toHaveLength(0);
+  });
+
   it('hides booking when the organization has no PIN, and speaks English', async () => {
     const { container } = await mountRoom(() => status({ bookingEnabled: false }), {
       locale: 'en',

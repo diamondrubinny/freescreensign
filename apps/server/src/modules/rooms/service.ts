@@ -7,7 +7,6 @@ import type { RoomStatusData, RoomStatusMeeting } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import type { Db } from '../../db/database.js';
 import { HttpError } from '../../lib/http-error.js';
-import { afterCommit } from '../../lib/tenant.js';
 
 /**
  * Meeting rooms (docs/phases/18-rooms-directory-calendar-zmanim.md): what a room's screen
@@ -83,18 +82,26 @@ export async function roomStatus(
 }
 
 /**
- * Tells every screen of the organization (screens without that room ignore it), after the
- * request's transaction commits, so a screen that fetches at once sees the change.
+ * Tells every screen of the organization that these rooms changed (screens without them
+ * ignore it; a screen refetches only the room widgets that show one). Events go out after
+ * the request's transaction commits (ctx.events defers them), so a screen that fetches at
+ * once sees the change.
  */
-export async function notifyRoomChanged(ctx: AppContext, orgId: string, roomId: string) {
+export async function notifyRoomChanged(
+  ctx: AppContext,
+  orgId: string,
+  roomIds: string | readonly string[],
+) {
+  const rooms = [...new Set(typeof roomIds === 'string' ? [roomIds] : roomIds)];
+  if (rooms.length === 0) return;
   const screens = await ctx.db
     .selectFrom('screens')
     .select('id')
     .where('org_id', '=', orgId)
     .execute();
-  await afterCommit(async () => {
-    for (const screen of screens) {
-      await ctx.events.publish(screen.id, { type: 'room.changed', roomId });
-    }
-  });
+  await Promise.all(
+    screens.flatMap((screen) =>
+      rooms.map((roomId) => ctx.events.publish(screen.id, { type: 'room.changed', roomId })),
+    ),
+  );
 }

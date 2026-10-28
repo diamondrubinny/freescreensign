@@ -162,6 +162,89 @@ describe('parseCalendar', () => {
     expect(data.events.length).toBeLessThanOrEqual(200);
   });
 
+  it('reaches today in series that started years ago, keeping their day and time', () => {
+    const data = parseCalendar(
+      ics(
+        // Daily since 2000 (about 9,800 days before the window).
+        event('daily', [
+          'SUMMARY:Standup',
+          'DTSTART:20000101T080000Z',
+          'DTEND:20000101T081500Z',
+          'RRULE:FREQ=DAILY',
+        ]),
+        // Every Monday and Wednesday at 18:00 Jerusalem time since 2005, across many
+        // daylight saving changes.
+        event('weekly', [
+          'SUMMARY:Choir',
+          'DTSTART;TZID=Asia/Jerusalem:20050103T180000',
+          'DTEND;TZID=Asia/Jerusalem:20050103T190000',
+          'RRULE:FREQ=WEEKLY;BYDAY=MO,WE',
+        ]),
+      ),
+      days(3),
+      NOW,
+    );
+    const titles = (name: string) => data.events.filter((e) => e.title === name);
+    // Sunday 1 Nov 09:00 Jerusalem: today's standup (08:00Z = 10:00) and the next two days.
+    expect(titles('Standup').map((e) => e.start)).toEqual([
+      '2026-11-01T08:00:00.000Z',
+      '2026-11-02T08:00:00.000Z',
+      '2026-11-03T08:00:00.000Z',
+    ]);
+    // Monday 2 Nov 18:00 in Jerusalem (UTC+2 in winter).
+    expect(titles('Choir').map((e) => e.start)).toEqual(['2026-11-02T16:00:00.000Z']);
+  });
+
+  it("keeps today's all-day events in time zones west of UTC", () => {
+    // 20:30 on 28 Oct in New York is already 29 Oct in UTC.
+    const data = parseCalendar(
+      ics(event('d', ['SUMMARY:Fair', 'DTSTART;VALUE=DATE:20261028', 'DTEND;VALUE=DATE:20261029'])),
+      days(3),
+      new Date('2026-10-29T00:30:00Z'),
+    );
+    expect(data.events.map((e) => e.title)).toEqual(['Fair']);
+  });
+
+  it("never lets one calendar's time zones change another's", () => {
+    // A calendar defines "Europe/Berlin" as UTC+5 (wrong on purpose).
+    const wrongBerlin = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'BEGIN:VTIMEZONE',
+      'TZID:Europe/Berlin',
+      'BEGIN:STANDARD',
+      'DTSTART:19700101T000000',
+      'TZOFFSETFROM:+0500',
+      'TZOFFSETTO:+0500',
+      'END:STANDARD',
+      'END:VTIMEZONE',
+      ...event('a', [
+        'SUMMARY:A',
+        'DTSTART;TZID=Europe/Berlin:20261102T100000',
+        'DTEND;TZID=Europe/Berlin:20261102T110000',
+      ]),
+      'END:VCALENDAR',
+    ].join('\r\n');
+    expect(parseCalendar(wrongBerlin, days(3), NOW).events[0]!.start).toBe(
+      '2026-11-02T05:00:00.000Z',
+    );
+    // Another calendar uses the same TZID without defining it: it is not read with the
+    // first calendar's rules (floating time, as before any calendar was read).
+    const other = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      ...event('b', [
+        'SUMMARY:B',
+        'DTSTART;TZID=Europe/Berlin:20261102T100000',
+        'DTEND;TZID=Europe/Berlin:20261102T110000',
+      ]),
+      'END:VCALENDAR',
+    ].join('\r\n');
+    expect(parseCalendar(other, days(3), NOW).events[0]!.start).not.toBe(
+      '2026-11-02T05:00:00.000Z',
+    );
+  });
+
   it('refuses what is not a calendar', () => {
     expect(() => parseCalendar('<html>nope</html>', days(14), NOW)).toThrow(CalendarParseError);
     expect(() => parseCalendar('BEGIN:VCARD\r\nEND:VCARD', days(14), NOW)).toThrow(

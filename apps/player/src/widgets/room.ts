@@ -441,8 +441,22 @@ export const roomWidget = defineWidget<RoomConfig>({
         lastStateKey = '';
         root.classList.remove('w-room--unavailable');
         render();
-      } catch {
-        // Offline with no copy yet, or the room was deleted: say so only if nothing is shown.
+      } catch (error) {
+        // The room was deleted: stop showing it (and "Book now"). Offline with no copy yet:
+        // say so only if nothing is shown.
+        const gone = error instanceof Error && error.name === 'WidgetDataGoneError';
+        if (gone && data) {
+          data = null;
+          meetings = [];
+          lastStateKey = '';
+          closePad();
+          root.classList.remove('w-room--busy', 'w-room--free');
+          actions.replaceChildren();
+          nextList.replaceChildren();
+          iconSlot.replaceChildren();
+          until.textContent = '';
+          title.hidden = true;
+        }
         if (!data) {
           root.classList.add('w-room--unavailable');
           stateWord.textContent = t.unavailable;

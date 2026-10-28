@@ -257,6 +257,38 @@ describe.runIf(integrationEnabled)('meeting rooms', () => {
     expect((await viewer.delete(api(`/room-bookings/${mine.id}`))).statusCode).toBe(204);
   });
 
+  it('lets a meeting that already started be renamed or extended', async () => {
+    const room = await createRoom('Small room');
+    const created = await book(viewer, room, 0, HOUR, 'Planning');
+    expect(created.statusCode, created.body).toBe(201);
+    const { id } = created.json<{ booking: Booking }>().booking;
+    // It started 20 minutes ago.
+    await h.db
+      .updateTable('room_bookings')
+      .set({ starts_at: new Date(Date.now() - 20 * 60_000) })
+      .where('id', '=', id)
+      .execute();
+    const startsAt = new Date(Date.now() - 20 * 60_000);
+    const stored = await h.db
+      .selectFrom('room_bookings')
+      .select('starts_at')
+      .where('id', '=', id)
+      .executeTakeFirstOrThrow();
+    // The dashboard sends the unchanged start with the new title and end.
+    const res = await viewer.patch(api(`/room-bookings/${id}`), {
+      startsAt: new Date(stored.starts_at).toISOString(),
+      endsAt: at(2 * HOUR),
+      title: 'Planning (longer)',
+    });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json<{ booking: Booking }>().booking.title).toBe('Planning (longer)');
+    // Moving the start into the past is still refused.
+    const moved = await viewer.patch(api(`/room-bookings/${id}`), {
+      startsAt: new Date(startsAt.getTime() - HOUR).toISOString(),
+    });
+    expect(moved.statusCode).toBe(400);
+  });
+
   it('shows a room’s screen free or busy, without who booked, and titles only when allowed', async () => {
     const room = await createRoom('Big room', { location: 'Floor 3' });
     const door = await roomScreen(room);
@@ -359,6 +391,11 @@ describe.runIf(integrationEnabled)('meeting rooms', () => {
     expect((await door.end(booking.id, '000000')).statusCode).toBe(403);
     expect((await door.end(booking.id, '123456')).statusCode).toBe(204);
     expect((await door.status()).current).toBeNull();
+    // Booking again at once (the same minute the last meeting ended) works.
+    res = await door.book(15, '123456');
+    expect(res.statusCode, res.body).toBe(201);
+    const again = res.json<{ booking: { id: string } }>().booking;
+    expect((await door.end(again.id, '123456')).statusCode).toBe(204);
 
     // Only bookings made at a screen can be ended there.
     const meeting = (await book(viewer, room, HOUR, 2 * HOUR)).json<{ booking: Booking }>().booking;

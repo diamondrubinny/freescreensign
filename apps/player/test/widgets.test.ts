@@ -8,6 +8,7 @@ import type { ManifestLayout, ManifestWidget } from '@rubinny/shared';
 import { defineWidget } from '@rubinny/widget-sdk';
 import { DomRenderer } from '../src/renderer';
 import type { PlayableItem } from '../src/sequence';
+import { WidgetDataGoneError } from '../src/api';
 import { WidgetDataClient } from '../src/widget-data';
 import { BUILT_IN_WIDGETS } from '../src/widgets';
 import { WidgetRuntime } from '../src/widgets/runtime';
@@ -501,6 +502,7 @@ describe('WidgetDataClient', () => {
     const store = {
       widgetData: (id: string) => saved.get(id) ?? null,
       setWidgetData: (id: string, data: unknown) => saved.set(id, data),
+      forgetWidgetData: (id: string) => saved.delete(id),
     };
     const widgetData = vi
       .fn()
@@ -510,6 +512,19 @@ describe('WidgetDataClient', () => {
     expect(await client.get('w1')).toEqual({ title: 'fresh' });
     expect(await client.get('w1')).toEqual({ title: 'fresh' });
     await expect(client.get('w2')).rejects.toThrow('Failed to fetch');
+  });
+
+  it('drops the stored copy when the server says the data is gone', async () => {
+    const saved = new Map<string, unknown>([['w1', { title: 'old' }]]);
+    const store = {
+      widgetData: (id: string) => saved.get(id) ?? null,
+      setWidgetData: (id: string, data: unknown) => saved.set(id, data),
+      forgetWidgetData: (id: string) => saved.delete(id),
+    };
+    const widgetData = vi.fn().mockRejectedValue(new WidgetDataGoneError('w1'));
+    const client = new WidgetDataClient({ widgetData }, () => 'token', store);
+    await expect(client.get('w1')).rejects.toMatchObject({ name: 'WidgetDataGoneError' });
+    expect(saved.has('w1')).toBe(false);
   });
 });
 
