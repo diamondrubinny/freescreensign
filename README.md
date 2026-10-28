@@ -9,7 +9,7 @@ and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Sponsor](#support-the-project)
 
-> **Status: actively developed (v0.8).** All nine planned phases are done, with releases since
+> **Status: actively developed (v0.9).** All nine planned phases are done, with releases since
 > 0.1. It is ready to evaluate and pilot; before production use, go through the
 > [production checklist](docs/PRODUCTION-CHECKLIST.md), which also lists what still needs a
 > professional review.
@@ -104,6 +104,10 @@ English, and every picture in it is original art drawn for the project
   screen goes offline and when it is back; **proof-of-play reports** per content and date range,
   with CSV export.
 - **Meeting rooms page**: rooms, a day board of bookings, and booking in an accessible form.
+- **Integrations** ([guide](docs/INTEGRATIONS.md)): API keys limited to what they may do (start
+  emergency alerts from a fire panel, update a text from a queue system, read screen status),
+  and signed webhooks when a screen goes offline, an alert starts or a change waits for
+  approval.
 - **Ready-made kits**: one click creates a designed screen: nine by trade (restaurant, café,
   cinema, retail, office, hotel, community center, synagogue, meeting room) and three general ones (lobby, menu board,
   notice board), in Hebrew or English.
@@ -201,7 +205,8 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-Now: v0.8.1 (fixes). v0.8.0 added meeting rooms with booking at the screen, an events calendar, a
+Now: v0.9.0, which adds integrations: API keys for other systems and signed webhooks
+([guide](docs/INTEGRATIONS.md)). v0.8.0 added meeting rooms with booking at the screen, an events calendar, a
 building directory and synagogue times, with two new kits
 ([plan and results](docs/phases/18-rooms-directory-calendar-zmanim.md)). 0.7.1 added the
 attribution "Powered by Rubinny · Open source" in every part of Rubinny

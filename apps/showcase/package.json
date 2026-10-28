@@ -1,6 +1,6 @@
 {
   "name": "@rubinny/showcase",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "private": true,
   "description": "Pictures of the starter kits on a screen, and the video ad, for the READMEs and the dashboard (a tool; not shipped).",
   "license": "AGPL-3.0-only",

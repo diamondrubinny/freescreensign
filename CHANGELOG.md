@@ -6,6 +6,12 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-28
+
+Integrations: API keys for other systems (alerts from a fire panel, text from a queue system,
+screen status) and signed webhooks. Upgrading from 0.8.1: see
+[docs/UPGRADING.md](docs/UPGRADING.md#081--090) (nothing to do).
+
 ### Added
 
 - Integrations (docs/INTEGRATIONS.md, docs/phases/19-integrations-api-webhooks.md), for admins
@@ -375,6 +381,7 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
+[0.9.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.9.0
 [0.8.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.8.1
 [0.8.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.8.0
 [0.7.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.7.1
