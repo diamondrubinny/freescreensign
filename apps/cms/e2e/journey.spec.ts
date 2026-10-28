@@ -4,7 +4,7 @@
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, request, test, type Browser, type Page } from '@playwright/test';
 import { expectAccessible, totp } from './helpers';
 
 const SETUP_TOKEN = process.env.E2E_SETUP_TOKEN ?? '';
@@ -768,8 +768,68 @@ async function meetingRoomJourney(page: Page, browser: Browser) {
   await device.close();
 }
 
+async function integrationsJourney(page: Page) {
+  // An admin creates an API key for a fire panel: shown once, with the chosen permissions.
+  await openPage(page, 'אינטגרציות');
+  await expect(page.getByText('עדיין אין מפתחות API.')).toBeVisible();
+  await expectAccessible(page, 'integrations');
+  await page.getByRole('button', { name: 'מפתח חדש' }).click();
+  const dialog = page.getByRole('dialog', { name: 'מפתח חדש' });
+  await dialog.getByRole('textbox', { name: /^שם/ }).fill('מערכת כיבוי');
+  await dialog.getByLabel('הפעלה וסיום של התראות חירום').check();
+  await expectAccessible(page, 'new key dialog');
+  await dialog.getByRole('button', { name: 'יצירה' }).click();
+  const shown = dialog.getByRole('textbox', { name: 'מפתח' });
+  await expect(shown).toHaveValue(/^rbk_[A-Za-z0-9_-]{43}$/);
+  const token = await shown.inputValue();
+  await dialog.getByRole('button', { name: 'סיום' }).click();
+  await expect(page.getByRole('table')).toContainText('מערכת כיבוי');
+  await expect(page.getByRole('table')).not.toContainText(token);
+
+  // The fire panel starts and ends an alert with the key (no cookies, no browser).
+  const panel = await request.newContext({
+    baseURL: new URL(page.url()).origin,
+    ignoreHTTPSErrors: true,
+    extraHTTPHeaders: { authorization: `Bearer ${token}` },
+  });
+  const started = await panel.post('/api/integrations/v1/alerts', {
+    data: { style: 'emergency', title: 'תרגיל פינוי', durationMinutes: 5 },
+  });
+  expect(started.status()).toBe(201);
+  const alertId = ((await started.json()) as { alert: { id: string } }).alert.id;
+  // Its permissions are only what it was given.
+  expect((await panel.get('/api/integrations/v1/screens')).status()).toBe(403);
+  await openPage(page, 'התראות חירום');
+  await expect(page.getByText('API: מערכת כיבוי').first()).toBeVisible();
+  expect((await panel.post(`/api/integrations/v1/alerts/${alertId}/end`)).status()).toBe(200);
+
+  // A webhook (the address does not exist here, so the test reports a failure).
+  await openPage(page, 'אינטגרציות');
+  await page.getByRole('button', { name: 'Webhook חדש' }).click();
+  const hookDialog = page.getByRole('dialog', { name: 'Webhook חדש' });
+  await hookDialog.getByRole('textbox', { name: /^שם/ }).fill('Teams');
+  await hookDialog.getByRole('textbox', { name: /^כתובת/ }).fill('https://hooks.invalid/teams');
+  await hookDialog.getByLabel('מסך התנתק').check();
+  await hookDialog.getByRole('button', { name: 'יצירה' }).click();
+  await expect(hookDialog.getByRole('textbox', { name: 'סוד החתימה' })).toHaveValue(/^whsec_/);
+  await hookDialog.getByRole('button', { name: 'סיום' }).click();
+  const card = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: 'Teams' }) });
+  await card.getByRole('button', { name: 'שליחת בדיקה' }).click();
+  await expect(card.getByText(/הבדיקה נכשלה/)).toBeVisible({ timeout: 15_000 });
+  await expectAccessible(page, 'integrations with a key and a webhook');
+
+  // Revoking the key stops it at once.
+  await page.getByRole('button', { name: 'ביטול המפתח מערכת כיבוי' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'ביטול המפתח' }).click();
+  await expect(page.getByRole('table')).toContainText('בוטל');
+  expect((await panel.get('/api/integrations/v1/alerts')).status()).toBe(401);
+  await panel.dispose();
+}
+
 test('operations: what a screen shows, proof of play and CSV export', async ({ page, browser }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(300_000);
   await signIn(page, ADMIN, true);
 
   // A playlist with a short image, on a fresh screen.
@@ -855,6 +915,10 @@ test('operations: what a screen shows, proof of play and CSV export', async ({ p
 
   await test.step('a meeting room, booked at its screen and in the dashboard', async () => {
     await meetingRoomJourney(page, browser);
+  });
+
+  await test.step('integrations: an API key for a fire panel, and a webhook', async () => {
+    await integrationsJourney(page);
   });
 });
 
