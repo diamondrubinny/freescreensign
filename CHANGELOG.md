@@ -6,6 +6,11 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-28
+
+Fixes from a review of the meeting rooms and the events calendar. Upgrading from 0.8.0: nothing
+to do ([docs/UPGRADING.md](docs/UPGRADING.md#080--081)).
+
 ### Fixed
 
 - Meeting rooms: a meeting that already started can be renamed or extended in the dashboard
@@ -357,6 +362,7 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
+[0.8.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.8.1
 [0.8.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.8.0
 [0.7.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.7.1
 [0.7.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.7.0

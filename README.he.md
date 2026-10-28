@@ -201,7 +201,7 @@ curl -k https://localhost/health  # {"status":"ok"}
 - [שלב 6 — תזמון](docs/phases/06-scheduling.md) · [שלב 7 — תפעול](docs/phases/07-ops.md) · [שלב 8 — נגנים לכל מכשיר](docs/phases/08-wrappers.md) · [שלב 9 — הקשחה ושחרור](docs/phases/09-release.md) · [התקנת נגנים](docs/players.he.md) · [שדרוג התקנה קיימת](docs/UPGRADING.md)
 - [תרומה לפרויקט](CONTRIBUTING.md) · [אבטחה](SECURITY.md) · [רישוי](LICENSING.md)
 
-**עכשיו:** גרסה v0.8.0. נוספו בה חדרי ישיבות עם הזמנה במסך, יומן אירועים, מדריך בניין וזמני תפילה, ושתי ערכות חדשות ([תוכנית ותוצאות](docs/phases/18-rooms-directory-calendar-zmanim.md)).
+**עכשיו:** גרסה v0.8.1 (תיקונים). ב-0.8.0 נוספו חדרי ישיבות עם הזמנה במסך, יומן אירועים, מדריך בניין וזמני תפילה, ושתי ערכות חדשות ([תוכנית ותוצאות](docs/phases/18-rooms-directory-calendar-zmanim.md)).
 
 ב-0.7.1 נוסף הקרדיט "מופעל על ידי Rubinny · קוד פתוח" בכל חלקי המערכת ([תוכנית ותוצאות](docs/phases/16-attribution.md)).
 

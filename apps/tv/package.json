@@ -1,6 +1,6 @@
 {
   "name": "@rubinny/tv",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "Rubinny loader apps for Samsung (Tizen) and LG (webOS) screens: ask for the server once, then open its web player.",
   "license": "AGPL-3.0-only",
