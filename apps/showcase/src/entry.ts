@@ -28,6 +28,7 @@ interface Zone {
 const page = window as unknown as {
   KITS: Record<string, { background: string; zones: Zone[] }>;
   ART: Record<string, string>;
+  DATA: Record<string, unknown>;
   rendered?: boolean;
 };
 const params = new URLSearchParams(location.search);
@@ -35,8 +36,12 @@ const kit = page.KITS[params.get('kit') ?? ''];
 const slide = Number(params.get('slide') ?? '0');
 const runtime = new WidgetRuntime({
   registry: BUILT_IN_WIDGETS,
-  // Server data (weather, feeds) is not part of the pictures.
-  fetchData: () => Promise.reject(new Error('no data in pictures')),
+  // Outside data (weather, feeds) is not part of the pictures; synagogue times and a room's
+  // status are prepared by kits.mts.
+  fetchData: (id) =>
+    id in page.DATA
+      ? Promise.resolve(page.DATA[id])
+      : Promise.reject(new Error('no data in pictures')),
   mediaUrl: (id) => Promise.resolve(page.ART[id] ? `art/${page.ART[id]}.png` : null),
   timezone: () => 'Asia/Jerusalem',
   // A fixed time, so every run makes the same pictures.

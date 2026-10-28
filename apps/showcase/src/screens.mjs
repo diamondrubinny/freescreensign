@@ -31,6 +31,8 @@ const PICTURES = {
   office: 0,
   hotel: 0,
   community: 0,
+  synagogue: 0,
+  'meeting-room': 0,
 };
 
 rmSync(work, { recursive: true, force: true });

@@ -13,6 +13,11 @@ import { parseWidgetConfig, templateZones } from '@rubinny/shared';
 import { ART_NAMES, artSvg } from '../../server/src/modules/kits/art.ts';
 import { resolveArt } from '../../server/src/modules/kits/kit-design.ts';
 import { ALL_STARTER_KITS } from '../../server/src/modules/kits/kits.ts';
+import { computeZmanim } from '../../server/src/modules/widgets/zmanim.ts';
+
+/** The pictures' clock (see entry.ts). */
+const NOW = new Date('2026-10-22T09:41:00+03:00');
+const at = (time: string) => new Date(`2026-10-22T${time}:00+03:00`).toISOString();
 
 const out = process.argv[2];
 if (!out) throw new Error('Usage: kits.mts <output directory>');
@@ -29,6 +34,8 @@ for (const name of ART_NAMES) {
 }
 
 const kits: Record<string, unknown> = {};
+/** What the server would send for data widgets, by widget id. */
+const data: Record<string, unknown> = {};
 for (const kit of ALL_STARTER_KITS) {
   for (const locale of ['he', 'en'] as const) {
     const widgets = new Map(
@@ -40,10 +47,33 @@ for (const kit of ALL_STARTER_KITS) {
         const parsed = parseWidgetConfig(widget.type, config);
         if (!parsed.success)
           throw new Error(`${kit.id}/${widget.key}: ${JSON.stringify(parsed.issues)}`);
-        return [
-          widget.key,
-          { id: `${kit.id}-${widget.key}`, type: widget.type, config: parsed.config },
-        ];
+        const id = `${kit.id}-${widget.key}-${locale}`;
+        if (widget.type === 'zmanim') {
+          data[id] = computeZmanim(parsed.config as Parameters<typeof computeZmanim>[0], NOW);
+        }
+        if (widget.type === 'room') {
+          const meeting = (from: string, to: string, he: string, en: string) => ({
+            startsAt: at(from),
+            endsAt: at(to),
+            title: locale === 'he' ? he : en,
+            screenBookingId: null,
+          });
+          data[id] = {
+            room: {
+              name: locale === 'he' ? 'חדר ישיבות' : 'Meeting room',
+              location: locale === 'he' ? 'קומה 3' : 'Floor 3',
+              capacity: 10,
+            },
+            serverTime: NOW.toISOString(),
+            current: meeting('09:30', '10:30', 'צוות מוצר', 'Product team'),
+            upcoming: [
+              meeting('11:00', '11:45', 'ראיון עבודה', 'Job interview'),
+              meeting('14:00', '15:00', 'סקירת רבעון', 'Quarterly review'),
+            ],
+            bookingEnabled: true,
+          };
+        }
+        return [widget.key, { id, type: widget.type, config: parsed.config }];
       }),
     );
     kits[`${kit.id}-${locale}`] = {
@@ -63,5 +93,5 @@ for (const kit of ALL_STARTER_KITS) {
 const art = Object.fromEntries([...ids].map(([name, id]) => [id, name]));
 writeFileSync(
   `${out}/kits.js`,
-  `window.KITS = ${JSON.stringify(kits)};\nwindow.ART = ${JSON.stringify(art)};\n`,
+  `window.KITS = ${JSON.stringify(kits)};\nwindow.ART = ${JSON.stringify(art)};\nwindow.DATA = ${JSON.stringify(data)};\n`,
 );

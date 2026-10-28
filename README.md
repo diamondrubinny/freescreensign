@@ -1,8 +1,8 @@
 # Rubinny
 
 **Free & open-source digital signage that looks professionally designed.** Menus, showtimes,
-sales, welcome screens and notice boards for restaurants, cafés, cinemas, shops, offices, hotels
-and community centers: ready in one click, edited in a web dashboard, and played on any number
+sales, welcome screens, notice boards, synagogue times and meeting room screens for restaurants,
+cafés, cinemas, shops, offices, hotels, community centers and synagogues: ready in one click, edited in a web dashboard, and played on any number
 of screens. Self-hosted, offline-first, with Hebrew/RTL and accessibility built in. Runs on
 anything with a modern browser: Raspberry Pi, Windows, Linux, Android / Android TV / Fire TV,
 and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
@@ -27,22 +27,25 @@ a ticker and, where it fits, a clock, a countdown or a QR code. Every kit comes 
 English, and every picture in it is original art drawn for the project
 ([Rubinny Art Pack](LICENSING.md), CC0). Change any text, price or color in the dashboard.
 
-|                                                             Cinema                                                              |                                                                   Café                                                                   |
-| :-----------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------: |
-|   ![Cinema: a "now showing" poster between red curtains and today's showtimes by hall](docs/screenshots/kits/cinema-en.webp)    | ![Café: a chalkboard menu of coffee, pastries and breakfast, and a morning deal with a steaming cup](docs/screenshots/kits/cafe-en.webp) |
-|                                                           **Retail**                                                            |                                                                **Office**                                                                |
-|    ![Retail: an end-of-season sale at -50% with a price tag, and a members club offer](docs/screenshots/kits/retail-en.webp)    |      ![Office: a welcome screen with the company name, the guest Wi-Fi, a clock and notices](docs/screenshots/kits/office-en.webp)       |
-|                                                            **Hotel**                                                            |                                                           **Community center**                                                           |
-| ![Hotel: a welcome with check-in times, a reception bell and a clock with the Hebrew date](docs/screenshots/kits/hotel-en.webp) | ![Community center: a family festival poster with balloons and confetti, and an updates ticker](docs/screenshots/kits/community-en.webp) |
+|                                                                                     Cinema                                                                                     |                                                                   Café                                                                   |
+| :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------: |
+|                           ![Cinema: a "now showing" poster between red curtains and today's showtimes by hall](docs/screenshots/kits/cinema-en.webp)                           | ![Café: a chalkboard menu of coffee, pastries and breakfast, and a morning deal with a steaming cup](docs/screenshots/kits/cafe-en.webp) |
+|                                                                                   **Retail**                                                                                   |                                                                **Office**                                                                |
+|                           ![Retail: an end-of-season sale at -50% with a price tag, and a members club offer](docs/screenshots/kits/retail-en.webp)                            |      ![Office: a welcome screen with the company name, the guest Wi-Fi, a clock and notices](docs/screenshots/kits/office-en.webp)       |
+|                                                                                   **Hotel**                                                                                    |                                                           **Community center**                                                           |
+|                        ![Hotel: a welcome with check-in times, a reception bell and a clock with the Hebrew date](docs/screenshots/kits/hotel-en.webp)                         | ![Community center: a family festival poster with balloons and confetti, and an updates ticker](docs/screenshots/kits/community-en.webp) |
+|                                                                                 **Synagogue**                                                                                  |                                                             **Meeting room**                                                             |
+| ![Synagogue: the Hebrew date and weekly portion, times of the day and prayers with the next one marked, candle lighting and havdalah](docs/screenshots/kits/synagogue-en.webp) |    ![Meeting room: "Busy until 10:30" in red with the current meeting and the next ones](docs/screenshots/kits/meeting-room-en.webp)     |
 
 <details>
 <summary>The same kits in Hebrew</summary>
 
-|   ![The restaurant kit in Hebrew](docs/screenshots/kits/restaurant-he.webp)    | ![The cinema kit in Hebrew](docs/screenshots/kits/cinema-he.webp) |
-| :----------------------------------------------------------------------------: | :---------------------------------------------------------------: |
-|         ![The café kit in Hebrew](docs/screenshots/kits/cafe-he.webp)          | ![The retail kit in Hebrew](docs/screenshots/kits/retail-he.webp) |
-|       ![The office kit in Hebrew](docs/screenshots/kits/office-he.webp)        |  ![The hotel kit in Hebrew](docs/screenshots/kits/hotel-he.webp)  |
-| ![The community center kit in Hebrew](docs/screenshots/kits/community-he.webp) |                                                                   |
+|   ![The restaurant kit in Hebrew](docs/screenshots/kits/restaurant-he.webp)    |    ![The cinema kit in Hebrew](docs/screenshots/kits/cinema-he.webp)    |
+| :----------------------------------------------------------------------------: | :---------------------------------------------------------------------: |
+|         ![The café kit in Hebrew](docs/screenshots/kits/cafe-he.webp)          |    ![The retail kit in Hebrew](docs/screenshots/kits/retail-he.webp)    |
+|       ![The office kit in Hebrew](docs/screenshots/kits/office-he.webp)        |     ![The hotel kit in Hebrew](docs/screenshots/kits/hotel-he.webp)     |
+| ![The community center kit in Hebrew](docs/screenshots/kits/community-he.webp) | ![The synagogue kit in Hebrew](docs/screenshots/kits/synagogue-he.webp) |
+| ![The meeting room kit in Hebrew](docs/screenshots/kits/meeting-room-he.webp)  |                                                                         |
 
 </details>
 
@@ -64,6 +67,16 @@ English, and every picture in it is original art drawn for the project
   shekels, dollars, euros or pounds, tags like vegan, spicy or new, up to 3 columns, in modern,
   classic or chalkboard style), **data tables** (Google Sheets, CSV, JSON: lists that update on
   their own) and **free-form designs**.
+- **Meeting rooms**: a screen by each room shows free or busy, until when and the next
+  meetings, and updates the moment a booking changes; on touch screens, "Book now" and "End
+  now" with the organization's PIN. Screens never show who booked.
+- **Events calendar** from a public iCal link (Google Calendar, Outlook and others), as a list
+  or a week; recurring events and time zones included.
+- **Building directory** for lobbies: companies and services by floor and room, with arrows
+  and floor maps; touch screens filter by floor and category.
+- **Synagogue times**: the Hebrew date, the weekly portion, times of the day, the
+  congregation's prayers, candle lighting and havdalah, computed on your server for two weeks
+  ahead (no outside service), so screens keep correct times offline.
 - **Sign-in through the organization** (SSO with Google Workspace, Microsoft Entra ID,
   Keycloak or any OpenID Connect provider) and optional **content approval** before editors'
   changes reach screens.
@@ -90,8 +103,9 @@ English, and every picture in it is original art drawn for the project
   a clock check (players correct a wrong device clock with the server time); e-mail alerts when a
   screen goes offline and when it is back; **proof-of-play reports** per content and date range,
   with CSV export.
-- **Ready-made kits**: one click creates a designed screen: seven by trade (restaurant, café,
-  cinema, retail, office, hotel, community center) and three general ones (lobby, menu board,
+- **Meeting rooms page**: rooms, a day board of bookings, and booking in an accessible form.
+- **Ready-made kits**: one click creates a designed screen: nine by trade (restaurant, café,
+  cinema, retail, office, hotel, community center, synagogue, meeting room) and three general ones (lobby, menu board,
   notice board), in Hebrew or English.
 - **Secure media library**: uploads are quarantined, scanned by ClamAV, re-encoded and stripped
   of metadata (EXIF/GPS) before use.
@@ -186,6 +200,10 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `packages/widget-sdk` | SDK for community widgets (the built-in widgets use it too)                                     | MIT      |
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
+
+In development for the next release: meeting rooms with booking at the screen, an events
+calendar, a building directory and synagogue times
+([plan](docs/phases/18-rooms-directory-calendar-zmanim.md)).
 
 Now: v0.7.1, which adds the attribution "Powered by Rubinny · Open source" in every part of
 Rubinny ([plan and results](docs/phases/16-attribution.md)). 0.7 brought seven starter kits by trade and original art, a menu / price list widget,

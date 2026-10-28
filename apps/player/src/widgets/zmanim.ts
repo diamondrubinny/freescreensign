@@ -12,6 +12,7 @@ import {
   type ZmanKey,
 } from '@rubinny/shared';
 import { defineWidget, el, every } from '@rubinny/widget-sdk';
+import { fitText, onLayout } from './fit';
 import { applyColors } from './theme';
 
 type ZmanimConfig = WidgetConfig<'zmanim'>;
@@ -206,6 +207,8 @@ export const zmanimWidget = defineWidget<ZmanimConfig>({
         );
       }
       columns.replaceChildren(...parts);
+      // Many times in a small zone: shrink the lists rather than cut them.
+      fitText(columns, columns);
 
       // The coming candle lighting and havdalah (havdalah alone during Shabbat or a holiday).
       const later = data.days.filter((d) => d.date >= day.date);
@@ -245,6 +248,9 @@ export const zmanimWidget = defineWidget<ZmanimConfig>({
       }
     };
     render();
+    onLayout(ctx.signal, () => {
+      fitText(columns, columns);
+    });
     void load();
     every(TICK_MS, ctx.signal, render);
     every(REFRESH_MS, ctx.signal, () => void load());
