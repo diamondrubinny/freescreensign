@@ -1,6 +1,6 @@
 {
   "name": "@rubinny/shared",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Shared schemas and types for Rubinny (player manifest, widgets, layouts, designs, pairing, roles).",
   "license": "MIT",
   "type": "module",

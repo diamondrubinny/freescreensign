@@ -21,7 +21,7 @@ by the release workflow of this repository. To verify them before running:
 
 ```bash
 for image in server worker web; do
-  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.7.1" \
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.8.0" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@'
 done
@@ -30,7 +30,7 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
-## 0.7 → 0.8 (next release)
+## 0.7.1 → 0.8.0
 
 - **One database extension:** meeting rooms use `btree_gist` (so two bookings can never
   overlap). It is part of PostgreSQL's standard contrib modules and of the official images,
@@ -40,6 +40,9 @@ release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
   again. **Check your provider's documentation that the extension is allowed** (most list it).
 - **Nothing else to do:** rooms, bookings and the PIN start empty; booking at screens stays off
   until an admin sets a PIN.
+- **Screens update on their own**, as since 0.7: the new widgets (meeting room, events
+  calendar, building directory, synagogue times) need the 0.8 player, and an older player
+  reloads when it reports in. Until a screen has updated, it shows nothing in their place.
 
 ## 0.7.0 → 0.7.1
 

@@ -9,7 +9,7 @@ and Samsung (Tizen) and LG (webOS) screens (not yet verified on a device).
 
 [עברית](README.he.md) · [Specification & roadmap](docs/PLAN.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Sponsor](#support-the-project)
 
-> **Status: actively developed (v0.7).** All nine planned phases are done, with releases since
+> **Status: actively developed (v0.8).** All nine planned phases are done, with releases since
 > 0.1. It is ready to evaluate and pilot; before production use, go through the
 > [production checklist](docs/PRODUCTION-CHECKLIST.md), which also lists what still needs a
 > professional review.
@@ -201,12 +201,11 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-In development for the next release: meeting rooms with booking at the screen, an events
-calendar, a building directory and synagogue times
-([plan](docs/phases/18-rooms-directory-calendar-zmanim.md)).
-
-Now: v0.7.1, which adds the attribution "Powered by Rubinny · Open source" in every part of
-Rubinny ([plan and results](docs/phases/16-attribution.md)). 0.7 brought seven starter kits by trade and original art, a menu / price list widget,
+Now: v0.8.0, which adds meeting rooms with booking at the screen, an events calendar, a
+building directory and synagogue times, with two new kits
+([plan and results](docs/phases/18-rooms-directory-calendar-zmanim.md)). 0.7.1 added the
+attribution "Powered by Rubinny · Open source" in every part of Rubinny
+([plan and results](docs/phases/16-attribution.md)). 0.7 brought seven starter kits by trade and original art, a menu / price list widget,
 and a designer with gradients, shadows, fonts and animations
 ([plan and results](docs/phases/15-showcase.md)). 0.6 added time windows for playlist items,
 screen groups, a time zone per screen, a server status page for the operator

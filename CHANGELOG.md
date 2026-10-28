@@ -6,6 +6,12 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-28
+
+Meeting rooms with booking at the screen, an events calendar, a building directory and
+synagogue times, with two new starter kits. Upgrading from 0.7.1: see
+[docs/UPGRADING.md](docs/UPGRADING.md#071--080) (one database extension).
+
 ### Added
 
 - Meeting rooms (docs/phases/18-rooms-directory-calendar-zmanim.md):
@@ -337,6 +343,7 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
+[0.8.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.8.0
 [0.7.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.7.1
 [0.7.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.7.0
 [0.4.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.4.1
