@@ -49,11 +49,13 @@ export const apiKeyInputSchema = z.object({
 });
 export type ApiKeyInput = z.infer<typeof apiKeyInputSchema>;
 
+/** A public https address on the default port (other ports are refused when sending). */
 export const webhookUrlSchema = z
   .string()
   .trim()
   .max(2000)
-  .pipe(z.url({ protocol: /^https$/, hostname: z.regexes.domain }));
+  .pipe(z.url({ protocol: /^https$/, hostname: z.regexes.domain }))
+  .refine((url) => new URL(url).port === '', { message: 'Use the default https port' });
 
 export const webhookInputSchema = z.object({
   name,

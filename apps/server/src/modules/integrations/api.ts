@@ -11,7 +11,7 @@ import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
 import { activeAlertsQuery } from '../alerts/active.js';
-import { endAlert, startAlert, startAlertSchema, type Alert } from '../alerts/service.js';
+import { alertDto, endAlert, startAlert, startAlertSchema } from '../alerts/service.js';
 import { notifyPlaylistScreens, widgetPlaylists } from '../screens/notify.js';
 import { ONLINE_WINDOW_MS } from '../screens/routes.js';
 import { requireApiKey } from './keys.js';
@@ -37,21 +37,6 @@ const widgetPatchSchema = z
   })
   .strict()
   .refine((v) => Object.keys(v).length > 0, { message: 'Nothing to update' });
-
-function alertDto(alert: Alert) {
-  const now = Date.now();
-  return {
-    id: alert.id,
-    style: alert.style,
-    title: alert.title,
-    message: alert.message,
-    screenIds: alert.screen_ids,
-    startsAt: alert.starts_at.toISOString(),
-    endsAt: alert.ends_at?.toISOString() ?? null,
-    endedAt: alert.ended_at?.toISOString() ?? null,
-    active: alert.ended_at === null && (alert.ends_at === null || alert.ends_at.getTime() > now),
-  };
-}
 
 export function integrationApiRoutes(app: FastifyInstance, ctx: AppContext) {
   app.get(`${BASE}/screens`, async (request) => {

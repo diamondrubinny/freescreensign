@@ -41,6 +41,22 @@ export type StartAlertInput = z.infer<typeof startAlertSchema>;
 
 export type Alert = Selectable<AlertsTable>;
 
+/** An alert as the dashboard and the integrations API show it. */
+export function alertDto(alert: Alert) {
+  const now = Date.now();
+  return {
+    id: alert.id,
+    style: alert.style,
+    title: alert.title,
+    message: alert.message,
+    screenIds: alert.screen_ids,
+    startsAt: alert.starts_at.toISOString(),
+    endsAt: alert.ends_at?.toISOString() ?? null,
+    endedAt: alert.ended_at?.toISOString() ?? null,
+    active: alert.ended_at === null && (alert.ends_at === null || alert.ends_at.getTime() > now),
+  };
+}
+
 /** Who acts: a signed-in person, or an integration's API key. */
 export type AlertActor = { userId: string } | { keyId: string; keyName: string };
 
@@ -132,6 +148,7 @@ export async function endAlert(
       ended_at: new Date(),
       ended_by: 'userId' in actor ? actor.userId : null,
       ended_by_key: 'keyId' in actor ? actor.keyId : null,
+      ended_event_at: new Date(),
     })
     .where('id', '=', alertId)
     .where('org_id', '=', orgId)
@@ -161,4 +178,25 @@ export async function endAlert(
     alert: { id: alert.id, style: alert.style, title: alert.title },
   });
   return alert;
+}
+
+/**
+ * "alert.ended" for alerts that ended on their own (their duration passed). Each is claimed
+ * once (ended_event_at), so several servers report it once. Runs with the webhook dispatcher.
+ */
+export async function reportExpiredAlerts(ctx: Pick<AppContext, 'db'>): Promise<number> {
+  const expired = await ctx.db
+    .updateTable('alerts')
+    .set({ ended_event_at: new Date() })
+    .where('ended_event_at', 'is', null)
+    .where('ended_at', 'is', null)
+    .where('ends_at', '<=', new Date())
+    .returning(['id', 'org_id', 'style', 'title'])
+    .execute();
+  for (const alert of expired) {
+    await emitWebhookEvent(ctx, alert.org_id, 'alert.ended', {
+      alert: { id: alert.id, style: alert.style, title: alert.title, expired: true },
+    });
+  }
+  return expired.length;
 }

@@ -16,6 +16,8 @@ export interface LimitRule {
 export interface Limiter {
   /** Counts a hit; throws 429 when the limit is exceeded and 503 if the store fails. */
   hit(rule: LimitRule, key: string): Promise<void>;
+  /** Throws 429 when the limit is already reached, without counting (checks before work). */
+  check(rule: LimitRule, key: string): Promise<void>;
   reset(rule: LimitRule, key: string): Promise<void>;
 }
 
@@ -52,6 +54,21 @@ export class RedisLimiter implements Limiter {
     if (count > rule.max) throw rateLimited(Math.max(ttl, 1));
   }
 
+  async check(rule: LimitRule, key: string): Promise<void> {
+    const storageKey = `${this.prefix}${rule.name}:${key}`;
+    let count: number;
+    let ttl: number;
+    try {
+      const results = await this.redis.multi().get(storageKey).ttl(storageKey).exec();
+      if (!results) throw new Error('transaction aborted');
+      count = Number(results[0]?.[1] ?? 0);
+      ttl = Number(results[1]?.[1]);
+    } catch {
+      throw new HttpError(503, 'SERVICE_UNAVAILABLE', 'Service temporarily unavailable');
+    }
+    if (count >= rule.max) throw rateLimited(Math.max(ttl, 1));
+  }
+
   async reset(rule: LimitRule, key: string): Promise<void> {
     await this.redis.del(`${this.prefix}${rule.name}:${key}`).catch(() => undefined);
   }
@@ -71,6 +88,15 @@ export class MemoryLimiter implements Limiter {
     }
     entry.count++;
     if (entry.count > rule.max) {
+      return Promise.reject(rateLimited(Math.ceil((entry.resetAt - now) / 1000)));
+    }
+    return Promise.resolve();
+  }
+
+  check(rule: LimitRule, key: string): Promise<void> {
+    const now = Date.now();
+    const entry = this.#hits.get(`${rule.name}:${key}`);
+    if (entry && entry.resetAt > now && entry.count >= rule.max) {
       return Promise.reject(rateLimited(Math.ceil((entry.resetAt - now) / 1000)));
     }
     return Promise.resolve();

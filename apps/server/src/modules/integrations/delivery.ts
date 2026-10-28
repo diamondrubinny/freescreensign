@@ -10,6 +10,7 @@ import { DEFAULT_LOCALE, INTEGRATION_LIMITS, isSupportedLocale } from '@rubinny/
 import type { AppContext } from '../../context.js';
 import { audit } from '../../lib/audit.js';
 import { SafeFetchError, safeFetch } from '../../lib/safe-fetch.js';
+import { reportExpiredAlerts } from '../alerts/service.js';
 import { onWebhookWake } from './events.js';
 
 /**
@@ -21,10 +22,17 @@ import { onWebhookWake } from './events.js';
 
 /** Waits after the 1st, 2nd… failed attempt; after the last one the delivery has failed. */
 export const RETRY_DELAYS_SECONDS = [60, 5 * 60, 30 * 60, 2 * 3600, 6 * 3600, 12 * 3600];
-/** Consecutive failed deliveries that turn a webhook off. */
+/**
+ * A webhook is turned off after this many failed attempts in a row that span at least
+ * DISABLE_AFTER_HOURS: a dead address goes quiet within a day, while a short outage during a
+ * burst of events (many attempts at once) does not turn it off.
+ */
 export const DISABLE_AFTER_FAILURES = 20;
+export const DISABLE_AFTER_HOURS = 6;
 const BATCH = 20;
-const CLAIM_SECONDS = 60;
+const REQUEST_TIMEOUT_MS = 10_000;
+/** Longer than a whole batch can take (every request timing out), so no claim lapses. */
+const CLAIM_SECONDS = (BATCH * REQUEST_TIMEOUT_MS) / 1000 + 60;
 const TICK_MS = 5_000;
 export const USER_AGENT =
   'Rubinny-Webhooks/1.0 (+https://github.com/diamondrubinny/freescreensign)';
@@ -57,7 +65,7 @@ export async function postWebhook(
     method: 'POST',
     body,
     discardBody: true,
-    timeoutMs: 10_000,
+    timeoutMs: REQUEST_TIMEOUT_MS,
     allowPrivate: deps.env.WIDGET_FETCH_ALLOW_PRIVATE,
     headers: {
       'user-agent': USER_AGENT,
@@ -158,7 +166,7 @@ export async function runWebhookDeliveries(deps: Deps): Promise<number> {
       if (hook.failure_count > 0) {
         await deps.db
           .updateTable('webhooks')
-          .set({ failure_count: 0 })
+          .set({ failure_count: 0, failing_since: null })
           .where('id', '=', hook.id)
           .execute();
       }
@@ -178,14 +186,22 @@ export async function runWebhookDeliveries(deps: Deps): Promise<number> {
       })
       .where('id', '=', delivery.id)
       .execute();
-    // Counted per attempt, so an address that is gone is turned off within hours.
+    // Failed attempts in a row, and since when; a success clears both.
     const failures = await deps.db
       .updateTable('webhooks')
-      .set((eb) => ({ failure_count: eb('failure_count', '+', 1) }))
+      .set((eb) => ({
+        failure_count: eb('failure_count', '+', 1),
+        failing_since: eb.fn.coalesce('failing_since', sql<Date>`now()`),
+      }))
       .where('id', '=', hook.id)
-      .returning(['failure_count', 'enabled'])
+      .returning(['failure_count', 'failing_since'])
       .executeTakeFirst();
-    if (failures && failures.failure_count >= DISABLE_AFTER_FAILURES) {
+    const failingFor = failures?.failing_since ? Date.now() - failures.failing_since.getTime() : 0;
+    if (
+      failures &&
+      failures.failure_count >= DISABLE_AFTER_FAILURES &&
+      failingFor >= DISABLE_AFTER_HOURS * 3600 * 1000
+    ) {
       const off = await deps.db
         .updateTable('webhooks')
         .set({ enabled: false, disabled_reason: 'failures', updated_at: new Date() })
@@ -201,7 +217,8 @@ export async function runWebhookDeliveries(deps: Deps): Promise<number> {
           targetId: hook.id,
           meta: { reason: 'failures', failures: failures.failure_count },
         });
-        await tellAdmins(deps, delivery.org_id, hook.name);
+        // A mail problem must not stop the other deliveries of this batch.
+        await tellAdmins(deps, delivery.org_id, hook.name).catch(() => undefined);
       }
     }
   }
@@ -232,7 +249,8 @@ export function startWebhookDispatcher(app: FastifyInstance, ctx: AppContext): v
       return;
     }
     running = true;
-    runWebhookDeliveries(deps)
+    reportExpiredAlerts(deps)
+      .then(() => runWebhookDeliveries(deps))
       .catch((err: unknown) => {
         app.log.error({ err }, 'webhook delivery failed');
       })

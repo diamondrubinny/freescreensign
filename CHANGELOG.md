@@ -15,9 +15,9 @@ All notable changes to Rubinny. The format follows
     text of text and ticker widgets ("Next in line: 42"). Keys are shown once, stored as a
     hash, can expire, and are revoked at once; the dashboard shows when each was last used.
   - **Webhooks**: signed (HMAC-SHA256) messages to an https address when a screen goes offline
-    or comes back, an emergency alert starts or ends, or a change waits for approval. Failed
-    deliveries are retried for about a day; a webhook that keeps failing is turned off and
-    admins get an e-mail. "Send a test" and the recent deliveries are on the page.
+    or comes back, an emergency alert starts or ends (also when its duration passes), or a
+    change waits for approval. Failed deliveries are retried for about a day; a webhook that
+    keeps failing for hours is turned off and admins get an e-mail. "Send a test" and the recent deliveries are on the page.
 
 ## [0.8.1] - 2026-10-28
 

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
+import { isIPv6 } from 'node:net';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Selectable } from 'kysely';
 import { z } from 'zod';
@@ -51,11 +52,18 @@ export function generateApiKey(): { token: string; prefix: string; hash: string 
 
 /** The address kept with "last used": /24 for IPv4, /48 for IPv6 (not the full address). */
 export function shortenIp(ip: string): string {
-  const v4 = /^(?:::ffff:)?(\d+)\.(\d+)\.(\d+)\.\d+$/.exec(ip);
+  const v4 = /^(?:::ffff:)?(\d+)\.(\d+)\.(\d+)\.\d+$/i.exec(ip);
   if (v4) return `${v4[1] ?? ''}.${v4[2] ?? ''}.${v4[3] ?? ''}.0/24`;
-  if (ip.includes(':')) {
-    const groups = ip.split(':').slice(0, 3);
-    return `${groups.join(':')}::/48`;
+  if (isIPv6(ip)) {
+    // Expand "::" so the first three groups are the real ones ("2001:db8::1" → 2001:db8:0).
+    const [head = '', tail] = ip.split('::');
+    const left = head ? head.split(':') : [];
+    const right = tail ? tail.split(':') : [];
+    const groups = [...left, ...Array<string>(8 - left.length - right.length).fill('0'), ...right];
+    const prefix = groups
+      .slice(0, 3)
+      .map((group) => (Number.parseInt(group, 16) || 0).toString(16));
+    return `${prefix.join(':')}::/48`;
   }
   return 'unknown';
 }
@@ -75,6 +83,9 @@ export async function requireApiKey(
   const header = request.headers.authorization ?? '';
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
   const ip = clientIp(request);
+  // An address that kept failing is refused before the lookup (so it costs no query).
+  const ipKey = ctx.keys.hashIp(ip);
+  await ctx.limiter.check(LIMITS.apiKeyFailIp, ipKey);
   const row = KEY_PATTERN.test(token)
     ? await ctx.db
         .selectFrom('api_keys')
@@ -100,7 +111,7 @@ export async function requireApiKey(
     (row.expires_at !== null && row.expires_at.getTime() <= now)
   ) {
     // Counted per address: guessing is hopeless (256 bits), but each try costs a lookup.
-    await ctx.limiter.hit(LIMITS.apiKeyFailIp, ctx.keys.hashIp(ip));
+    await ctx.limiter.hit(LIMITS.apiKeyFailIp, ipKey);
     throw unauthorized();
   }
   await ctx.limiter.hit(LIMITS.apiKeyRequests, row.id);

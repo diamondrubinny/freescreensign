@@ -38,7 +38,10 @@ export async function up(db: Kysely<any>): Promise<void> {
       -- Encrypted with a key derived from ENCRYPTION_KEY (it signs every delivery).
       secret_enc bytea NOT NULL,
       enabled boolean NOT NULL DEFAULT true,
+      -- Consecutive failed attempts, and since when (a short outage during a burst of events
+      -- must not turn the webhook off).
       failure_count integer NOT NULL DEFAULT 0,
+      failing_since timestamptz,
       disabled_reason text,
       created_by uuid REFERENCES users (id) ON DELETE SET NULL,
       created_at timestamptz NOT NULL DEFAULT now(),
@@ -73,11 +76,18 @@ export async function up(db: Kysely<any>): Promise<void> {
     db,
   );
 
-  // Alerts started or ended by an integration name its key (no person).
+  // Alerts started or ended by an integration name its key (no person). ended_event_at: when
+  // "alert.ended" was sent (alerts with a duration end on their own); existing alerts count
+  // as reported, so upgrading sends nothing for the past.
   await sql`
     ALTER TABLE alerts
       ADD COLUMN created_by_key uuid REFERENCES api_keys (id) ON DELETE SET NULL,
-      ADD COLUMN ended_by_key uuid REFERENCES api_keys (id) ON DELETE SET NULL`.execute(db);
+      ADD COLUMN ended_by_key uuid REFERENCES api_keys (id) ON DELETE SET NULL,
+      ADD COLUMN ended_event_at timestamptz`.execute(db);
+  await sql`UPDATE alerts SET ended_event_at = now()`.execute(db);
+  await sql`
+    CREATE INDEX alerts_ending_idx ON alerts (ends_at)
+      WHERE ended_event_at IS NULL AND ends_at IS NOT NULL`.execute(db);
 
   // Row-level security like every organization table (see 0011).
   const hasRole = await sql<{ exists: boolean }>`

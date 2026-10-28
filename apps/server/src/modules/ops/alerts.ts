@@ -44,7 +44,7 @@ export async function runOfflineAlerts(
   startedAt: Date,
 ): Promise<{ orgs: number; screens: number }> {
   // Screens are claimed for organizations that want e-mails, or that have a webhook for
-  // "screen.offline" (each outage is reported once, either way).
+  // "screen.offline" or "screen.online" (each outage is reported once, either way).
   const claimed = await sql<{
     id: string;
     name: string;
@@ -61,7 +61,8 @@ export async function runOfflineAlerts(
         o.offline_alerts
         OR EXISTS (
           SELECT 1 FROM webhooks w
-          WHERE w.org_id = o.id AND w.enabled AND 'screen.offline' = ANY(w.events)
+          WHERE w.org_id = o.id AND w.enabled
+            AND w.events && ARRAY['screen.offline', 'screen.online']::text[]
         )
       )
       AND o.deleted_at IS NULL
@@ -80,11 +81,13 @@ export async function runOfflineAlerts(
   for (const [orgId, rows] of byOrg) {
     const first = rows[0];
     if (!first) continue;
+    // Queued first, but a problem queueing them must not stop the e-mails (the screens are
+    // already claimed, so this outage is not reported again).
     for (const row of rows) {
       await emitWebhookEvent(deps, orgId, 'screen.offline', {
         screen: { id: row.id, name: row.name },
         offlineMinutes: row.minutes,
-      });
+      }).catch(() => 0);
     }
     if (!first.emails) continue;
     for (const user of await recipients(deps, orgId)) {
@@ -119,7 +122,7 @@ export async function reportScreenBack(deps: AlertDeps, screenId: string): Promi
   if (!back) return false;
   await emitWebhookEvent(deps, back.org_id, 'screen.online', {
     screen: { id: screenId, name: back.name },
-  });
+  }).catch(() => 0);
   const org = await deps.db
     .selectFrom('organizations')
     .select(['name', 'offline_alerts'])

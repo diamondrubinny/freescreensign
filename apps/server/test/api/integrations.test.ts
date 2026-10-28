@@ -9,8 +9,10 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { KeyRing } from '../../src/lib/crypto.js';
 import { runMaintenance } from '../../src/lib/maintenance.js';
+import { reportExpiredAlerts } from '../../src/modules/alerts/service.js';
 import {
   DISABLE_AFTER_FAILURES,
+  DISABLE_AFTER_HOURS,
   runWebhookDeliveries,
   secretAad,
   signPayload,
@@ -38,6 +40,10 @@ describe('integration helpers', () => {
     expect(shortenIp('203.0.113.77')).toBe('203.0.113.0/24');
     expect(shortenIp('::ffff:198.51.100.9')).toBe('198.51.100.0/24');
     expect(shortenIp('2001:db8:abcd:12::1')).toBe('2001:db8:abcd::/48');
+    // Compressed addresses are expanded first.
+    expect(shortenIp('2001:db8::1')).toBe('2001:db8:0::/48');
+    expect(shortenIp('::1')).toBe('0:0:0::/48');
+    expect(shortenIp('not an address')).toBe('unknown');
   });
 
   it('signs "<timestamp>.<body>" with HMAC-SHA256', () => {
@@ -317,6 +323,16 @@ describe.runIf(integrationEnabled)('integrations: API keys and webhooks', () => 
         })
       ).statusCode,
     ).toBe(400);
+    // Only the default https port (others cannot be reached when sending).
+    expect(
+      (
+        await admin.post(api('/webhooks'), {
+          name: 'x',
+          url: 'https://hooks.example:8443/x',
+          events: ['alert.started'],
+        })
+      ).statusCode,
+    ).toBe(400);
     expect(
       (
         await editor.post(api('/webhooks'), {
@@ -402,11 +418,26 @@ describe.runIf(integrationEnabled)('integrations: API keys and webhooks', () => 
         .failure_count,
     ).toBe(0);
 
-    // Many failures in a row: the webhook is turned off and admins get an e-mail.
+    // A burst of failures during a short outage does not turn it off.
     answer = 500;
     await h.db
       .updateTable('webhooks')
-      .set({ failure_count: DISABLE_AFTER_FAILURES - 1 })
+      .set({ failure_count: DISABLE_AFTER_FAILURES + 5, failing_since: new Date() })
+      .where('id', '=', hook.id)
+      .execute();
+    await admin.post(api('/alerts'), { style: 'notice', title: 'Burst' });
+    await deliver();
+    expect(
+      (await h.db.selectFrom('webhooks').select('enabled').executeTakeFirstOrThrow()).enabled,
+    ).toBe(true);
+
+    // Failing for hours, many times in a row: turned off, and admins get an e-mail.
+    await h.db
+      .updateTable('webhooks')
+      .set({
+        failure_count: DISABLE_AFTER_FAILURES - 1,
+        failing_since: new Date(Date.now() - (DISABLE_AFTER_HOURS + 1) * 3600 * 1000),
+      })
       .where('id', '=', hook.id)
       .execute();
     await admin.post(api('/alerts'), { style: 'notice', title: 'Two' });
@@ -428,6 +459,66 @@ describe.runIf(integrationEnabled)('integrations: API keys and webhooks', () => 
       .where('next_attempt_at', '<=', new Date())
       .execute();
     expect(queued).toHaveLength(0);
+  });
+
+  it('sends "alert.ended" once for alerts that end on their own', async () => {
+    await localWebhook(['alert.ended']);
+    const started = (
+      await admin.post(api('/alerts'), { style: 'notice', title: 'Short', durationMinutes: 1 })
+    ).json<{ alert: { id: string } }>().alert;
+    expect(await reportExpiredAlerts({ db: h.db })).toBe(0);
+    await h.db
+      .updateTable('alerts')
+      .set({ starts_at: new Date(Date.now() - 120_000), ends_at: new Date(Date.now() - 1000) })
+      .where('id', '=', started.id)
+      .execute();
+    expect(await reportExpiredAlerts({ db: h.db })).toBe(1);
+    expect(await reportExpiredAlerts({ db: h.db })).toBe(0);
+    await deliver();
+    expect(received).toHaveLength(1);
+    expect(JSON.parse(received[0]!.body)).toMatchObject({
+      event: 'alert.ended',
+      data: { alert: { id: started.id, expired: true } },
+    });
+    // Ended by hand: reported then, not again when its time passes.
+    const other = (
+      await admin.post(api('/alerts'), { style: 'notice', title: 'Manual', durationMinutes: 1 })
+    ).json<{ alert: { id: string } }>().alert;
+    await admin.post(api(`/alerts/${other.id}/end`));
+    await h.db
+      .updateTable('alerts')
+      .set({ starts_at: new Date(Date.now() - 120_000), ends_at: new Date(Date.now() - 1000) })
+      .where('id', '=', other.id)
+      .execute();
+    expect(await reportExpiredAlerts({ db: h.db })).toBe(0);
+  });
+
+  it('watches screens for a webhook that wants only "screen.online"', async () => {
+    await localWebhook(['screen.online']);
+    const screen = await h.db
+      .insertInto('screens')
+      .values({
+        org_id: orgId,
+        name: 'Hall',
+        token_hash: 'y'.repeat(64),
+        last_seen_at: new Date(Date.now() - 60 * 60 * 1000),
+      })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    const deps = { db: h.db, mailer: h.mailer, publicUrl: PUBLIC_URL };
+    expect((await runOfflineAlerts(deps, new Date(Date.now() - 24 * 3600 * 1000))).screens).toBe(1);
+    await reportScreenBack(deps, screen.id);
+    await deliver();
+    expect(received.map((r) => r.headers['rubinny-event'])).toEqual(['screen.online']);
+  });
+
+  it('refuses an address that kept failing key checks before looking keys up', async () => {
+    const { token } = await createKey(['screens:read']);
+    for (let i = 0; i < 30; i++) {
+      expect((await integration('GET', '/screens', `rbk_${'x'.repeat(43)}`)).statusCode).toBe(401);
+    }
+    // Even a valid key is refused from that address for a while.
+    expect((await integration('GET', '/screens', token)).statusCode).toBe(429);
   });
 
   it('tells webhooks when screens go offline and come back, without e-mail if not wanted', async () => {

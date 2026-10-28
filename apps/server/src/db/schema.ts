@@ -359,6 +359,8 @@ export interface AlertsTable {
   /** The API key that started or ended the alert (an integration), if any. */
   created_by_key: ColumnType<string | null, string | null | undefined, string | null>;
   ended_by_key: ColumnType<string | null, string | null | undefined, string | null>;
+  /** When "alert.ended" was sent to webhooks. */
+  ended_event_at: ColumnType<Date | null, Date | null | undefined, Date | null>;
   created_at: Generated<Date>;
 }
 
@@ -435,6 +437,7 @@ export interface WebhooksTable {
   secret_enc: Buffer;
   enabled: Generated<boolean>;
   failure_count: Generated<number>;
+  failing_since: ColumnType<Date | null, Date | null | undefined, Date | null>;
   disabled_reason: string | null;
   created_by: string | null;
   created_at: Generated<Date>;

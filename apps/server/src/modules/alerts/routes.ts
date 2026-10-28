@@ -9,25 +9,16 @@ import type { AppContext } from '../../context.js';
 import { parse } from '../../lib/validation.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { activeAlertsQuery } from './active.js';
-import { endAlert, startAlert, startAlertSchema, type Alert } from './service.js';
+import { alertDto, endAlert, startAlert, startAlertSchema, type Alert } from './service.js';
 
 const RECENT_ALERTS = 20;
 
 const alertParams = z.object({ orgId: z.uuid(), alertId: z.uuid() });
 
 /** `names`: a person's name, or "API: <key name>" for an integration. */
-function alertDto(alert: Alert, names: { createdBy: string | null; endedBy: string | null }) {
-  const now = Date.now();
+function alertWithNames(alert: Alert, names: { createdBy: string | null; endedBy: string | null }) {
   return {
-    id: alert.id,
-    style: alert.style,
-    title: alert.title,
-    message: alert.message,
-    screenIds: alert.screen_ids,
-    startsAt: alert.starts_at.toISOString(),
-    endsAt: alert.ends_at?.toISOString() ?? null,
-    endedAt: alert.ended_at?.toISOString() ?? null,
-    active: alert.ended_at === null && (alert.ends_at === null || alert.ends_at.getTime() > now),
+    ...alertDto(alert),
     createdBy: names.createdBy,
     endedBy: names.endedBy,
     createdAt: alert.created_at.toISOString(),
@@ -61,7 +52,7 @@ export function alertRoutes(app: FastifyInstance, ctx: AppContext) {
       return users.find((u) => u.id === id)?.name ?? null;
     };
     return rows.map((row) =>
-      alertDto(row, {
+      alertWithNames(row, {
         createdBy: name(row.created_by, row.created_by_key),
         endedBy: name(row.ended_by, row.ended_by_key),
       }),

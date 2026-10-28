@@ -142,7 +142,7 @@ export function webhookRoutes(app: FastifyInstance, ctx: AppContext) {
         // Turning it on again starts over (no leftover failures, no reason).
         ...(body.enabled !== undefined
           ? body.enabled
-            ? { enabled: true, failure_count: 0, disabled_reason: null }
+            ? { enabled: true, failure_count: 0, failing_since: null, disabled_reason: null }
             : { enabled: false, disabled_reason: 'manual' }
           : {}),
         updated_at: new Date(),

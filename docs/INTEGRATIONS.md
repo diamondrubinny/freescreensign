@@ -99,17 +99,17 @@ integrations cannot wait for an admin (alerts are not affected).
 
 ## Webhooks
 
-An admin adds an `https` address and chooses events. Internal addresses (localhost, private
+An admin adds an `https` address (on the default port) and chooses events. Internal addresses (localhost, private
 networks) are refused. The **signing secret** (`whsec_…`) is shown once; "New secret" replaces
 it.
 
-| Event                | When                                                           |
-| -------------------- | -------------------------------------------------------------- |
-| `screen.offline`     | A screen has not reported for the organization's offline delay |
-| `screen.online`      | That screen is back                                            |
-| `alert.started`      | An emergency alert started (dashboard or API)                  |
-| `alert.ended`        | It ended                                                       |
-| `approval.requested` | An editor's change waits for an admin                          |
+| Event                | When                                                               |
+| -------------------- | ------------------------------------------------------------------ |
+| `screen.offline`     | A screen has not reported for the organization's offline delay     |
+| `screen.online`      | That screen is back                                                |
+| `alert.started`      | An emergency alert started (dashboard or API)                      |
+| `alert.ended`        | It ended (by hand, or its duration passed: then `"expired": true`) |
+| `approval.requested` | An editor's change waits for an admin                              |
 
 Each delivery is a `POST` with this body (and `ping` from "Send a test"):
 
@@ -140,8 +140,8 @@ addresses or meeting titles. Headers:
   `<t>.<raw body>` with the secret.
 
 **Answer with any 2xx within 10 seconds.** Other answers, redirects and timeouts are retried
-after 1 and 5 minutes, then 30 minutes and 2, 6 and 12 hours. A webhook whose deliveries fail 20
-times in a row is turned off, and the organization's admins get an e-mail; turning it on again
+after 1 and 5 minutes, then 30 minutes and 2, 6 and 12 hours. A webhook that keeps failing (20 attempts in a row, over
+at least 6 hours) is turned off, and the organization's admins get an e-mail; turning it on again
 in the dashboard starts over. Deliveries are kept for 7 days and listed per webhook.
 
 ### Checking the signature
