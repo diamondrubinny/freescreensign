@@ -22,7 +22,7 @@ import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
 import { notifyPlaylistScreens, widgetPlaylists } from '../screens/notify.js';
-import { getWidgetData, roomWidgetData, weatherEnabled } from './data.js';
+import { weatherEnabled, widgetData } from './data.js';
 import { WEATHER_ATTRIBUTION } from './weather.js';
 
 const widgetParams = z.object({ orgId: z.uuid(), widgetId: z.uuid() });
@@ -329,7 +329,6 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     const org = requireOrg(request);
     const { widgetId } = parse(widgetParams, request.params);
     const widget = await loadWidget(org.id, widgetId);
-    if (widget.type === 'room') return roomWidgetData(ctx, widget);
-    return getWidgetData(ctx, widget);
+    return widgetData(ctx, widget);
   });
 }

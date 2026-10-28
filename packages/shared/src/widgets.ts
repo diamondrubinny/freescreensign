@@ -242,6 +242,88 @@ export const calendarConfigSchema = z.object({
   accent: color.default('#f59e0b'),
 });
 
+/** Times of the day the zmanim widget can show (computed by the server, see widgets/zmanim.ts). */
+export const ZMANIM_KEYS = [
+  'alotHaShachar',
+  'misheyakir',
+  'sunrise',
+  'sofZmanShmaMGA',
+  'sofZmanShma',
+  'sofZmanTfilla',
+  'chatzot',
+  'minchaGedola',
+  'minchaKetana',
+  'plagHaMincha',
+  'sunset',
+  'tzeit',
+] as const;
+export type ZmanKey = (typeof ZMANIM_KEYS)[number];
+
+const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:MM');
+
+/**
+ * Synagogue times: the Hebrew date, the week's Torah portion, times of the day, Shabbat and
+ * holiday candle lighting and havdalah for a place, and the congregation's prayer times (fixed,
+ * or relative to a time of the day). Computed by the Rubinny server for the coming two weeks; no
+ * outside service.
+ */
+export const zmanimConfigSchema = z.object({
+  title: z.string().trim().max(100).optional(),
+  place: z.object({
+    name: z.string().trim().min(1).max(60),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    /** Meters above sea level; used for sunrise and sunset when set. */
+    elevation: z.number().min(-500).max(9000).optional(),
+    timezone: z.string().max(64).refine(isValidTimeZone, 'Unknown time zone'),
+    /** Israel or the diaspora (holidays and Torah portions differ). */
+    israel: z.boolean().default(true),
+  }),
+  times: z
+    .array(z.enum(ZMANIM_KEYS))
+    .max(ZMANIM_KEYS.length)
+    .default([
+      'alotHaShachar',
+      'sunrise',
+      'sofZmanShma',
+      'sofZmanTfilla',
+      'chatzot',
+      'minchaGedola',
+      'plagHaMincha',
+      'sunset',
+      'tzeit',
+    ]),
+  /** Minutes before sunset (18 by custom; 40 in Jerusalem). */
+  candleMinutes: z.number().int().min(0).max(60).default(18),
+  /** Havdalah: when 3 stars appear (8.5° below the horizon), or fixed minutes after sunset. */
+  havdalah: z.enum(['tzeit', '42', '50', '72']).default('tzeit'),
+  prayers: z
+    .array(
+      z
+        .object({
+          name: z.string().trim().min(1).max(40),
+          /** Days of the week (0 = Sunday … 6 = Saturday); empty = every day. */
+          days: z.array(z.number().int().min(0).max(6)).max(7).default([]),
+          time: clockTime.optional(),
+          zman: z.enum(ZMANIM_KEYS).optional(),
+          /** Minutes after (positive) or before (negative) the time of the day. */
+          offset: z.number().int().min(-180).max(180).default(0),
+        })
+        .refine((p) => (p.time === undefined) !== (p.zman === undefined), {
+          message: 'Either a fixed time or a time of the day',
+          path: ['time'],
+        }),
+    )
+    .max(20)
+    .default([]),
+  showParasha: z.boolean().default(true),
+  locale: z.enum(['he', 'en']).default('he'),
+  format: z.enum(['24h', '12h']).default('24h'),
+  textColor: color.default('#fdf6e3'),
+  background: color.default('#1c1917'),
+  accent: color.default('#d4a017'),
+});
+
 /** Where to go, as an arrow (physical directions: "left" is left in Hebrew too). */
 export const DIRECTORY_DIRECTIONS = [
   'none',
@@ -346,6 +428,7 @@ export const WIDGET_CONFIG_SCHEMAS = {
   room: roomConfigSchema,
   calendar: calendarConfigSchema,
   directory: directoryConfigSchema,
+  zmanim: zmanimConfigSchema,
 } as const;
 
 export type WidgetType = keyof typeof WIDGET_CONFIG_SCHEMAS;
@@ -358,6 +441,7 @@ export const DATA_WIDGET_TYPES = [
   'weather',
   'table',
   'calendar',
+  'zmanim',
 ] as const satisfies readonly WidgetType[];
 
 /**
@@ -430,6 +514,31 @@ export interface CalendarData {
   title: string | null;
   /** Events from now to the configured number of days ahead, by start (at most 200). */
   events: CalendarEvent[];
+}
+
+export interface ZmanimDay {
+  /** The civil date in the place's time zone (YYYY-MM-DD). */
+  date: string;
+  hebrewDate: string;
+  /** The Torah portion read on the coming Shabbat (shown all week), when enabled. */
+  parasha: string | null;
+  /** Holidays, fasts and Rosh Chodesh of the day. */
+  holidays: string[];
+  /** The configured times of the day, in order (null: no such time, e.g. near the poles). */
+  times: { key: ZmanKey; at: string | null }[];
+  /** The congregation's prayers held that day. */
+  prayers: { name: string; at: string | null }[];
+  /** Candle lighting (Shabbat and holiday eves) and havdalah, ISO 8601. */
+  candles: string | null;
+  havdalah: string | null;
+}
+
+export interface ZmanimData {
+  place: { name: string; timezone: string };
+  /** Today in the place's time zone first; two weeks, so screens keep working offline. */
+  days: ZmanimDay[];
+  /** How candle lighting and havdalah are computed (named on the screen). */
+  method: { candleMinutes: number; havdalah: WidgetConfig<'zmanim'>['havdalah'] };
 }
 
 export interface TableData {

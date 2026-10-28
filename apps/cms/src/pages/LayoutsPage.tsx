@@ -47,6 +47,8 @@ const KITS = [
   { id: 'office', template: 'l-bar', trade: true },
   { id: 'hotel', template: 'showcase', trade: true },
   { id: 'community', template: 'header-main-footer', trade: true },
+  { id: 'synagogue', template: 'showcase', trade: true },
+  { id: 'meeting-room', template: 'main-ticker', trade: true },
   { id: 'lobby', template: 'l-bar', trade: false },
   { id: 'menu', template: 'grid-2x2', trade: false },
   { id: 'info', template: 'header-main-footer', trade: false },

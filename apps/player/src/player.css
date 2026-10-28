@@ -1491,3 +1491,99 @@ body,
   max-width: 14em;
   margin-top: 0.6em;
 }
+
+/* Synagogue times (widgets/zmanim.ts): dates, two lists side by side, Shabbat times. */
+.w-zm {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: calc(var(--zone-h, 600px) * 0.04) calc(var(--zone-w, 800px) * 0.04);
+  font-size: calc(var(--zone-h, 600px) * 0.036);
+  line-height: 1.3;
+  overflow: hidden;
+}
+.w-zm-title {
+  margin: 0;
+  color: var(--w-accent, currentColor);
+  font-size: 1.7em;
+  font-weight: 800;
+}
+.w-zm-dates {
+  margin: 0.2em 0 0;
+  font-size: 1.05em;
+  font-weight: 600;
+}
+.w-zm-special {
+  margin: 0.2em 0 0;
+  color: var(--w-accent, currentColor);
+  font-size: 1.05em;
+  font-weight: 700;
+}
+.w-zm-columns {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.6em;
+  overflow: hidden;
+}
+.w-zm-section {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0.6em;
+  border-inline-start: 0.06em solid rgba(255, 255, 255, 0.25);
+}
+.w-zm-section:first-child {
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}
+.w-zm-heading {
+  margin: 0 0 0.3em;
+  color: var(--w-accent, currentColor);
+  font-size: 1em;
+  font-weight: 800;
+}
+.w-zm-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.w-zm-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.12em 0.3em;
+  border-radius: 0.25em;
+}
+.w-zm-next {
+  background: var(--w-accent, rgba(255, 255, 255, 0.2));
+  color: var(--w-bg, #000);
+  font-weight: 800;
+}
+.w-zm-label {
+  overflow: hidden;
+  margin-inline-end: 0.6em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.w-zm-time {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.w-zm-shabbat {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5em;
+  padding: 0.35em 0.6em;
+  border: 0.08em solid var(--w-accent, currentColor);
+  border-radius: 0.35em;
+}
+.w-zm-shabbat-item {
+  margin: 0 0.8em;
+  font-size: 1.1em;
+}
+.w-zm-method {
+  margin: 0.4em 0 0;
+  font-size: 0.65em;
+  opacity: 0.8;
+}

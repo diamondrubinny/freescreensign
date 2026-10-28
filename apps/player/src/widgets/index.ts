@@ -18,6 +18,7 @@ import { textWidget } from './text';
 import { tickerWidget } from './ticker';
 import { weatherWidget } from './weather';
 import { webpageWidget } from './webpage';
+import { zmanimWidget } from './zmanim';
 
 /** Built-in widgets, all written against the public widget SDK. */
 export const BUILT_IN_WIDGETS: ReadonlyMap<string, WidgetDefinition<unknown>> = new Map(
@@ -37,6 +38,7 @@ export const BUILT_IN_WIDGETS: ReadonlyMap<string, WidgetDefinition<unknown>> = 
       roomWidget,
       calendarWidget,
       directoryWidget,
+      zmanimWidget,
     ] as WidgetDefinition<unknown>[]
   ).map((widget) => [widget.type, widget]),
 );

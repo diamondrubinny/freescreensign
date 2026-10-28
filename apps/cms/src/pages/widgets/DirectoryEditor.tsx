@@ -10,7 +10,7 @@ import {
   type DirectoryDirection,
 } from '@rubinny/shared';
 import { Plus, Trash2 } from 'lucide-react';
-import { useId, useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { get } from '../../api/client';
@@ -18,6 +18,7 @@ import type { Messages } from '../../i18n/locales/he';
 import type { MediaItem } from '../../api/types';
 import { Button } from '../../components/Button';
 import { inputClass } from '../../components/ui';
+import { Labelled } from './Labelled';
 
 interface FloorDraft {
   name: string;
@@ -78,38 +79,6 @@ export function directoryValue(drafts: Drafts) {
       ...(e.note.trim() ? { note: e.note.trim() } : {}),
     })),
   };
-}
-
-function Labelled({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string | undefined;
-  children: (props: {
-    id: string;
-    'aria-invalid'?: true;
-    'aria-describedby'?: string;
-  }) => ReactNode;
-}) {
-  const id = useId();
-  return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      {children({
-        id,
-        ...(error ? { 'aria-invalid': true, 'aria-describedby': `${id}-error` } : {}),
-      })}
-      {error && (
-        <p id={`${id}-error`} className="text-sm font-semibold text-red-700 dark:text-red-300">
-          {error}
-        </p>
-      )}
-    </div>
-  );
 }
 
 /**

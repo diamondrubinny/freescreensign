@@ -7,7 +7,7 @@ import { Readable } from 'node:stream';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import sharp from 'sharp';
 import { z } from 'zod';
-import { parseWidgetConfig, templateZones } from '@rubinny/shared';
+import { hasRole, parseWidgetConfig, templateZones } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import { audit } from '../../lib/audit.js';
 import { HttpError } from '../../lib/http-error.js';
@@ -15,6 +15,7 @@ import { parse } from '../../lib/validation.js';
 import { ingestMedia } from '../../media/ingest.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { ART, ART_ATTRIBUTION, ART_SOURCE_URL, artSvg, type ArtName } from './art.js';
+import { KIT_ROOM_PLACEHOLDER } from './industry-kits.js';
 import { artNames, resolveArt } from './kit-design.js';
 import { ALL_STARTER_KITS, STARTER_KIT_IDS, sampleCountdownTarget } from './kits.js';
 
@@ -119,16 +120,58 @@ export function kitRoutes(app: FastifyInstance, ctx: AppContext) {
       return { ...widget, parsed: parsed.config };
     });
 
-    const layoutId = await ctx.db.transaction().execute(async (trx) => {
+    // A meeting room screen shows the organization's first room. Without one, an admin's
+    // kit adds a sample room (as on the Rooms page, MFA rules included); others are told to
+    // ask an admin.
+    const needsRoom = widgets.some((widget) => widget.type === 'room');
+    const mayAddRoom = hasRole(org.role, 'ADMIN') && !(org.requireAdminMfa && !user.mfa_enabled_at);
+
+    const { layoutId, addedRoom } = await ctx.db.transaction().execute(async (trx) => {
+      let roomId: string | null = null;
+      let addedRoom: string | null = null;
+      if (needsRoom) {
+        const first = await trx
+          .selectFrom('rooms')
+          .select('id')
+          .where('org_id', '=', org.id)
+          .orderBy('name')
+          .limit(1)
+          .executeTakeFirst();
+        if (first) {
+          roomId = first.id;
+        } else {
+          if (!mayAddRoom) {
+            throw new HttpError(409, 'ROOM_REQUIRED', 'A meeting room is needed; ask an admin');
+          }
+          const room = await trx
+            .insertInto('rooms')
+            .values({
+              org_id: org.id,
+              name: locale === 'he' ? 'חדר ישיבות' : 'Meeting room',
+              location: null,
+              capacity: null,
+              show_titles: false,
+            })
+            .returning('id')
+            .executeTakeFirstOrThrow();
+          roomId = room.id;
+          addedRoom = room.id;
+        }
+      }
+
       const widgetIds = new Map<string, string>();
       for (const widget of widgets) {
+        const config =
+          widget.type === 'room' && roomId && widget.parsed.roomId === KIT_ROOM_PLACEHOLDER
+            ? { ...widget.parsed, roomId }
+            : widget.parsed;
         const row = await trx
           .insertInto('widgets')
           .values({
             org_id: org.id,
             type: widget.type,
             name: widget.name[locale],
-            config: JSON.stringify(widget.parsed),
+            config: JSON.stringify(config),
             created_by: user.id,
           })
           .returning('id')
@@ -194,9 +237,19 @@ export function kitRoutes(app: FastifyInstance, ctx: AppContext) {
           })
           .execute();
       }
-      return layout.id;
+      return { layoutId: layout.id, addedRoom };
     });
 
+    if (addedRoom) {
+      await audit(ctx.db, {
+        action: 'room.created',
+        orgId: org.id,
+        actorUserId: user.id,
+        targetType: 'room',
+        targetId: addedRoom,
+        meta: { starterKit: kit.id },
+      });
+    }
     await audit(ctx.db, {
       action: 'layout.created',
       orgId: org.id,

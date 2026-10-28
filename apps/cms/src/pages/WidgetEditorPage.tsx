@@ -14,6 +14,7 @@ import {
   type RssData,
   type TableData,
   type WeatherData,
+  type ZmanimData,
   type WidgetType,
 } from '@rubinny/shared';
 import { del, get, patch, post } from '../api/client';
@@ -35,6 +36,7 @@ import { useOrgRole } from '../lib/use-org-role';
 import { DesignPage } from './design/DesignPage';
 import { DirectoryEditor } from './widgets/DirectoryEditor';
 import { MenuSectionsEditor } from './widgets/MenuSectionsEditor';
+import { ZmanimEditor } from './widgets/ZmanimEditor';
 import {
   WIDGET_FIELDS,
   readWidgetConfig,
@@ -136,6 +138,21 @@ function ConfigField({
           {label}
         </h3>
         <DirectoryEditor name={field.key} initial={initial} errors={nested} />
+      </section>
+    );
+  }
+
+  if (field.kind === 'zmanimSettings') {
+    // Server errors are by configuration path: place.latitude, prayers.2.time…
+    const nested = Object.fromEntries(
+      Object.entries(allErrors).filter(([path]) => /^(place|times|prayers)(\.|$)/.test(path)),
+    );
+    return (
+      <section aria-labelledby={`${id}-heading`} className="flex flex-col gap-2">
+        <h3 id={`${id}-heading`} className="font-bold">
+          {label}
+        </h3>
+        <ZmanimEditor name={field.key} initial={initial} errors={nested} />
       </section>
     );
   }
@@ -295,6 +312,7 @@ function DataPreview({ orgId, widget }: { orgId: string; widget: WidgetItem }) {
             {result.type === 'weather' && <WeatherPreview data={result.data as WeatherData} />}
             {result.type === 'table' && <TablePreview data={result.data as TableData} />}
             {result.type === 'calendar' && <CalendarPreview data={result.data as CalendarData} />}
+            {result.type === 'zmanim' && <ZmanimPreview data={result.data as ZmanimData} />}
           </div>
         )}
       </div>
@@ -322,6 +340,45 @@ function RssPreview({ data }: { data: RssData }) {
           ))}
         </ul>
       )}
+    </>
+  );
+}
+
+/** Today's times as the screen will show them (in the place's time zone). */
+function ZmanimPreview({ data }: { data: ZmanimData }) {
+  const { t, i18n } = useTranslation();
+  const day = data.days[0];
+  if (!day) return null;
+  const time = (at: string | null) =>
+    at
+      ? new Intl.DateTimeFormat(i18n.language === 'he' ? 'he-IL' : 'en-GB', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: data.place.timezone,
+        }).format(new Date(at))
+      : '—';
+  const rows = [
+    ...day.times.map((x) => ({ name: t(`widgets.zmanim.labels.${x.key}`), at: x.at })),
+    ...day.prayers.map((x) => ({ name: x.name, at: x.at })),
+    ...(day.candles ? [{ name: t('widgets.zmanim.candles'), at: day.candles }] : []),
+    ...(day.havdalah ? [{ name: t('widgets.zmanim.havdalah'), at: day.havdalah }] : []),
+  ];
+  return (
+    <>
+      <p className="font-semibold">
+        <bdi>{data.place.name}</bdi> · {day.hebrewDate}
+        {day.parasha && <> · {day.parasha}</>}
+        {day.holidays.map((holiday) => (
+          <span key={holiday}> · {holiday}</span>
+        ))}
+      </p>
+      <ul className="list-disc ps-6">
+        {rows.map((row, index) => (
+          <li key={String(index)}>
+            <bdi>{row.name}</bdi>: <span className="tabular-nums">{time(row.at)}</span>
+          </li>
+        ))}
+      </ul>
     </>
   );
 }
@@ -546,6 +603,11 @@ export function WidgetEditorPage() {
           <Alert variant="info">{t('widgets.directoryPrivacy')}</Alert>
         </div>
       )}
+      {widgetType === 'zmanim' && (
+        <div className="mb-4 max-w-2xl">
+          <Alert variant="info">{t('widgets.zmanimNote')}</Alert>
+        </div>
+      )}
 
       <Form
         key={widget?.updatedAt ?? 'new'}
@@ -569,7 +631,12 @@ export function WidgetEditorPage() {
             <ConfigField
               key={field.key}
               field={field}
-              initial={initial[field.key]}
+              initial={
+                // These editors cover several configuration keys at once.
+                field.kind === 'directoryLists' || field.kind === 'zmanimSettings'
+                  ? initial
+                  : initial[field.key]
+              }
               error={fieldErrors[field.key]}
               allErrors={fieldErrors}
             />

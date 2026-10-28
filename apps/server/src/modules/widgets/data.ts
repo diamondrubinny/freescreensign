@@ -13,6 +13,8 @@ import {
   type TableData,
   type WeatherData,
   type WidgetConfig,
+  type ZmanimData,
+  zmanimConfigSchema,
 } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import { HttpError } from '../../lib/http-error.js';
@@ -23,6 +25,7 @@ import { parseCalendar } from './calendar.js';
 import { parseFeed } from './rss.js';
 import { parseTable, tableSourceUrl } from './table.js';
 import { parseWeather, weatherRequestUrl } from './weather.js';
+import { computeZmanim } from './zmanim.js';
 
 /** How long fetched data counts as fresh, per widget type (tables: their own setting). */
 const FRESH_SECONDS = { rss: 10 * 60, weather: 15 * 60, table: 5 * 60, calendar: 10 * 60 } as const;
@@ -203,4 +206,36 @@ export async function roomWidgetData(
     config.data.allowBooking,
   );
   return { type: 'room', data, fetchedAt: data.serverTime, stale: false };
+}
+
+export interface ZmanimWidgetDataResult {
+  type: 'zmanim';
+  data: ZmanimData;
+  fetchedAt: string;
+  stale: false;
+}
+
+/** Synagogue times, computed here (a few milliseconds; nothing is fetched or cached). */
+export function zmanimWidgetData(widget: {
+  config: Record<string, unknown>;
+}): ZmanimWidgetDataResult {
+  const config = zmanimConfigSchema.safeParse(widget.config);
+  if (!config.success) throw upstreamFailed();
+  const now = new Date();
+  return {
+    type: 'zmanim',
+    data: computeZmanim(config.data, now),
+    fetchedAt: now.toISOString(),
+    stale: false,
+  };
+}
+
+/** The data endpoint's answer for any widget (the player's and the dashboard's preview). */
+export function widgetData(
+  ctx: AppContext,
+  widget: { org_id: string; type: string; config: Record<string, unknown> },
+): Promise<WidgetDataResult | RoomWidgetDataResult | ZmanimWidgetDataResult> {
+  if (widget.type === 'room') return roomWidgetData(ctx, widget);
+  if (widget.type === 'zmanim') return Promise.resolve(zmanimWidgetData(widget));
+  return getWidgetData(ctx, widget);
 }

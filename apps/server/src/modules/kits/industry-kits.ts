@@ -19,7 +19,9 @@ import {
 
 /**
  * Starter kits by trade (docs/phases/15-showcase.md): restaurant, café, cinema, shop, office
- * lobby, hotel and community. Names of places are invented; links point at example.org.
+ * lobby, hotel and community; and a synagogue and a meeting room
+ * (docs/phases/18-rooms-directory-calendar-zmanim.md). Names of places are invented; links
+ * point at example.org.
  * Colors are chosen for contrast (checked in the tests).
  */
 
@@ -1766,6 +1768,193 @@ const community = (): StarterKit => {
   };
 };
 
+// ---- Synagogue ---------------------------------------------------------------------------
+
+const synagogue = (): StarterKit => ({
+  id: 'synagogue',
+  template: 'showcase',
+  name: L('בית כנסת — אוהל יעקב', 'Synagogue — Ohel Yaakov'),
+  background: '#1c1917',
+  widgets: [
+    {
+      key: 'zmanim',
+      type: 'zmanim',
+      name: L('זמני היום והתפילות', 'Times and prayers'),
+      config: both((locale) => ({
+        place:
+          locale === 'he'
+            ? {
+                name: 'ירושלים',
+                latitude: 31.76904,
+                longitude: 35.21633,
+                timezone: 'Asia/Jerusalem',
+                israel: true,
+              }
+            : {
+                name: 'New York',
+                latitude: 40.71427,
+                longitude: -74.00597,
+                timezone: 'America/New_York',
+                israel: false,
+              },
+        title: pick(locale, 'בית הכנסת אוהל יעקב', 'Ohel Yaakov Synagogue'),
+        times: [
+          'alotHaShachar',
+          'sunrise',
+          'sofZmanShma',
+          'sofZmanTfilla',
+          'chatzot',
+          'minchaGedola',
+          'plagHaMincha',
+          'sunset',
+          'tzeit',
+        ],
+        // Jerusalem lights 40 minutes before sunset; most places 18.
+        candleMinutes: locale === 'he' ? 40 : 18,
+        havdalah: 'tzeit',
+        prayers: [
+          { name: pick(locale, 'שחרית', 'Shacharit'), days: [0, 1, 2, 3, 4, 5], time: '06:30' },
+          { name: pick(locale, 'שחרית', 'Shacharit'), days: [6], time: '08:30' },
+          {
+            name: pick(locale, 'מנחה', 'Mincha'),
+            days: [0, 1, 2, 3, 4],
+            zman: 'sunset',
+            offset: -15,
+          },
+          {
+            name: pick(locale, 'מנחה וקבלת שבת', 'Mincha and Kabbalat Shabbat'),
+            days: [5],
+            zman: 'sunset',
+            offset: -10,
+          },
+          {
+            name: pick(locale, 'ערבית', 'Maariv'),
+            days: [0, 1, 2, 3, 4],
+            zman: 'tzeit',
+            offset: 0,
+          },
+        ],
+        showParasha: true,
+        locale,
+        format: '24h',
+        textColor: '#fdf6e3',
+        background: '#1c1917',
+        accent: '#d4a017',
+      })),
+    },
+    {
+      key: 'clock',
+      type: 'clock',
+      name: L('שעון', 'Clock'),
+      config: both((locale) => ({ locale, textColor: '#fdf6e3', background: '#292524' })),
+    },
+    {
+      key: 'lessons',
+      type: 'menu',
+      name: L('שיעורים השבוע', "This week's classes"),
+      config: both((locale) => ({
+        title: pick(locale, 'שיעורים', 'Classes'),
+        style: 'classic',
+        columns: 1,
+        currency: 'none',
+        locale,
+        textColor: '#fdf6e3',
+        background: '#292524',
+        accent: '#d4a017',
+        sections: [
+          {
+            title: pick(locale, 'כל ערב', 'Every evening'),
+            items: [
+              { name: pick(locale, 'דף יומי', 'Daf Yomi'), price: '20:30', tags: [] },
+              { name: pick(locale, 'הלכה יומית', 'Daily halacha'), price: '21:30', tags: [] },
+            ],
+          },
+          {
+            title: pick(locale, 'שבת', 'Shabbat'),
+            items: [
+              { name: pick(locale, 'פרשת השבוע', 'Weekly portion'), price: '16:00', tags: [] },
+              { name: pick(locale, 'שיעור לנשים', "Women's class"), price: '17:00', tags: [] },
+            ],
+          },
+        ],
+      })),
+    },
+    {
+      key: 'ticker',
+      type: 'ticker',
+      name: L('הודעות לקהל', 'Announcements'),
+      config: both((locale) => ({
+        label: pick(locale, 'הודעות', 'Notices'),
+        text: pick(
+          locale,
+          'מזל טוב למשפחת לוי להולדת הבת · קידוש לכל הקהל בשבת אחרי התפילה · נא לכבות טלפונים בבית הכנסת',
+          'Mazel tov to the Levi family on the birth of a daughter · Kiddush for everyone after services on Shabbat · Please silence phones in the sanctuary',
+        ),
+        textColor: '#1c1917',
+        background: '#d4a017',
+      })),
+    },
+  ],
+  zones: {
+    main: { playlist: L('בית כנסת — זמנים', 'Synagogue — times'), widgets: ['zmanim'] },
+    side: {
+      playlist: L('בית כנסת — צד', 'Synagogue — side'),
+      widgets: [
+        { key: 'clock', durationMs: 10_000 },
+        { key: 'lessons', durationMs: 15_000 },
+      ],
+    },
+    ticker: { playlist: L('בית כנסת — הודעות', 'Synagogue — notices'), widgets: ['ticker'] },
+  },
+});
+
+// ---- Meeting room ------------------------------------------------------------------------
+
+/**
+ * The room widget's room until the kit is created: the kit uses the organization's first
+ * room, or adds one (see routes.ts).
+ */
+export const KIT_ROOM_PLACEHOLDER = '00000000-0000-4000-8000-000000000000';
+
+const meetingRoom = (): StarterKit => ({
+  id: 'meeting-room',
+  template: 'main-ticker',
+  name: L('חדר ישיבות', 'Meeting room'),
+  background: '#0f172a',
+  widgets: [
+    {
+      key: 'room',
+      type: 'room',
+      name: L('מצב החדר', 'Room status'),
+      config: both((locale) => ({
+        roomId: KIT_ROOM_PLACEHOLDER,
+        allowBooking: true,
+        locale,
+        format: '24h',
+      })),
+    },
+    {
+      key: 'ticker',
+      type: 'ticker',
+      name: L('הודעות לחדר', 'Room notices'),
+      config: both((locale) => ({
+        label: pick(locale, 'לתשומת לבכם', 'Please note'),
+        text: pick(
+          locale,
+          'אפשר להזמין את החדר במגע במסך, עם הקוד של הארגון · נא להשאיר את החדר מסודר · השלט של המסך במגירה',
+          'Book this room by touching the screen, with your organization’s code · Please leave the room tidy · The screen remote is in the drawer',
+        ),
+        textColor: '#ffffff',
+        background: '#1e3a8a',
+      })),
+    },
+  ],
+  zones: {
+    main: { playlist: L('חדר ישיבות — מצב', 'Meeting room — status'), widgets: ['room'] },
+    ticker: { playlist: L('חדר ישיבות — הודעות', 'Meeting room — notices'), widgets: ['ticker'] },
+  },
+});
+
 export const INDUSTRY_KITS: readonly StarterKit[] = [
   restaurant(),
   cafe(),
@@ -1774,4 +1963,6 @@ export const INDUSTRY_KITS: readonly StarterKit[] = [
   office(),
   hotel(),
   community(),
+  synagogue(),
+  meetingRoom(),
 ];

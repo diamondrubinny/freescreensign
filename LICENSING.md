@@ -55,6 +55,18 @@ file. They are served from your own server, with no requests to font services.
 | Secular One      | `@fontsource/secular-one`               | Hebrew, Latin         |
 | Bebas Neue       | `@fontsource/bebas-neue`                | Latin only            |
 
+## Libraries with notable licenses
+
+Most dependencies use permissive licenses (MIT, ISC, Apache-2.0, BSD); the SBOM attached to
+each release lists them all. Two server libraries have copyleft terms:
+
+| Library                                                | License          | Used for                                                    | Notes                                                                                                                                          |
+| ------------------------------------------------------ | ---------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@hebcal/core`](https://github.com/hebcal/hebcal-es6) | GPL-2.0-or-later | Synagogue times: times of the day, holidays, Torah portions | Used only in `apps/server` (AGPL-3.0); GPL-2.0-or-later may be used under GPL-3.0, which can be combined with AGPL-3.0. Never in MIT packages. |
+| [`ical.js`](https://github.com/kewisch/ical.js)        | MPL-2.0          | Reading iCal calendars for the events calendar widget       | File-level copyleft: changes to its own files would be shared under MPL-2.0; Rubinny uses it unchanged.                                        |
+
+> The compatibility notes above are a technical reading and **require legal review**.
+
 ## Rubinny Art Pack
 
 The illustrations and backgrounds of the starter kits (restaurant, café, cinema, shop, office,

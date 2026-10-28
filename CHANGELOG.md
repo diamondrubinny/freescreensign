@@ -29,6 +29,16 @@ All notable changes to Rubinny. The format follows
   Touch screens filter by floor and category and open an entry's details; left alone, the
   screen goes back to the full list, and long lists turn their pages by themselves. Names of
   people are personal data shown in public: the editor says to add them only with consent.
+- A "Synagogue times" widget: the Hebrew date, the week's Torah portion, holidays and Rosh
+  Chodesh, times of the day (dawn to nightfall, by the GRA and the Magen Avraham), the
+  congregation's prayers at fixed times or relative to a time of the day, on chosen days, with
+  the next time marked, and the coming candle lighting and havdalah. Computed on the server
+  with `@hebcal/core` (the engine behind hebcal.com; no outside service); screens get two
+  weeks ahead and keep showing correct times offline. The editor starts from a list of cities,
+  and the screen names the method used. Times should be confirmed with the congregation's
+  rabbi before publishing.
+- Two starter kits: "Synagogue" (times and prayers, clock, classes, notices) and "Meeting
+  room" (the room's screen; it uses the organization's first room, or, for admins, adds one).
 
 ### Security
 

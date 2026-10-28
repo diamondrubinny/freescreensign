@@ -89,6 +89,7 @@ describe('parseWidgetConfig', () => {
       'room',
       'calendar',
       'directory',
+      'zmanim',
     ]);
   });
 });

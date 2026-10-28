@@ -265,7 +265,7 @@ export interface WidgetTypes {
 }
 
 export interface WidgetData {
-  type: 'rss' | 'weather' | 'table' | 'calendar';
+  type: 'rss' | 'weather' | 'table' | 'calendar' | 'zmanim';
   data: unknown;
   fetchedAt: string;
   stale: boolean;

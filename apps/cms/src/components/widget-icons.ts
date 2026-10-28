@@ -11,6 +11,7 @@ import {
   DoorOpen,
   Globe,
   Signpost,
+  Sunset,
   Palette,
   Puzzle,
   QrCode,
@@ -41,6 +42,7 @@ export const WIDGET_ICONS: Record<
   room: { icon: DoorOpen, tone: 'green' },
   calendar: { icon: CalendarDays, tone: 'sky' },
   directory: { icon: Signpost, tone: 'amber' },
+  zmanim: { icon: Sunset, tone: 'rose' },
 };
 
 export const widgetIcon = (type: string) =>

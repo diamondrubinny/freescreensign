@@ -37,10 +37,14 @@ psql_value() {
 fingerprint_db() {
   local table
   for table in users organizations memberships media playlists playlist_items layouts \
-    layout_zones widgets schedules schedule_entries play_events schema_migrations; do
+    layout_zones widgets schedules schedule_entries play_events rooms room_bookings \
+    schema_migrations; do
     printf '%s %s\n' "$table" \
       "$(psql_value "SELECT count(*) || ' ' || md5(coalesce(string_agg(t::text, '|' ORDER BY t::text), '')) FROM $table t;")"
   done
+  # Row-level security: every table's policy (compared before and after the restore).
+  printf 'policies %s\n' \
+    "$(psql_value "SELECT count(*) || ' ' || md5(coalesce(string_agg(tablename || ':' || policyname, '|' ORDER BY tablename, policyname), '')) FROM pg_policies WHERE schemaname = current_schema();")"
   printf 'screens %s\n' \
     "$(psql_value "SELECT count(*) || ' ' || md5(coalesce(string_agg(id || name || org_id, '|' ORDER BY id), '')) FROM screens;")"
 }
@@ -106,11 +110,12 @@ fingerprint_db >"$TMP/db.after"
 fingerprint_storage >"$TMP/storage.after"
 diff -u "$TMP/db.before" "$TMP/db.after" || fail "database differs after the restore"
 diff -u "$TMP/storage.before" "$TMP/storage.after" || fail "media differs after the restore"
-# Row-level security came back with the data: the role, its grants and the policies.
+# Row-level security came back with the data: the role and its grants (the policies are in
+# the fingerprint; at least one per organization table as of 0021).
 [ "$(psql_value "SELECT pg_has_role(current_user, 'rubinny_tenant', 'MEMBER')
   AND has_table_privilege('rubinny_tenant', 'widgets', 'SELECT')
   AND (SELECT count(*) FROM pg_policies
-         WHERE schemaname = current_schema() AND policyname = 'tenant_isolation') = 20;")" = t ] ||
+         WHERE schemaname = current_schema() AND policyname = 'tenant_isolation') >= 22;")" = t ] ||
   fail "row-level security is not complete after the restore"
 ok "database, media and settings are identical after the restore; the stack is healthy"
 rm -f .env.before-restore-*

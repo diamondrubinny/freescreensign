@@ -32,6 +32,8 @@ export const API_ERROR_CODES = [
   'WRONG_PIN',
   /** Rooms: the organization has no PIN, or the screen does not allow booking. */
   'BOOKING_DISABLED',
+  /** Rooms: a meeting room screen needs a room, which only an admin can add. */
+  'ROOM_REQUIRED',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

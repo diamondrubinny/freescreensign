@@ -142,7 +142,7 @@ describe('starter kits', () => {
     }
   });
 
-  it('has the seven kits by trade, after the general ones', () => {
+  it('has the kits by trade, after the general ones', () => {
     expect(ALL_STARTER_KITS.map((kit) => kit.id)).toEqual([
       'lobby',
       'menu',
@@ -154,6 +154,8 @@ describe('starter kits', () => {
       'office',
       'hotel',
       'community',
+      'synagogue',
+      'meeting-room',
     ]);
   });
 

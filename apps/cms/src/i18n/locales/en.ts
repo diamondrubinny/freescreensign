@@ -126,6 +126,8 @@ export const en: Messages = {
     ROOM_BUSY: 'The room is already booked at that time. Choose another time or room.',
     WRONG_PIN: 'The PIN is not correct.',
     BOOKING_DISABLED: 'Booking at the screen is not available.',
+    ROOM_REQUIRED:
+      'A meeting room screen needs a room. An admin can add one on the Rooms page; then create the screen.',
     network: 'Cannot reach the server. Check your connection and try again.',
     reference: 'Support reference: {{id}}',
   },
@@ -580,6 +582,8 @@ export const en: Messages = {
     noHeadlines: 'No headlines were found in the feed.',
     weatherNow: 'Now: {{temperature}}',
     rssPrivacy: 'The server downloads the feed. Screens never contact the feed site directly.',
+    zmanimNote:
+      'Times are computed on the Rubinny server with the open-source library @hebcal/core (the engine behind hebcal.com); no outside service is called. Screens get two weeks ahead and keep working offline. Before publishing, confirm the place, the candle lighting minutes and the havdalah method with the congregation’s rabbi.',
     directoryPrivacy:
       'Names of people (for example "Dr. Cohen, floor 2") are personal data shown in public: add them only with their consent.',
     calendarPrivacy:
@@ -609,6 +613,7 @@ export const en: Messages = {
       room: 'Meeting room',
       calendar: 'Events calendar',
       directory: 'Building directory',
+      zmanim: 'Synagogue times',
     },
     descriptions: {
       clock: "Time, Gregorian and Hebrew date, in the screen's time zone.",
@@ -627,6 +632,55 @@ export const en: Messages = {
         'Upcoming events from a public calendar (iCal) of Google, Outlook and others. Updates on its own.',
       directory:
         'A lobby screen: companies and departments by floor and room, filtered by touch, with an arrow and a map.',
+      zmanim:
+        'For a synagogue: Hebrew date, weekly portion, times of the day, prayers, candle lighting and havdalah.',
+    },
+    zmanim: {
+      place: 'Place',
+      city: 'Start from a city (optional)',
+      cityChoose: 'Choose a city…',
+      coordsHint:
+        'Choosing a city fills in the coordinates of its center. For accuracy, enter the synagogue’s own location (from a map, for example) and check the times against a known calendar.',
+      placeName: 'Place name',
+      latitude: 'Latitude',
+      longitude: 'Longitude',
+      elevation: 'Elevation in meters (optional)',
+      elevationHint:
+        'With an elevation, sunrise and sunset take it into account. Most calendars use sea level: leave it empty to match them.',
+      timezone: 'Time zone',
+      israel: 'In Israel (holidays and portions by the Israeli schedule)',
+      times: 'Times of the day to show',
+      prayers: 'Prayers',
+      prayersHint:
+        'A fixed time, or relative to a time of the day (e.g. Mincha 15 minutes before sunset: -15).',
+      prayerName: 'Prayer name',
+      mode: 'When',
+      fixed: 'Fixed time',
+      relative: 'Relative to a time of the day',
+      time: 'Time',
+      zman: 'Time of the day',
+      offset: 'Minutes (+ after, − before)',
+      days: 'Days',
+      daysHint: 'None ticked: every day.',
+      addPrayer: 'Add prayer',
+      removePrayer: 'Remove prayer',
+      candles: 'Candle lighting',
+      havdalah: 'Havdalah',
+      weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      labels: {
+        alotHaShachar: 'Dawn (Alot HaShachar)',
+        misheyakir: 'Misheyakir',
+        sunrise: 'Sunrise',
+        sofZmanShmaMGA: 'Latest Shema (MGA)',
+        sofZmanShma: 'Latest Shema (GRA)',
+        sofZmanTfilla: 'Latest Shacharit (GRA)',
+        chatzot: 'Midday (Chatzot)',
+        minchaGedola: 'Earliest Mincha',
+        minchaKetana: 'Mincha Ketana',
+        plagHaMincha: 'Plag HaMincha',
+        sunset: 'Sunset',
+        tzeit: 'Nightfall (Tzeit)',
+      },
     },
     directory: {
       floors: 'Floors',
@@ -662,6 +716,16 @@ export const en: Messages = {
       },
     },
     fields: {
+      zmanimSettings: 'Place, times and prayers',
+      candleMinutes: 'Candle lighting: minutes before sunset',
+      candleMinutesHint: 'By local custom: 40 in Jerusalem, 30 in Haifa, 18–20 in most places.',
+      havdalah: 'End of Shabbat and holidays',
+      havdalahTzeit: 'Nightfall (sun 8.5° below the horizon)',
+      havdalah42: '42 minutes after sunset',
+      havdalah50: '50 minutes after sunset',
+      havdalah72: '72 minutes after sunset (Rabbeinu Tam)',
+      showParasha: 'Show the weekly Torah portion',
+      zmanimAccent: 'Highlight color',
       directoryLists: 'Floors, categories and entries',
       idleSeconds: 'Seconds untouched before going back to the full list',
       calendarUrl: 'Calendar link (iCal)',
@@ -904,6 +968,16 @@ export const en: Messages = {
         name: 'Community and school',
         description:
           'A family festival with balloons and confetti, a countdown, weekly classes and updates.',
+      },
+      synagogue: {
+        name: 'Synagogue',
+        description:
+          'Times of the day and prayers, the weekly portion, candle lighting and havdalah, classes and notices.',
+      },
+      'meeting-room': {
+        name: 'Meeting room',
+        description:
+          "A screen by the room: free or busy, the next meeting and touch booking. Uses the organization's first room (or adds one, for admins).",
       },
       lobby: {
         name: 'Lobby',

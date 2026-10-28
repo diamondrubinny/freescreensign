@@ -33,6 +33,8 @@ export type WidgetFieldSpec = { key: string; label: FieldLabel; hint?: FieldLabe
   | { kind: 'room'; required: true }
   /** Floors, categories and entries of a directory (pages/widgets/DirectoryEditor), as JSON. */
   | { kind: 'directoryLists' }
+  /** Place, times of the day and prayers of the zmanim widget (pages/widgets/ZmanimEditor). */
+  | { kind: 'zmanimSettings' }
 );
 
 const colors = (text: 'textColor' | 'foreground' = 'textColor'): WidgetFieldSpec[] => [
@@ -51,6 +53,43 @@ const locale: WidgetFieldSpec = {
 };
 
 export const WIDGET_FIELDS: Record<WidgetType, WidgetFieldSpec[]> = {
+  zmanim: [
+    { key: 'title', label: 'titleOptional', kind: 'text', maxLength: 100 },
+    { key: 'settings', label: 'zmanimSettings', kind: 'zmanimSettings' },
+    {
+      key: 'candleMinutes',
+      label: 'candleMinutes',
+      hint: 'candleMinutesHint',
+      kind: 'number',
+      min: 0,
+      max: 60,
+      step: 1,
+    },
+    {
+      key: 'havdalah',
+      label: 'havdalah',
+      kind: 'select',
+      options: [
+        { value: 'tzeit', label: 'havdalahTzeit' },
+        { value: '42', label: 'havdalah42' },
+        { value: '50', label: 'havdalah50' },
+        { value: '72', label: 'havdalah72' },
+      ],
+    },
+    { key: 'showParasha', label: 'showParasha', kind: 'checkbox' },
+    {
+      key: 'format',
+      label: 'format',
+      kind: 'select',
+      options: [
+        { value: '24h', label: 'format24' },
+        { value: '12h', label: 'format12' },
+      ],
+    },
+    locale,
+    ...colors(),
+    { key: 'accent', label: 'zmanimAccent', kind: 'color' },
+  ],
   directory: [
     { key: 'title', label: 'titleOptional', kind: 'text', maxLength: 100 },
     { key: 'lists', label: 'directoryLists', kind: 'directoryLists' },
@@ -387,12 +426,12 @@ export function readWidgetConfig(type: WidgetType, data: FormData): Record<strin
       }
       continue;
     }
-    if (field.kind === 'directoryLists') {
-      // Several configuration keys (floors, categories, entries) in one value.
+    if (field.kind === 'directoryLists' || field.kind === 'zmanimSettings') {
+      // Several configuration keys (floors, categories, entries; place, times, prayers).
       try {
         Object.assign(config, JSON.parse(text) as Record<string, unknown>);
       } catch {
-        // Built by DirectoryEditor; never malformed.
+        // Built by DirectoryEditor or ZmanimEditor; never malformed.
       }
       continue;
     }

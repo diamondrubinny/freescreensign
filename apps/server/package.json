@@ -25,6 +25,7 @@
     "@fastify/multipart": "10.1.4",
     "@fastify/rate-limit": "11.2.1",
     "@fastify/websocket": "11.3.4",
+    "@hebcal/core": "6.14.7",
     "@node-rs/argon2": "2.2.2",
     "@rubinny/shared": "workspace:*",
     "bullmq": "6.3.17",

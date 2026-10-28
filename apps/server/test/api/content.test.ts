@@ -198,7 +198,36 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'room',
       'calendar',
       'directory',
+      'zmanim',
     ]);
+    expect(types.types.find((t) => t.type === 'zmanim')).toMatchObject({ serverData: true });
+
+    // Synagogue times are computed here: no source to fetch, today's day first.
+    const zmanim = await createWidget('zmanim', {
+      place: { name: 'ירושלים', latitude: 31.77, longitude: 35.21, timezone: 'Asia/Jerusalem' },
+      prayers: [{ name: 'מנחה', zman: 'sunset', offset: -15 }],
+    });
+    expect(zmanim.config).toMatchObject({ candleMinutes: 18, havdalah: 'tzeit', locale: 'he' });
+    const zmanimData = await viewer.get(api(`/widgets/${zmanim.id}/data`));
+    expect(zmanimData.statusCode, zmanimData.body).toBe(200);
+    const zd = zmanimData.json<{
+      type: string;
+      stale: boolean;
+      data: { place: { timezone: string }; days: { date: string; prayers: unknown[] }[] };
+    }>();
+    expect(zd).toMatchObject({ type: 'zmanim', stale: false });
+    expect(zd.data.place.timezone).toBe('Asia/Jerusalem');
+    expect(zd.data.days).toHaveLength(14);
+    expect(zd.data.days[0]!.prayers).toHaveLength(1);
+    expect(
+      (
+        await editor.post(api('/widgets'), {
+          type: 'zmanim',
+          name: 'z',
+          config: { place: { name: 'x', latitude: 99, longitude: 0, timezone: 'Nowhere/City' } },
+        })
+      ).statusCode,
+    ).toBe(400);
 
     const clock = await createWidget('clock', {});
     expect(clock.config).toMatchObject({ format: '24h', showHebrewDate: true });
@@ -673,7 +702,27 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'office',
       'hotel',
       'community',
+      'synagogue',
+      'meeting-room',
     ]);
+    // A meeting room screen needs a room: an editor is told to ask an admin; an admin's kit
+    // adds a sample room.
+    const noRoom = await editor.post(api('/starter-kits/meeting-room'), { locale: 'he' });
+    expect(noRoom.statusCode).toBe(409);
+    expect(noRoom.json<{ error: { code: string } }>().error.code).toBe('ROOM_REQUIRED');
+    const owner = await login(h.app, 'owner@example.com');
+    expect((await owner.post(api('/starter-kits/meeting-room'), { locale: 'he' })).statusCode).toBe(
+      201,
+    );
+    const rooms = await h.db.selectFrom('rooms').select(['id', 'name']).execute();
+    expect(rooms.map((r) => r.name)).toEqual(['חדר ישיבות']);
+    const roomWidget = await h.db
+      .selectFrom('widgets')
+      .select('config')
+      .where('type', '=', 'room')
+      .executeTakeFirstOrThrow();
+    expect((roomWidget.config as { roomId: string }).roomId).toBe(rooms[0]!.id);
+
     const { deviceToken, screenId } = await pair();
     for (const [index, kit] of kits.entries()) {
       const res = await editor.post(api(`/starter-kits/${kit.id}`), {
@@ -702,6 +751,10 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
         ['Office lobby — Orion Tech', 3],
         ['מלון ואירועים — מלון גליל', 3],
         ['Community and school — Neve Gan Center', 3],
+        ['בית כנסת — אוהל יעקב', 3],
+        // Once as an admin (adding the room), then by the editor with the room in place.
+        ['חדר ישיבות', 2],
+        ['Meeting room', 2],
       ].sort(),
     );
     expect((await viewer.post(api('/starter-kits/lobby'), {})).statusCode).toBe(403);
