@@ -10,8 +10,25 @@ export async function up(db: Kysely<any>): Promise<void> {
   // Meeting rooms and their bookings (docs/phases/18-rooms-directory-calendar-zmanim.md).
   // btree_gist lets one constraint cover "same room" (=) and "overlapping time" (&&), so two
   // bookings can never overlap, even when they are made at the same moment.
+  //
+  // An extension belongs to the whole database (one copy, in one schema). It goes in "public"
+  // when that exists, not in the connection's current schema: Rubinny may run in its own
+  // schema (search_path), and dropping that schema must not take the extension from others.
+  // Operator classes are found by type, whatever the search_path.
+  const installed = await sql<{ schema: string }>`
+    SELECT n.nspname AS schema FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE e.extname = 'btree_gist'`.execute(db);
+  const hasPublic = await sql<{ exists: boolean }>`
+    SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'public') AS exists`.execute(db);
   try {
-    await sql`CREATE EXTENSION IF NOT EXISTS btree_gist`.execute(db);
+    if (installed.rows.length === 0) {
+      await (
+        hasPublic.rows[0]?.exists
+          ? sql`CREATE EXTENSION IF NOT EXISTS btree_gist SCHEMA public`
+          : sql`CREATE EXTENSION IF NOT EXISTS btree_gist`
+      ).execute(db);
+    }
   } catch (error) {
     throw new Error(
       'Rubinny needs the PostgreSQL extension btree_gist (part of the standard contrib modules). ' +
