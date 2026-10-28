@@ -30,6 +30,14 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
+## 0.8 → 0.9 (next release)
+
+- **Nothing to do:** the migration adds the tables for API keys and webhooks. No keys or webhooks
+  exist until an admin creates them.
+- **Offline e-mails and webhooks:** screens are now also watched for organizations that have a
+  "screen.offline" webhook but no offline e-mails; e-mails still go only to organizations that
+  turned them on.
+
 ## 0.8.0 → 0.8.1
 
 - **Nothing to do:** no migrations and no new settings. Screens update their player on their

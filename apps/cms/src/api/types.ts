@@ -408,3 +408,41 @@ export interface PlayReport {
   totals: { plays: number; durationMs: number };
   items: PlayReportItem[];
 }
+
+/** An organization API key (integrations); the key itself is shown only when created. */
+export interface ApiKeyItem {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  createdAt: string;
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  lastUsedIp: string | null;
+  revokedAt: string | null;
+  active: boolean;
+}
+
+export interface WebhookItem {
+  id: string;
+  name: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  /** "failures" (turned off after failing again and again) or "manual". */
+  disabledReason: string | null;
+  failureCount: number;
+  createdAt: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  event: string;
+  status: 'pending' | 'delivered' | 'failed';
+  attempts: number;
+  statusCode: number | null;
+  error: string | null;
+  createdAt: string;
+  deliveredAt: string | null;
+  nextAttemptAt: string | null;
+}

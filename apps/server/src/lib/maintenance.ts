@@ -4,6 +4,7 @@
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
 import type { Db } from '../db/database.js';
+import { pruneWebhookDeliveries } from '../modules/integrations/delivery.js';
 import { pruneScreenshots } from '../modules/ops/screenshots.js';
 import type { MediaQueue } from '../queue.js';
 
@@ -18,6 +19,7 @@ export interface MaintenanceResult {
   playEvents: number;
   screenshots: number;
   roomBookings: number;
+  webhookDeliveries: number;
 }
 
 /** Uptime history kept per screen. */
@@ -85,6 +87,7 @@ export async function runMaintenance(
     .where('ends_at', '<', new Date(now.getTime() - ROOM_BOOKING_RETENTION_DAYS * DAY_MS))
     .executeTakeFirst();
   const screenshots = await pruneScreenshots(db, now);
+  const webhookDeliveries = await pruneWebhookDeliveries(db);
   return {
     screenshots,
     uptimeDays: Number(uptimeDays.numDeletedRows),
@@ -94,6 +97,7 @@ export async function runMaintenance(
     invitations: Number(invitations.numDeletedRows),
     auditLogs: Number(auditLogs.numDeletedRows),
     roomBookings: Number(roomBookings.numDeletedRows),
+    webhookDeliveries,
   };
 }
 

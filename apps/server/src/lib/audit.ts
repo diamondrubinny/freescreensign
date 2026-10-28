@@ -75,7 +75,14 @@ export type AuditAction =
   | 'room.booking_deleted'
   | 'room.pin_set'
   | 'room.pin_cleared'
-  | 'room.pin_failed';
+  | 'room.pin_failed'
+  | 'api_key.created'
+  | 'api_key.revoked'
+  | 'webhook.created'
+  | 'webhook.updated'
+  | 'webhook.deleted'
+  | 'webhook.secret_rotated'
+  | 'webhook.disabled';
 
 export interface AuditEvent {
   action: AuditAction;

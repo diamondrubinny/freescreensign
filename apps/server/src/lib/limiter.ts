@@ -119,4 +119,9 @@ export const LIMITS = {
   roomPinScreen: { name: 'room-pin-screen', max: 5, windowSeconds: 900 },
   roomPinOrg: { name: 'room-pin-org', max: 30, windowSeconds: 900 },
   roomBookScreen: { name: 'room-book-screen', max: 4, windowSeconds: 3600 },
+  /** Integrations: requests per API key, and failed key checks per address. */
+  apiKeyRequests: { name: 'api-key-requests', max: 300, windowSeconds: 60 },
+  apiKeyFailIp: { name: 'api-key-fail-ip', max: 30, windowSeconds: 600 },
+  /** "Send a test" to a webhook. */
+  webhookTestOrg: { name: 'webhook-test-org', max: 20, windowSeconds: 3600 },
 } as const satisfies Record<string, LimitRule>;

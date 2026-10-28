@@ -15,6 +15,7 @@ import { beginTenantTransaction, requestDryRun } from '../../lib/tenant.js';
 import { parse } from '../../lib/validation.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { appLink } from '../auth/tokens.js';
+import { emitWebhookEvent } from '../integrations/events.js';
 
 /**
  * Content approval (docs/phases/11b-approvals.md). When an organization requires it, an
@@ -97,6 +98,9 @@ export function approvalGate(ctx: AppContext, kind: ApprovalKind) {
         targetType: 'approval',
         targetId: row.id,
         meta: { kind, action: summary.action },
+      });
+      await emitWebhookEvent(ctx, org.id, 'approval.requested', {
+        approval: { id: row.id, kind, action: summary.action },
       });
       void notifyAdmins(ctx, org, user.name, summary).catch(() => undefined);
       return { approval: approvalDto(row, user.name, null) };

@@ -138,6 +138,12 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
       },
       'booking',
     );
+    ids.keyId = await created('/api-keys', { name: 'A key', scopes: ['screens:read'] }, 'key');
+    ids.webhookId = await created(
+      '/webhooks',
+      { name: 'A hook', url: 'https://hooks.example/a', events: ['alert.started'] },
+      'webhook',
+    );
     // Media needs object storage; its isolation is covered in test/media/flow.test.ts.
     ids.mediaId = '00000000-0000-4000-8000-000000000001';
   });
@@ -161,6 +167,7 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
     'PATCH /screen-groups/:groupId': { name: 'hacked' },
     'PATCH /rooms/:roomId': { name: 'hacked' },
     'PATCH /room-bookings/:bookingId': { title: 'hacked' },
+    'PATCH /webhooks/:webhookId': { name: 'hacked' },
     'PUT /screen-groups/:groupId/content': { playlistId: null },
     'PATCH /members/:userId': { role: 'VIEWER' },
     'PATCH /media/:mediaId': { name: 'hacked' },
@@ -262,5 +269,17 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
       .where('id', '=', ids.bookingId!)
       .executeTakeFirstOrThrow();
     expect(booking.title).toBe('A meeting');
+    const key = await h.db
+      .selectFrom('api_keys')
+      .select('revoked_at')
+      .where('id', '=', ids.keyId!)
+      .executeTakeFirstOrThrow();
+    expect(key.revoked_at).toBeNull();
+    const hook = await h.db
+      .selectFrom('webhooks')
+      .select(['name', 'enabled'])
+      .where('id', '=', ids.webhookId!)
+      .executeTakeFirstOrThrow();
+    expect(hook).toEqual({ name: 'A hook', enabled: true });
   });
 });

@@ -6,6 +6,19 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Integrations (docs/INTEGRATIONS.md, docs/phases/19-integrations-api-webhooks.md), for admins
+  on a new "Integrations" page:
+  - **API keys** for other systems, each limited to the permissions it was given: see the
+    screens' status, start and end emergency alerts (e.g. from a fire panel), and change the
+    text of text and ticker widgets ("Next in line: 42"). Keys are shown once, stored as a
+    hash, can expire, and are revoked at once; the dashboard shows when each was last used.
+  - **Webhooks**: signed (HMAC-SHA256) messages to an https address when a screen goes offline
+    or comes back, an emergency alert starts or ends, or a change waits for approval. Failed
+    deliveries are retried for about a day; a webhook that keeps failing is turned off and
+    admins get an e-mail. "Send a test" and the recent deliveries are on the page.
+
 ## [0.8.1] - 2026-10-28
 
 Fixes from a review of the meeting rooms and the events calendar. Upgrading from 0.8.0: nothing

@@ -47,6 +47,10 @@ import { createAnthropicAi, type AiClientFactory } from './lib/ai.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { approvalRoutes } from './modules/approvals/routes.js';
 import { startOfflineAlerts } from './modules/ops/alerts.js';
+import { integrationApiRoutes } from './modules/integrations/api.js';
+import { startWebhookDispatcher } from './modules/integrations/delivery.js';
+import { apiKeyRoutes } from './modules/integrations/keys.js';
+import { webhookRoutes } from './modules/integrations/webhooks.js';
 import { opsRoutes } from './modules/ops/routes.js';
 import { reportRoutes } from './modules/ops/reports.js';
 import { screenshotRoutes } from './modules/ops/screenshots.js';
@@ -255,11 +259,17 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     scheduleRoutes(app, ctx);
     alertRoutes(app, ctx);
     approvalRoutes(app, ctx);
+    apiKeyRoutes(app, ctx);
+    webhookRoutes(app, ctx);
+    integrationApiRoutes(app, ctx);
     aiRoutes(app, ctx);
     opsRoutes(app, ctx);
     reportRoutes(app, ctx);
     screenshotRoutes(app, ctx);
-    if (options.backgroundJobs) startOfflineAlerts(app, ctx);
+    if (options.backgroundJobs) {
+      startOfflineAlerts(app, ctx);
+      startWebhookDispatcher(app, ctx);
+    }
     kitRoutes(app, ctx);
     operatorRoutes(app, ctx, options.checks ?? [], {
       ...(ctx.media ? { clamav: () => clamavVersion(env.CLAMAV_HOST, env.CLAMAV_PORT) } : {}),

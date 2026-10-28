@@ -12,7 +12,8 @@ import type { Readable } from 'node:stream';
 import zlib from 'node:zlib';
 
 /**
- * Outbound HTTP(S) for server-side widget data (RSS, weather), hardened against SSRF:
+ * Outbound HTTP(S) for server-side widget data (RSS, weather) and webhook deliveries,
+ * hardened against SSRF:
  *
  * - http/https only, default ports only (unless `allowPrivate`).
  * - Every resolved address is checked at connect time through a custom `lookup`,
@@ -34,6 +35,8 @@ export class SafeFetchError extends Error {
       | 'http_error'
       | 'network',
     message: string,
+    /** For 'http_error': the response's status code. */
+    readonly status?: number,
   ) {
     super(message);
     this.name = 'SafeFetchError';
@@ -47,6 +50,14 @@ export interface SafeFetchOptions {
   timeoutMs?: number;
   maxBytes?: number;
   accept?: string;
+  /** GET by default; a POST is never redirected to another method or address silently. */
+  method?: 'GET' | 'POST';
+  /** The request body (POST). */
+  body?: string;
+  /** More request headers (they may replace the user agent). */
+  headers?: Record<string, string>;
+  /** Only the status matters (webhooks): the response body is not read. */
+  discardBody?: boolean;
 }
 
 export interface SafeFetchResponse {
@@ -216,7 +227,8 @@ interface Hop {
 
 function requestOnce(
   url: URL,
-  options: Required<Pick<SafeFetchOptions, 'allowPrivate' | 'maxBytes' | 'accept'>>,
+  options: Required<Pick<SafeFetchOptions, 'allowPrivate' | 'maxBytes' | 'accept'>> &
+    Pick<SafeFetchOptions, 'method' | 'body' | 'headers' | 'discardBody'>,
   signal: AbortSignal,
 ): Promise<Hop> {
   return new Promise<Hop>((resolve, reject) => {
@@ -232,7 +244,7 @@ function requestOnce(
     const request = client.request(
       url,
       {
-        method: 'GET',
+        method: options.method ?? 'GET',
         agent: false,
         lookup: guardedLookup(options.allowPrivate),
         signal,
@@ -240,6 +252,10 @@ function requestOnce(
           'user-agent': USER_AGENT,
           accept: options.accept,
           'accept-encoding': 'gzip, deflate, br',
+          ...(options.body !== undefined
+            ? { 'content-length': String(Buffer.byteLength(options.body)) }
+            : {}),
+          ...options.headers,
         },
       },
       (response) => {
@@ -248,6 +264,11 @@ function requestOnce(
         if (status >= 300 && status < 400 && response.headers.location) {
           response.resume();
           resolve({ status, location: response.headers.location, contentType, body: null });
+          return;
+        }
+        if (options.discardBody) {
+          response.resume();
+          resolve({ status, location: null, contentType, body: Buffer.alloc(0) });
           return;
         }
         const declared = Number(response.headers['content-length'] ?? '0');
@@ -285,7 +306,7 @@ function requestOnce(
       else if (signal.aborted) reject(new SafeFetchError('timeout', 'Request timed out'));
       else reject(new SafeFetchError('network', 'Request failed'));
     });
-    request.end();
+    request.end(options.body);
   });
 }
 
@@ -299,6 +320,10 @@ export async function safeFetch(
     allowPrivate,
     maxBytes: options.maxBytes ?? 1024 * 1024,
     accept: options.accept ?? '*/*',
+    ...(options.method !== undefined ? { method: options.method } : {}),
+    ...(options.body !== undefined ? { body: options.body } : {}),
+    ...(options.headers !== undefined ? { headers: options.headers } : {}),
+    ...(options.discardBody !== undefined ? { discardBody: options.discardBody } : {}),
   };
   const signal = AbortSignal.timeout(options.timeoutMs ?? 5000);
 
@@ -311,6 +336,14 @@ export async function safeFetch(
       throw error;
     });
     if (result.location !== null) {
+      // A POST is not followed: the receiver must answer at the address it was given.
+      if (options.method === 'POST') {
+        throw new SafeFetchError(
+          'http_error',
+          `Upstream responded with ${String(result.status)}`,
+          result.status,
+        );
+      }
       if (hop >= maxRedirects) throw new SafeFetchError('too_many_redirects', 'Too many redirects');
       let next: string;
       try {
@@ -322,7 +355,11 @@ export async function safeFetch(
       continue;
     }
     if (result.status < 200 || result.status >= 300 || !result.body) {
-      throw new SafeFetchError('http_error', `Upstream responded with ${String(result.status)}`);
+      throw new SafeFetchError(
+        'http_error',
+        `Upstream responded with ${String(result.status)}`,
+        result.status,
+      );
     }
     return {
       url: url.toString(),

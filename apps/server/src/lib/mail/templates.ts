@@ -13,6 +13,7 @@ export type MailTemplate =
   | { kind: 'security-notice'; event: 'password-changed' | 'mfa-enabled' | 'mfa-disabled' }
   | { kind: 'screens-offline'; orgName: string; screens: string[]; minutes: number; url: string }
   | { kind: 'screens-online'; orgName: string; screens: string[]; url: string }
+  | { kind: 'webhook-disabled'; orgName: string; webhook: string; url: string }
   | {
       kind: 'approval-requested';
       orgName: string;
@@ -160,6 +161,24 @@ function copyFor(template: MailTemplate, locale: Locale): Copy {
               `${template.screens.join(', ')} in ${template.orgName} is connected again and showing content.`,
             ],
             action: { label: 'View screens', url: template.url },
+          };
+    case 'webhook-disabled':
+      return he
+        ? {
+            subject: `ה-Webhook "${oneLine(template.webhook)}" הושבת`,
+            lines: [
+              `ה-Webhook "${template.webhook}" בארגון ${template.orgName} נכשל שוב ושוב, ולכן הושבת. לא יישלחו אליו אירועים עד שתפעילו אותו מחדש.`,
+              'בדקו שהכתובת נכונה ושהשרת המקבל עונה, ואז הפעילו אותו בעמוד האינטגרציות.',
+            ],
+            action: { label: 'לעמוד האינטגרציות', url: template.url },
+          }
+        : {
+            subject: `Webhook "${oneLine(template.webhook)}" was turned off`,
+            lines: [
+              `The webhook "${template.webhook}" in ${template.orgName} kept failing, so it was turned off. No events are sent to it until you turn it on again.`,
+              'Check that the address is right and that the receiving server answers, then turn it on on the Integrations page.',
+            ],
+            action: { label: 'Open Integrations', url: template.url },
           };
     case 'approval-requested':
       return he

@@ -10,6 +10,7 @@ import {
   ChartColumn,
   ClipboardCheck,
   DoorOpen,
+  Plug,
   Siren,
   Images,
   LayoutDashboard,
@@ -215,6 +216,7 @@ export function AppShell({ session }: { session: SessionInfo }) {
             <NavGroup id={`${navId}-org`} title={t('nav.groupOrg')}>
               <NavItem to={`${org}/members`} icon={Users} label={t('nav.members')} />
               <NavItem to={`${org}/settings`} icon={Settings} label={t('nav.settings')} />
+              <NavItem to={`${org}/integrations`} icon={Plug} label={t('integrations.nav')} />
               <NavItem to={`${org}/audit`} icon={ScrollText} label={t('nav.audit')} />
             </NavGroup>
           )}

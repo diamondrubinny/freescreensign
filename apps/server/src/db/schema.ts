@@ -356,6 +356,9 @@ export interface AlertsTable {
   ended_at: Date | null;
   created_by: string | null;
   ended_by: string | null;
+  /** The API key that started or ended the alert (an integration), if any. */
+  created_by_key: ColumnType<string | null, string | null | undefined, string | null>;
+  ended_by_key: ColumnType<string | null, string | null | undefined, string | null>;
   created_at: Generated<Date>;
 }
 
@@ -408,6 +411,52 @@ export interface PairingCodesTable {
   created_at: Generated<Date>;
 }
 
+export interface ApiKeysTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  prefix: string;
+  token_hash: string;
+  scopes: string[];
+  created_by: string | null;
+  created_at: Generated<Date>;
+  expires_at: Date | null;
+  last_used_at: Date | null;
+  last_used_ip: string | null;
+  revoked_at: Date | null;
+}
+
+export interface WebhooksTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  url: string;
+  events: string[];
+  secret_enc: Buffer;
+  enabled: Generated<boolean>;
+  failure_count: Generated<number>;
+  disabled_reason: string | null;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface WebhookDeliveriesTable {
+  id: Generated<string>;
+  org_id: string;
+  webhook_id: string;
+  event: string;
+  payload: ColumnType<Record<string, unknown>, string, string>;
+  status: Generated<'pending' | 'delivered' | 'failed'>;
+  attempts: Generated<number>;
+  next_attempt_at: Generated<Date>;
+  claimed_until: Date | null;
+  last_status_code: number | null;
+  last_error: string | null;
+  created_at: Generated<Date>;
+  delivered_at: Date | null;
+}
+
 export interface Database {
   users: UsersTable;
   backup_runs: BackupRunsTable;
@@ -438,6 +487,9 @@ export interface Database {
   approval_requests: ApprovalRequestsTable;
   rooms: RoomsTable;
   room_bookings: RoomBookingsTable;
+  api_keys: ApiKeysTable;
+  webhooks: WebhooksTable;
+  webhook_deliveries: WebhookDeliveriesTable;
 }
 
 export type User = Selectable<UsersTable>;
