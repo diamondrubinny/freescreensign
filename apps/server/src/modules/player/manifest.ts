@@ -6,13 +6,12 @@
 import { createHash } from 'node:crypto';
 import { sql } from 'kysely';
 import {
-  designMediaIds,
+  widgetMediaIds,
   localTime,
   manifestV1Schema,
   parseWidgetConfig,
   TOUCH_LIMITS,
   windowEnded,
-  type DesignConfig,
   type ManifestV1,
 } from '@rubinny/shared';
 import type { Env } from '../../config/env.js';
@@ -317,12 +316,11 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
     }
   }
 
-  // Images used inside designs travel with the manifest like any other media.
+  // Images used inside widgets (designs, directory floor maps) travel with the manifest like
+  // any other media.
   const designMedia = [
     ...new Set(
-      [...widgets.values()]
-        .filter((widget) => widget.type === 'design')
-        .flatMap((widget) => designMediaIds(widget.config as DesignConfig)),
+      [...widgets.values()].flatMap((widget) => widgetMediaIds(widget.type, widget.config)),
     ),
   ].filter((id) => !media.has(id));
   if (designMedia.length > 0) {

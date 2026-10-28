@@ -4,7 +4,7 @@
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
 import { z } from 'zod';
-import { designConfigSchema } from './design.js';
+import { designConfigSchema, designMediaIds, type DesignConfig } from './design.js';
 
 /**
  * Built-in widget types and their configuration schemas. Shared by the server
@@ -242,6 +242,86 @@ export const calendarConfigSchema = z.object({
   accent: color.default('#f59e0b'),
 });
 
+/** Where to go, as an arrow (physical directions: "left" is left in Hebrew too). */
+export const DIRECTORY_DIRECTIONS = [
+  'none',
+  'left',
+  'right',
+  'straight',
+  'back',
+  'up',
+  'down',
+] as const;
+export type DirectoryDirection = (typeof DIRECTORY_DIRECTIONS)[number];
+export const DIRECTORY_MAX_ENTRIES = 300;
+
+const directoryName = z.string().trim().min(1).max(40);
+
+/**
+ * A building directory for a lobby: companies or departments by floor and room, filtered by
+ * floor and category on touch screens, with an arrow and the floor's map.
+ */
+export const directoryConfigSchema = z
+  .object({
+    title: z.string().trim().max(100).optional(),
+    floors: z
+      .array(z.object({ name: directoryName, mapMediaId: z.uuid().optional() }))
+      .min(1)
+      .max(60),
+    categories: z.array(directoryName).max(30).default([]),
+    entries: z
+      .array(
+        z.object({
+          name: z.string().trim().min(1).max(80),
+          floor: directoryName,
+          room: z.string().trim().max(40).optional(),
+          category: directoryName.optional(),
+          direction: z.enum(DIRECTORY_DIRECTIONS).default('none'),
+          note: z.string().trim().max(120).optional(),
+        }),
+      )
+      .min(1)
+      .max(DIRECTORY_MAX_ENTRIES),
+    /** Touch screens go back to the full list after this long untouched. */
+    idleSeconds: z.number().int().min(10).max(600).default(60),
+    /** Without touch, long lists turn pages by themselves. */
+    pageSeconds: z.number().int().min(5).max(60).default(10),
+    locale: z.enum(['he', 'en']).default('he'),
+    textColor: color.default('#f8fafc'),
+    background: color.default('#0f172a'),
+    accent: color.default('#38bdf8'),
+  })
+  .superRefine((config, ctx) => {
+    const floors = new Set<string>();
+    config.floors.forEach((floor, index) => {
+      if (floors.has(floor.name)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['floors', index, 'name'],
+          message: 'Duplicate floor',
+        });
+      }
+      floors.add(floor.name);
+    });
+    const categories = new Set(config.categories);
+    config.entries.forEach((entry, index) => {
+      if (!floors.has(entry.floor)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['entries', index, 'floor'],
+          message: 'Unknown floor',
+        });
+      }
+      if (entry.category !== undefined && !categories.has(entry.category)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['entries', index, 'category'],
+          message: 'Unknown category',
+        });
+      }
+    });
+  });
+
 /** A meeting room's screen: free or busy, the current and next meetings, "Book now". */
 export const roomConfigSchema = z.object({
   roomId: z.uuid(),
@@ -265,6 +345,7 @@ export const WIDGET_CONFIG_SCHEMAS = {
   design: designConfigSchema,
   room: roomConfigSchema,
   calendar: calendarConfigSchema,
+  directory: directoryConfigSchema,
 } as const;
 
 export type WidgetType = keyof typeof WIDGET_CONFIG_SCHEMAS;
@@ -284,6 +365,19 @@ export const DATA_WIDGET_TYPES = [
  * outside source; served by the same data endpoint and refreshed by the player more often.
  */
 export const LIVE_WIDGET_TYPES = ['room'] as const satisfies readonly WidgetType[];
+
+/**
+ * Images a widget shows from the organization's media (design images, directory floor maps):
+ * they travel with the manifest like other media, and must be the organization's own.
+ */
+export function widgetMediaIds(type: string, config: Record<string, unknown>): string[] {
+  if (type === 'design') return designMediaIds(config as DesignConfig);
+  if (type === 'directory') {
+    const floors = (config as Partial<WidgetConfig<'directory'>>).floors ?? [];
+    return [...new Set(floors.flatMap((floor) => (floor.mapMediaId ? [floor.mapMediaId] : [])))];
+  }
+  return [];
+}
 
 export function isWidgetType(value: string): value is WidgetType {
   return value in WIDGET_CONFIG_SCHEMAS;

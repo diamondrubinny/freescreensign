@@ -580,6 +580,8 @@ export const en: Messages = {
     noHeadlines: 'No headlines were found in the feed.',
     weatherNow: 'Now: {{temperature}}',
     rssPrivacy: 'The server downloads the feed. Screens never contact the feed site directly.',
+    directoryPrivacy:
+      'Names of people (for example "Dr. Cohen, floor 2") are personal data shown in public: add them only with their consent.',
     calendarPrivacy:
       'The server downloads the calendar every 10 minutes, and screens get only the title, time and place of each event. Anyone with the link can see the calendar: use one meant to be public.',
     calendarEmpty: 'No upcoming events in the calendar.',
@@ -606,6 +608,7 @@ export const en: Messages = {
       design: 'Free design',
       room: 'Meeting room',
       calendar: 'Events calendar',
+      directory: 'Building directory',
     },
     descriptions: {
       clock: "Time, Gregorian and Hebrew date, in the screen's time zone.",
@@ -622,8 +625,45 @@ export const en: Messages = {
       room: 'A screen next to a room: free or busy, the next meeting, and booking by touch.',
       calendar:
         'Upcoming events from a public calendar (iCal) of Google, Outlook and others. Updates on its own.',
+      directory:
+        'A lobby screen: companies and departments by floor and room, filtered by touch, with an arrow and a map.',
+    },
+    directory: {
+      floors: 'Floors',
+      floorName: 'Floor name',
+      floorMap: 'Floor map (optional)',
+      noMap: 'No map',
+      addFloor: 'Add floor',
+      removeFloor: 'Remove floor',
+      categories: 'Categories (optional)',
+      categoriesHint: 'For example "Medical" or "Offices". Touch screens can filter by them.',
+      categoryName: 'Category name',
+      addCategory: 'Add category',
+      removeCategory: 'Remove category',
+      entries: 'Entries',
+      entriesHint: 'On screen, entries are sorted by name.',
+      entryName: 'Name (company, department or service)',
+      floor: 'Floor',
+      room: 'Room (optional)',
+      category: 'Category',
+      noCategory: 'None',
+      direction: 'Direction',
+      note: 'Note (optional)',
+      addEntry: 'Add entry',
+      removeEntry: 'Remove',
+      directions: {
+        none: 'No arrow',
+        left: 'Left',
+        right: 'Right',
+        straight: 'Straight ahead',
+        back: 'Behind you',
+        up: 'One floor up',
+        down: 'One floor down',
+      },
     },
     fields: {
+      directoryLists: 'Floors, categories and entries',
+      idleSeconds: 'Seconds untouched before going back to the full list',
       calendarUrl: 'Calendar link (iCal)',
       calendarUrlHint:
         'A public link in iCal format (.ics, or webcal://). In Google Calendar: the calendar\'s settings → "Public address in iCal format".',

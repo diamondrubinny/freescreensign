@@ -10,6 +10,7 @@ import {
   CloudSun,
   DoorOpen,
   Globe,
+  Signpost,
   Palette,
   Puzzle,
   QrCode,
@@ -39,6 +40,7 @@ export const WIDGET_ICONS: Record<
   design: { icon: Palette, tone: 'rose' },
   room: { icon: DoorOpen, tone: 'green' },
   calendar: { icon: CalendarDays, tone: 'sky' },
+  directory: { icon: Signpost, tone: 'amber' },
 };
 
 export const widgetIcon = (type: string) =>

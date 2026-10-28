@@ -9,10 +9,9 @@ import { z } from 'zod';
 import {
   DATA_WIDGET_TYPES,
   WIDGET_TYPES,
-  designMediaIds,
+  widgetMediaIds,
   isWidgetType,
   parseWidgetConfig,
-  type DesignConfig,
 } from '@rubinny/shared';
 import type { AppContext } from '../../context.js';
 import type { Widget } from '../../db/schema.js';
@@ -74,8 +73,8 @@ export function validateWidgetConfig(
 }
 
 /**
- * Designs may only use media of the same organization that is ready or still being
- * checked (never blocked, failed or deleted files).
+ * Designs and directory maps may only use images of the same organization that are ready or
+ * still being checked (never blocked, failed or deleted files).
  */
 export async function assertDesignMedia(
   ctx: AppContext,
@@ -83,8 +82,7 @@ export async function assertDesignMedia(
   type: string,
   config: Record<string, unknown>,
 ): Promise<void> {
-  if (type !== 'design') return;
-  const ids = designMediaIds(config as DesignConfig);
+  const ids = widgetMediaIds(type, config);
   if (ids.length === 0) return;
   const rows = await ctx.db
     .selectFrom('media')
@@ -99,7 +97,7 @@ export async function assertDesignMedia(
   const invalid = ids.filter((id) => !valid.has(id));
   if (invalid.length > 0) {
     throw new HttpError(400, 'VALIDATION_FAILED', 'Some images are not available', [
-      { path: 'config.elements', reason: 'invalid' },
+      { path: type === 'directory' ? 'config.floors' : 'config.elements', reason: 'invalid' },
     ]);
   }
 }

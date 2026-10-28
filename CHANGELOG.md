@@ -24,6 +24,11 @@ All notable changes to Rubinny. The format follows
   the calendar every 10 minutes (with the same protections as feeds) and expands recurring
   events with their exceptions and cancellations, in the calendar's time zones; screens get
   only each event's title, time and place.
+- A "Building directory" widget for lobbies: companies, departments and services by floor and
+  room, sorted by name, with an arrow and the floor's map (an image from the media library).
+  Touch screens filter by floor and category and open an entry's details; left alone, the
+  screen goes back to the full list, and long lists turn their pages by themselves. Names of
+  people are personal data shown in public: the editor says to add them only with consent.
 
 ### Security
 

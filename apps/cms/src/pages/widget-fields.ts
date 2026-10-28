@@ -31,6 +31,8 @@ export type WidgetFieldSpec = { key: string; label: FieldLabel; hint?: FieldLabe
   | { kind: 'menuSections' }
   /** One of the organization's meeting rooms (a select loaded from the server). */
   | { kind: 'room'; required: true }
+  /** Floors, categories and entries of a directory (pages/widgets/DirectoryEditor), as JSON. */
+  | { kind: 'directoryLists' }
 );
 
 const colors = (text: 'textColor' | 'foreground' = 'textColor'): WidgetFieldSpec[] => [
@@ -49,6 +51,15 @@ const locale: WidgetFieldSpec = {
 };
 
 export const WIDGET_FIELDS: Record<WidgetType, WidgetFieldSpec[]> = {
+  directory: [
+    { key: 'title', label: 'titleOptional', kind: 'text', maxLength: 100 },
+    { key: 'lists', label: 'directoryLists', kind: 'directoryLists' },
+    { key: 'idleSeconds', label: 'idleSeconds', kind: 'number', min: 10, max: 600, step: 1 },
+    { key: 'pageSeconds', label: 'pageSeconds', kind: 'number', min: 5, max: 60, step: 1 },
+    locale,
+    ...colors(),
+    { key: 'accent', label: 'calendarAccent', kind: 'color' },
+  ],
   calendar: [
     {
       key: 'url',
@@ -373,6 +384,15 @@ export function readWidgetConfig(type: WidgetType, data: FormData): Record<strin
         config[field.key] = JSON.parse(text) as unknown;
       } catch {
         config[field.key] = text; // the server reports it
+      }
+      continue;
+    }
+    if (field.kind === 'directoryLists') {
+      // Several configuration keys (floors, categories, entries) in one value.
+      try {
+        Object.assign(config, JSON.parse(text) as Record<string, unknown>);
+      } catch {
+        // Built by DirectoryEditor; never malformed.
       }
       continue;
     }

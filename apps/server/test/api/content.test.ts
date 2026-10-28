@@ -197,6 +197,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'design',
       'room',
       'calendar',
+      'directory',
     ]);
 
     const clock = await createWidget('clock', {});
@@ -449,6 +450,58 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       config: { source: 'json', url: `${feedBase}/rows.json`, jsonPath: '../etc' },
     });
     expect(bad.json()).toMatchObject({ error: { fields: [{ path: 'config.jsonPath' }] } });
+  });
+
+  it('ships a directory’s floor maps to screens, and only the organization’s own images', async () => {
+    const image = (org: string) =>
+      h.db
+        .insertInto('media')
+        .values({
+          org_id: org,
+          name: 'map',
+          original_filename: 'map.png',
+          kind: 'image',
+          mime: 'image/png',
+          size_bytes: 10,
+          sha256: 'c'.repeat(64),
+          status: 'ready',
+          storage_key: 'k',
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+    const own = await image(orgId);
+    const foreign = await image(otherOrgId);
+    const directory = (mapMediaId: string) => ({
+      floors: [{ name: '1' }, { name: '2', mapMediaId }],
+      entries: [{ name: 'מרפאה', floor: '2', room: '204' }],
+    });
+    const bad = await editor.post(api('/widgets'), {
+      type: 'directory',
+      name: 'Lobby',
+      config: directory(foreign.id),
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json()).toMatchObject({ error: { fields: [{ path: 'config.floors' }] } });
+    // An entry on a floor that does not exist is refused by the schema.
+    const lost = await editor.post(api('/widgets'), {
+      type: 'directory',
+      name: 'Lobby',
+      config: { floors: [{ name: '1' }], entries: [{ name: 'X', floor: '7' }] },
+    });
+    expect(lost.json()).toMatchObject({ error: { fields: [{ path: 'config.entries.0.floor' }] } });
+
+    const widget = await createWidget('directory', directory(own.id));
+    expect(widget.config).toMatchObject({ idleSeconds: 60, pageSeconds: 10, categories: [] });
+    const playlist = (await editor.post(api('/playlists'), { name: 'Lobby' })).json<{
+      playlist: { id: string };
+    }>().playlist;
+    await editor.put(api(`/playlists/${playlist.id}/items`), {
+      items: [{ widgetId: widget.id, durationMs: null }],
+    });
+    const { deviceToken, screenId } = await pair();
+    await editor.patch(api(`/screens/${screenId}`), { playlistId: playlist.id });
+    const manifest = (await playerGet('/player/v1/manifest', deviceToken)).json<ManifestV1>();
+    expect(manifest.media.map((m) => m.id)).toEqual([own.id]);
   });
 
   it('turns an iCal calendar into upcoming events for the player', async () => {

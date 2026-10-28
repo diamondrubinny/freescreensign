@@ -8,6 +8,7 @@ import { calendarWidget } from './calendar';
 import { clockWidget } from './clock';
 import { countdownWidget } from './countdown';
 import { designWidget } from './design';
+import { directoryWidget } from './directory';
 import { menuWidget } from './menu';
 import { qrWidget } from './qr';
 import { roomWidget } from './room';
@@ -35,6 +36,7 @@ export const BUILT_IN_WIDGETS: ReadonlyMap<string, WidgetDefinition<unknown>> = 
       designWidget,
       roomWidget,
       calendarWidget,
+      directoryWidget,
     ] as WidgetDefinition<unknown>[]
   ).map((widget) => [widget.type, widget]),
 );

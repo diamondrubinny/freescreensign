@@ -33,6 +33,7 @@ import { useFormErrors } from '../lib/use-form-errors';
 import { useDuplicate } from '../lib/use-duplicate';
 import { useOrgRole } from '../lib/use-org-role';
 import { DesignPage } from './design/DesignPage';
+import { DirectoryEditor } from './widgets/DirectoryEditor';
 import { MenuSectionsEditor } from './widgets/MenuSectionsEditor';
 import {
   WIDGET_FIELDS,
@@ -120,6 +121,21 @@ function ConfigField({
           {label}
         </h3>
         <MenuSectionsEditor name={field.key} initial={initial} errors={nested} />
+      </section>
+    );
+  }
+
+  if (field.kind === 'directoryLists') {
+    // Server errors are by configuration path: floors.0.name, entries.3.floor…
+    const nested = Object.fromEntries(
+      Object.entries(allErrors).filter(([path]) => /^(floors|categories|entries)(\.|$)/.test(path)),
+    );
+    return (
+      <section aria-labelledby={`${id}-heading`} className="flex flex-col gap-2">
+        <h3 id={`${id}-heading`} className="font-bold">
+          {label}
+        </h3>
+        <DirectoryEditor name={field.key} initial={initial} errors={nested} />
       </section>
     );
   }
@@ -524,6 +540,11 @@ export function WidgetEditorPage() {
       )}
       {widgetType === 'calendar' && (
         <p className="mb-4 max-w-2xl text-sm">{t('widgets.calendarPrivacy')}</p>
+      )}
+      {widgetType === 'directory' && (
+        <div className="mb-4 max-w-2xl">
+          <Alert variant="info">{t('widgets.directoryPrivacy')}</Alert>
+        </div>
       )}
 
       <Form
