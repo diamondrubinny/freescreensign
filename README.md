@@ -234,7 +234,6 @@ are **MIT**. See [LICENSING.md](LICENSING.md) and [TRADEMARKS.md](TRADEMARKS.md)
 
 Created by **Diamond Rubinny**. Copyright © 2026 The Rubinny Authors (see [AUTHORS.md](AUTHORS.md)).
 
-
 ---
 
 ## 💼 Commercial license & rights acquisition

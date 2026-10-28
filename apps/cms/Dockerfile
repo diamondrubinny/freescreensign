@@ -20,6 +20,8 @@ ARG GO_IMAGE=golang:1.27-alpine
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS caddy
 ARG CADDY_VERSION=v2.11.7
 ARG X_NET_VERSION=v0.60.0
+# go-jose 4.1.6: DoS when parsing JWKs with RSA keys (CVE-2026-116587) in 4.1.5 and earlier.
+ARG GO_JOSE_VERSION=v4.1.6
 ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /src
@@ -30,6 +32,7 @@ RUN printf '%s\n' 'package main' '' 'import (' \
  && go mod init rubinny.local/caddy \
  && retry() { for attempt in 1 2 3; do "$@" && return 0; echo "$* failed (attempt $attempt)" >&2; sleep 20; done; return 1; } \
  && retry go get "github.com/caddyserver/caddy/v2@${CADDY_VERSION}" "golang.org/x/net@${X_NET_VERSION}" \
+      "github.com/go-jose/go-jose/v4@${GO_JOSE_VERSION}" \
  && retry go mod tidy \
  && CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" go build -trimpath -ldflags "-s -w" -o /caddy .
 
@@ -60,6 +63,9 @@ LABEL org.opencontainers.image.title="Rubinny web" \
       org.opencontainers.image.vendor="Rubinny (open source)" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.source="https://github.com/diamondrubinny/freescreensign"
+# Security fixes of the base image's packages that its last release does not have yet
+# (e.g. brotli and curl); the image scan in CI fails on any that remain.
+RUN apk upgrade --no-cache
 COPY --from=caddy /caddy /usr/bin/caddy
 RUN setcap cap_net_bind_service=+ep /usr/bin/caddy && caddy version
 COPY --from=build /repo/apps/cms/dist /srv/cms
