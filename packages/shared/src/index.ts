@@ -17,3 +17,4 @@ export * from './schedule.js';
 export * from './ops.js';
 export * from './csp.js';
 export * from './attribution.js';
+export * from './rooms.js';

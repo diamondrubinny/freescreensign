@@ -127,6 +127,17 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
       .values({ org_id: orgA, user_id: member, role: 'EDITOR' })
       .execute();
     ids.userId = member;
+    ids.roomId = await created('/rooms', { name: 'A room' }, 'room');
+    ids.bookingId = await created(
+      '/room-bookings',
+      {
+        roomId: ids.roomId,
+        startsAt: new Date(Date.now() + 3_600_000).toISOString(),
+        endsAt: new Date(Date.now() + 7_200_000).toISOString(),
+        title: 'A meeting',
+      },
+      'booking',
+    );
     // Media needs object storage; its isolation is covered in test/media/flow.test.ts.
     ids.mediaId = '00000000-0000-4000-8000-000000000001';
   });
@@ -148,6 +159,8 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
     'PATCH /schedules/:scheduleId': { name: 'hacked' },
     'PATCH /screens/:screenId': { name: 'hacked' },
     'PATCH /screen-groups/:groupId': { name: 'hacked' },
+    'PATCH /rooms/:roomId': { name: 'hacked' },
+    'PATCH /room-bookings/:bookingId': { title: 'hacked' },
     'PUT /screen-groups/:groupId/content': { playlistId: null },
     'PATCH /members/:userId': { role: 'VIEWER' },
     'PATCH /media/:mediaId': { name: 'hacked' },
@@ -240,5 +253,14 @@ describe.runIf(integrationEnabled)('tenant isolation on every route with an id',
       .where('id', '=', ids.approvalId!)
       .executeTakeFirstOrThrow();
     expect(approval.status).toBe('pending');
+    expect((await ownerA.get(inA('/rooms'))).json()).toMatchObject({
+      rooms: [{ id: ids.roomId, name: 'A room' }],
+    });
+    const booking = await h.db
+      .selectFrom('room_bookings')
+      .select('title')
+      .where('id', '=', ids.bookingId!)
+      .executeTakeFirstOrThrow();
+    expect(booking.title).toBe('A meeting');
   });
 });

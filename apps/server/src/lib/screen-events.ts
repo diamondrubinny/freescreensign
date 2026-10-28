@@ -12,7 +12,9 @@ export type ScreenEvent =
   | { type: 'reload' }
   | { type: 'revoked' }
   /** A wrapper with the "screenshot" capability uploads a screenshot for this request. */
-  | { type: 'screenshot'; requestId: string };
+  | { type: 'screenshot'; requestId: string }
+  /** A booking of this room changed: room widgets showing it fetch their status again. */
+  | { type: 'room.changed'; roomId: string };
 
 export interface ScreenEvents {
   publish(screenId: string, event: ScreenEvent): Promise<void>;
@@ -40,15 +42,30 @@ export class LocalScreenEvents implements ScreenEvents {
   }
 }
 
-const EVENT_TYPES = new Set(['manifest.changed', 'reload', 'revoked', 'screenshot']);
+const EVENT_TYPES = new Set([
+  'manifest.changed',
+  'reload',
+  'revoked',
+  'screenshot',
+  'room.changed',
+]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** Only known events, with only their own fields, are delivered to players. */
-function toScreenEvent(event: { type?: unknown; requestId?: unknown }): ScreenEvent | null {
+function toScreenEvent(event: {
+  type?: unknown;
+  requestId?: unknown;
+  roomId?: unknown;
+}): ScreenEvent | null {
   if (typeof event.type !== 'string' || !EVENT_TYPES.has(event.type)) return null;
   if (event.type === 'screenshot') {
     return typeof event.requestId === 'string' && UUID.test(event.requestId)
       ? { type: 'screenshot', requestId: event.requestId }
+      : null;
+  }
+  if (event.type === 'room.changed') {
+    return typeof event.roomId === 'string' && UUID.test(event.roomId)
+      ? { type: 'room.changed', roomId: event.roomId }
       : null;
   }
   return { type: event.type as 'manifest.changed' | 'reload' | 'revoked' };
@@ -71,7 +88,7 @@ export class RedisScreenEvents implements ScreenEvents {
       try {
         const parsed = JSON.parse(message) as {
           screenId?: unknown;
-          event?: { type?: unknown; requestId?: unknown };
+          event?: { type?: unknown; requestId?: unknown; roomId?: unknown };
         };
         const event = parsed.event ? toScreenEvent(parsed.event) : null;
         if (typeof parsed.screenId === 'string' && event) this.#handler(parsed.screenId, event);

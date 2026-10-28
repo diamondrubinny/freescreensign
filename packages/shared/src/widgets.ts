@@ -219,6 +219,15 @@ export function formatMenuPrice(
   }).format(value);
 }
 
+/** A meeting room's screen: free or busy, the current and next meetings, "Book now". */
+export const roomConfigSchema = z.object({
+  roomId: z.uuid(),
+  /** Touch screens offer "Book now" (with the organization's PIN). */
+  allowBooking: z.boolean().default(true),
+  locale: z.enum(['he', 'en']).default('he'),
+  format: z.enum(['24h', '12h']).default('24h'),
+});
+
 export const WIDGET_CONFIG_SCHEMAS = {
   clock: clockConfigSchema,
   text: textConfigSchema,
@@ -231,6 +240,7 @@ export const WIDGET_CONFIG_SCHEMAS = {
   table: tableConfigSchema,
   menu: menuConfigSchema,
   design: designConfigSchema,
+  room: roomConfigSchema,
 } as const;
 
 export type WidgetType = keyof typeof WIDGET_CONFIG_SCHEMAS;
@@ -243,6 +253,12 @@ export const DATA_WIDGET_TYPES = [
   'weather',
   'table',
 ] as const satisfies readonly WidgetType[];
+
+/**
+ * Widget types whose data comes from the organization's own records (rooms) rather than an
+ * outside source; served by the same data endpoint and refreshed by the player more often.
+ */
+export const LIVE_WIDGET_TYPES = ['room'] as const satisfies readonly WidgetType[];
 
 export function isWidgetType(value: string): value is WidgetType {
   return value in WIDGET_CONFIG_SCHEMAS;

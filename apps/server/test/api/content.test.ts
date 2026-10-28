@@ -169,6 +169,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'table',
       'menu',
       'design',
+      'room',
     ]);
 
     const clock = await createWidget('clock', {});

@@ -26,6 +26,12 @@ export const API_ERROR_CODES = [
   'SERVICE_UNAVAILABLE',
   /** An external source (e.g. an RSS feed) could not be fetched or parsed. */
   'UPSTREAM_FAILED',
+  /** Rooms: the time overlaps another booking of the room. */
+  'ROOM_BUSY',
+  /** Rooms: the PIN for booking at a screen is not correct. */
+  'WRONG_PIN',
+  /** Rooms: the organization has no PIN, or the screen does not allow booking. */
+  'BOOKING_DISABLED',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

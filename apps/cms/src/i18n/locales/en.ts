@@ -123,6 +123,9 @@ export const en: Messages = {
     SERVICE_UNAVAILABLE: 'The service is temporarily unavailable. Please try again shortly.',
     UPSTREAM_FAILED:
       'The external data source could not be loaded. Check the address and try again.',
+    ROOM_BUSY: 'The room is already booked at that time. Choose another time or room.',
+    WRONG_PIN: 'The PIN is not correct.',
+    BOOKING_DISABLED: 'Booking at the screen is not available.',
     network: 'Cannot reach the server. Check your connection and try again.',
     reference: 'Support reference: {{id}}',
   },

@@ -18,7 +18,7 @@ import { sendStoredFile } from '../../media/serve.js';
 import { clientIp } from '../auth/sessions.js';
 import { findScreenByToken, requireScreen } from './auth.js';
 import { buildManifest } from './manifest.js';
-import { getWidgetData } from '../widgets/data.js';
+import { getWidgetData, roomWidgetData } from '../widgets/data.js';
 import { reportScreenBack } from '../ops/alerts.js';
 import { recordUptime } from '../ops/uptime.js';
 import { deviceCredential, verifiedCredentials } from '../../lib/rate-limit-key.js';
@@ -136,7 +136,10 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   // ---------------------------------------------------------- widget data
-  /** Data-widget content (RSS, weather, table) for a widget of the screen's own organization. */
+  /**
+   * Data-widget content (RSS, weather, table, a room's status) for a widget of the screen's
+   * own organization.
+   */
   app.get('/player/v1/widgets/:widgetId/data', async (request, reply) => {
     const screen = await requireScreen(ctx, request);
     const { widgetId } = parse(z.object({ widgetId: z.uuid() }), request.params);
@@ -147,9 +150,9 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('org_id', '=', screen.org_id)
       .executeTakeFirst();
     if (!widget) throw new HttpError(404, 'NOT_FOUND', 'Resource not found');
-    const result = await getWidgetData(ctx, widget);
     void reply.header('cache-control', 'no-store');
-    return result;
+    if (widget.type === 'room') return roomWidgetData(ctx, widget);
+    return getWidgetData(ctx, widget);
   });
 
   // -------------------------------------------------------------- heartbeat

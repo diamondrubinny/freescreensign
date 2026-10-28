@@ -23,7 +23,7 @@ import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
 import { notifyPlaylistScreens, widgetPlaylists } from '../screens/notify.js';
-import { getWidgetData, weatherEnabled } from './data.js';
+import { getWidgetData, roomWidgetData, weatherEnabled } from './data.js';
 import { WEATHER_ATTRIBUTION } from './weather.js';
 
 const widgetParams = z.object({ orgId: z.uuid(), widgetId: z.uuid() });
@@ -104,6 +104,27 @@ export async function assertDesignMedia(
   }
 }
 
+/** A room widget shows a room of the same organization. */
+export async function assertWidgetRoom(
+  ctx: AppContext,
+  orgId: string,
+  type: string,
+  config: Record<string, unknown>,
+): Promise<void> {
+  if (type !== 'room') return;
+  const room = await ctx.db
+    .selectFrom('rooms')
+    .select('id')
+    .where('id', '=', String(config.roomId))
+    .where('org_id', '=', orgId)
+    .executeTakeFirst();
+  if (!room) {
+    throw new HttpError(400, 'VALIDATION_FAILED', 'The room is not available', [
+      { path: 'config.roomId', reason: 'invalid' },
+    ]);
+  }
+}
+
 export function isOwnOrigin(ctx: AppContext, url: string): boolean {
   try {
     return new URL(url).origin === new URL(ctx.env.PUBLIC_URL).origin;
@@ -180,6 +201,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     );
     const config = validateWidgetConfig(ctx, body.type, body.config);
     await assertDesignMedia(ctx, org.id, body.type, config);
+    await assertWidgetRoom(ctx, org.id, body.type, config);
     await assertWidgetQuota(org.id);
     const widget = await ctx.db
       .insertInto('widgets')
@@ -226,6 +248,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     const config =
       body.config !== undefined ? validateWidgetConfig(ctx, current.type, body.config) : undefined;
     if (config) await assertDesignMedia(ctx, org.id, current.type, config);
+    if (config) await assertWidgetRoom(ctx, org.id, current.type, config);
     const widget = await ctx.db
       .updateTable('widgets')
       .set({
@@ -308,6 +331,7 @@ export function widgetRoutes(app: FastifyInstance, ctx: AppContext) {
     const org = requireOrg(request);
     const { widgetId } = parse(widgetParams, request.params);
     const widget = await loadWidget(org.id, widgetId);
+    if (widget.type === 'room') return roomWidgetData(ctx, widget);
     return getWidgetData(ctx, widget);
   });
 }

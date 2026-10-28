@@ -95,6 +95,8 @@ export interface OrganizationsTable {
   ai_key_hint: string | null;
   ai_model: Generated<'claude-opus-5-5' | 'claude-sonnet-5-5' | 'claude-haiku-5-5'>;
   ai_enabled_at: NullableTimestamp;
+  /** PIN for booking rooms at a screen (Argon2id); null = booking at screens is off. */
+  room_pin_hash: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: NullableTimestamp;
@@ -371,6 +373,32 @@ export interface PlayEventsTable {
   received_at: Generated<Date>;
 }
 
+export interface RoomsTable {
+  id: Generated<string>;
+  org_id: string;
+  name: string;
+  location: string | null;
+  capacity: number | null;
+  show_titles: Generated<boolean>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
+export interface RoomBookingsTable {
+  id: Generated<string>;
+  org_id: string;
+  room_id: string;
+  starts_at: Timestamp;
+  ends_at: Timestamp;
+  /** Generated from starts_at and ends_at (the no-overlap constraint uses it). */
+  during: ColumnType<string, never, never>;
+  title: string | null;
+  booked_by: string | null;
+  screen_id: string | null;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 export interface PairingCodesTable {
   code_hash: string;
   poll_token_hash: string;
@@ -408,6 +436,8 @@ export interface Database {
   alerts: AlertsTable;
   user_identities: UserIdentitiesTable;
   approval_requests: ApprovalRequestsTable;
+  rooms: RoomsTable;
+  room_bookings: RoomBookingsTable;
 }
 
 export type User = Selectable<UsersTable>;

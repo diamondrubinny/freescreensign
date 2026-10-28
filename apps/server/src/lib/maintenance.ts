@@ -17,10 +17,12 @@ export interface MaintenanceResult {
   uptimeDays: number;
   playEvents: number;
   screenshots: number;
+  roomBookings: number;
 }
 
 /** Uptime history kept per screen. */
 export const UPTIME_RETENTION_DAYS = 90;
+export const ROOM_BOOKING_RETENTION_DAYS = 90;
 
 /** Enforces retention: removes expired credentials and old audit entries. */
 export async function runMaintenance(
@@ -77,6 +79,11 @@ export async function runMaintenance(
     .deleteFrom('play_events')
     .where('started_at', '<', new Date(now.getTime() - playRetentionDays * DAY_MS))
     .executeTakeFirst();
+  // Room bookings are kept 90 days after they end (docs/phases/18-rooms-directory-calendar-zmanim.md).
+  const roomBookings = await db
+    .deleteFrom('room_bookings')
+    .where('ends_at', '<', new Date(now.getTime() - ROOM_BOOKING_RETENTION_DAYS * DAY_MS))
+    .executeTakeFirst();
   const screenshots = await pruneScreenshots(db, now);
   return {
     screenshots,
@@ -86,6 +93,7 @@ export async function runMaintenance(
     tokens: Number(tokens.numDeletedRows),
     invitations: Number(invitations.numDeletedRows),
     auditLogs: Number(auditLogs.numDeletedRows),
+    roomBookings: Number(roomBookings.numDeletedRows),
   };
 }
 

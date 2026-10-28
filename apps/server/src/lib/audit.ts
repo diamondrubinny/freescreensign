@@ -66,7 +66,16 @@ export type AuditAction =
   | 'approval.requested'
   | 'approval.approved'
   | 'approval.rejected'
-  | 'approval.withdrawn';
+  | 'approval.withdrawn'
+  | 'room.created'
+  | 'room.updated'
+  | 'room.deleted'
+  | 'room.booking_created'
+  | 'room.booking_updated'
+  | 'room.booking_deleted'
+  | 'room.pin_set'
+  | 'room.pin_cleared'
+  | 'room.pin_failed';
 
 export interface AuditEvent {
   action: AuditAction;

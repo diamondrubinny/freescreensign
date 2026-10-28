@@ -6,6 +6,8 @@
 import { createHash } from 'node:crypto';
 import {
   parseWidgetConfig,
+  roomConfigSchema,
+  type RoomStatusData,
   type RssData,
   type TableData,
   type WeatherData,
@@ -15,6 +17,7 @@ import type { AppContext } from '../../context.js';
 import { HttpError } from '../../lib/http-error.js';
 import { LIMITS } from '../../lib/limiter.js';
 import { safeFetch } from '../../lib/safe-fetch.js';
+import { roomStatus } from '../rooms/service.js';
 import { parseFeed } from './rss.js';
 import { parseTable, tableSourceUrl } from './table.js';
 import { parseWeather, weatherRequestUrl } from './weather.js';
@@ -159,4 +162,27 @@ export async function getWidgetData(
   const entry: CachedEntry = { fetchedAt: new Date().toISOString(), data };
   await ctx.cache.set(key, JSON.stringify(entry), STALE_SECONDS);
   return { type, data, fetchedAt: entry.fetchedAt, stale: false };
+}
+
+export interface RoomWidgetDataResult {
+  type: 'room';
+  data: RoomStatusData;
+  fetchedAt: string;
+  stale: false;
+}
+
+/** A room widget's status, from the organization's own bookings (never cached). */
+export async function roomWidgetData(
+  ctx: AppContext,
+  widget: { org_id: string; config: Record<string, unknown> },
+): Promise<RoomWidgetDataResult> {
+  const config = roomConfigSchema.safeParse(widget.config);
+  if (!config.success) throw new HttpError(404, 'NOT_FOUND', 'Resource not found');
+  const data = await roomStatus(
+    ctx.db,
+    widget.org_id,
+    config.data.roomId,
+    config.data.allowBooking,
+  );
+  return { type: 'room', data, fetchedAt: data.serverTime, stale: false };
 }

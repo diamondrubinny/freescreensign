@@ -114,4 +114,9 @@ export const LIMITS = {
   operatorStatusUser: { name: 'operator-status-user', max: 60, windowSeconds: 60 },
   /** SSO starts and callbacks per address. */
   oidcIp: { name: 'oidc-ip', max: 30, windowSeconds: 600 },
+  // Booking at a room's screen: PIN attempts per screen and per organization (both reset
+  // after a correct PIN, so only consecutive failures count), and bookings per screen.
+  roomPinScreen: { name: 'room-pin-screen', max: 5, windowSeconds: 900 },
+  roomPinOrg: { name: 'room-pin-org', max: 30, windowSeconds: 900 },
+  roomBookScreen: { name: 'room-book-screen', max: 4, windowSeconds: 3600 },
 } as const satisfies Record<string, LimitRule>;
