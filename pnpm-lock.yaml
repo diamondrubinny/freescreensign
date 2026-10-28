@@ -229,6 +229,9 @@ importers:
       file-type:
         specifier: 22.2.0
         version: 22.2.0
+      ical.js:
+        specifier: 2.2.1
+        version: 2.2.1
       ioredis:
         specifier: 6.0.0
         version: 6.0.0
@@ -2681,6 +2684,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  ical.js@2.2.1:
+    resolution: {integrity: sha512-yK/UlPbEs316igb/tjRgbFA8ZV75rCsBJp/hWOatpyaPNlgw0dGDmU+FoicOcwX4xXkeXOkYiOmCqNPFpNPkQg==}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -6917,6 +6923,8 @@ snapshots:
   i18next@26.5.2(typescript@6.0.3):
     optionalDependencies:
       typescript: 6.0.3
+
+  ical.js@2.2.1: {}
 
   ieee754@1.2.1: {}
 

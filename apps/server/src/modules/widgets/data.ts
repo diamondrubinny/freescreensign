@@ -6,6 +6,7 @@
 import { createHash } from 'node:crypto';
 import {
   parseWidgetConfig,
+  type CalendarData,
   roomConfigSchema,
   type RoomStatusData,
   type RssData,
@@ -18,19 +19,20 @@ import { HttpError } from '../../lib/http-error.js';
 import { LIMITS } from '../../lib/limiter.js';
 import { safeFetch } from '../../lib/safe-fetch.js';
 import { roomStatus } from '../rooms/service.js';
+import { parseCalendar } from './calendar.js';
 import { parseFeed } from './rss.js';
 import { parseTable, tableSourceUrl } from './table.js';
 import { parseWeather, weatherRequestUrl } from './weather.js';
 
 /** How long fetched data counts as fresh, per widget type (tables: their own setting). */
-const FRESH_SECONDS = { rss: 10 * 60, weather: 15 * 60, table: 5 * 60 } as const;
+const FRESH_SECONDS = { rss: 10 * 60, weather: 15 * 60, table: 5 * 60, calendar: 10 * 60 } as const;
 /** Stale copies are kept this long and served when the source is down. */
 const STALE_SECONDS = 24 * 60 * 60;
 /** After a failure, the source is not retried for this long (protects both sides). */
 const FAILURE_BACKOFF_SECONDS = 60;
 
 export type DataWidgetType = keyof typeof FRESH_SECONDS;
-type WidgetData = RssData | WeatherData | TableData;
+type WidgetData = RssData | WeatherData | TableData | CalendarData;
 
 function freshSeconds(type: DataWidgetType, config: Record<string, unknown>): number {
   if (type === 'table') return (config as WidgetConfig<'table'>).refreshMinutes * 60;
@@ -79,6 +81,17 @@ async function fetchFresh(
     });
     return parseFeed(response.body.toString('utf8'), rss.maxItems);
   }
+  if (type === 'calendar') {
+    const calendar = config as WidgetConfig<'calendar'>;
+    const response = await safeFetch(calendar.url, {
+      allowPrivate: ctx.env.WIDGET_FETCH_ALLOW_PRIVATE,
+      accept: 'text/calendar, text/plain;q=0.8',
+      // Google and Microsoft answer calendar links with a redirect or two.
+      maxRedirects: 3,
+      maxBytes: 1024 * 1024,
+    });
+    return parseCalendar(response.body.toString('utf8'), calendar);
+  }
   if (type === 'table') {
     const table = config as WidgetConfig<'table'>;
     const response = await safeFetch(tableSourceUrl(table.url, table.source), {
@@ -112,12 +125,17 @@ function sourceOf(type: DataWidgetType, config: Record<string, unknown>) {
     const { source, url, jsonPath, hasHeader, columns, maxRows } = config as WidgetConfig<'table'>;
     return { source, url, jsonPath, hasHeader, columns, maxRows };
   }
+  if (type === 'calendar') {
+    // The window moves with time: the cache entry is per source, refreshed every 10 minutes.
+    const { url, days } = config as WidgetConfig<'calendar'>;
+    return { url, days };
+  }
   const { latitude, longitude, units, days } = config as WidgetConfig<'weather'>;
   return { latitude, longitude, units, days };
 }
 
 /**
- * Returns data for an RSS, weather or table widget: fresh from the cache, or fetched
+ * Returns data for an RSS, weather, table or calendar widget: fresh from the cache, or fetched
  * through the SSRF-safe client, falling back to a stale copy when the source fails.
  */
 export async function getWidgetData(

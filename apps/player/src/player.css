@@ -916,3 +916,371 @@ body,
 .w-menu-chalkboard .w-menu-dots {
   border-bottom-style: dashed;
 }
+
+/*
+ * Meeting room (widgets/room.ts). Free and busy differ in word, icon and color; white text
+ * on both backgrounds is above 6:1. Sizes follow the zone's height (--zone-h), and touch
+ * targets are at least 56px. Flex gaps are margins (Chromium 69 has no flex gap).
+ */
+.w-room {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: calc(var(--zone-h, 600px) * 0.045) calc(var(--zone-w, 800px) * 0.04);
+  color: #ffffff;
+  font-size: calc(var(--zone-h, 600px) * 0.04);
+  line-height: 1.25;
+  transition: background-color 0.4s;
+}
+.w-room--free {
+  background-color: #0b6b35;
+}
+.w-room--busy {
+  background-color: #a4161a;
+}
+.w-room--unavailable {
+  background-color: #3f3f46;
+}
+.w-room-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.w-room-names {
+  min-width: 0;
+}
+.w-room-name {
+  margin: 0;
+  font-size: 1.5em;
+  font-weight: 800;
+  line-height: 1.1;
+}
+.w-room-place {
+  margin: 0.2em 0 0;
+  opacity: 0.9;
+}
+.w-room-clock {
+  margin-inline-start: 1em;
+  font-size: 1.4em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.w-room-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.8em;
+}
+.w-room-main {
+  display: flex;
+  flex: 3;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.w-room-status {
+  display: flex;
+  align-items: center;
+}
+.w-room-icon-slot {
+  flex: none;
+  width: 3.6em;
+  height: 3.6em;
+  margin-inline-end: 0.6em;
+}
+.w-room-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.w-room-state {
+  margin: 0;
+  font-size: 3.2em;
+  font-weight: 800;
+  line-height: 1;
+}
+.w-room-until {
+  margin: 0.25em 0 0;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+.w-room-title {
+  margin: 0.3em 0 0;
+  font-size: 1.1em;
+  opacity: 0.95;
+}
+.w-room-actions {
+  margin-top: 1.2em;
+}
+.w-room-actions-label {
+  margin: 0 0 0.4em;
+  font-weight: 700;
+}
+.w-room-book {
+  display: flex;
+  flex-wrap: wrap;
+}
+.w-room-button {
+  min-width: 56px;
+  min-height: 56px;
+  margin-block-end: 0.4em;
+  margin-inline-end: 0.5em;
+  padding: 0.35em 0.9em;
+  border: 0.12em solid #ffffff;
+  border-radius: 0.5em;
+  background: rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.w-room-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.w-room-button:focus,
+.w-room-key:focus,
+.w-room-pin-cancel:focus {
+  outline: 0.15em solid #ffffff;
+  outline-offset: 0.12em;
+  box-shadow: 0 0 0 0.3em #000000;
+}
+.w-room-notice {
+  min-height: 1.3em;
+  margin: 0.5em 0 0;
+  font-weight: 600;
+}
+.w-room-next {
+  flex: 2;
+  min-width: 0;
+  margin-inline-start: 1.2em;
+  padding: 0.8em 1em;
+  border-radius: 0.5em;
+  background: rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+.w-room-next-title {
+  margin: 0 0 0.5em;
+  font-size: 1.1em;
+}
+.w-room-next-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.w-room-next-list li {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 0.6em;
+}
+.w-room-next-time {
+  margin-inline-end: 0.6em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.w-room-next-what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The PIN pad, over the widget. */
+.w-room-pin {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+}
+.w-room-pin[hidden] {
+  display: none;
+}
+.w-room-pin-box {
+  width: 15em;
+  max-width: 92%;
+  padding: 1em;
+  border-radius: 0.6em;
+  background: #ffffff;
+  color: #111827;
+  text-align: center;
+}
+.w-room-pin-title {
+  margin: 0;
+  font-size: 1.1em;
+}
+.w-room-pin-action {
+  margin: 0.2em 0 0;
+  color: #374151;
+}
+.w-room-pin-dots {
+  display: flex;
+  justify-content: center;
+  margin: 0.6em 0;
+  direction: ltr;
+}
+.w-room-pin-dots span {
+  width: 0.7em;
+  height: 0.7em;
+  margin: 0 0.25em;
+  border: 0.1em solid #111827;
+  border-radius: 50%;
+}
+.w-room-pin-dots span.on {
+  background: #111827;
+}
+.w-room-pin-error {
+  min-height: 1.25em;
+  margin: 0 0 0.4em;
+  color: #b91c1c;
+  font-weight: 700;
+}
+.w-room-pin-keys {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-gap: 0.4em;
+  direction: ltr;
+}
+.w-room-key {
+  min-height: 56px;
+  padding: 0.3em 0;
+  border: 0.08em solid #9ca3af;
+  border-radius: 0.4em;
+  background: #f3f4f6;
+  color: #111827;
+  font: inherit;
+  font-size: 1.3em;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.w-room-key-ok {
+  border-color: #0b6b35;
+  background: #0b6b35;
+  color: #ffffff;
+}
+.w-room-pin-cancel {
+  min-height: 56px;
+  margin-top: 0.5em;
+  padding: 0.3em 1em;
+  border: 0;
+  background: none;
+  color: #1d4ed8;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .w-room {
+    transition: none;
+  }
+}
+
+/* Events calendar (widgets/calendar.ts): a list by day, or seven columns. */
+.w-cal {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: calc(var(--zone-h, 600px) * 0.04) calc(var(--zone-w, 800px) * 0.04);
+  font-size: calc(var(--zone-h, 600px) * 0.04);
+  line-height: 1.3;
+  overflow: hidden;
+}
+.w-cal-title {
+  margin: 0 0 0.5em;
+  font-size: 1.6em;
+  font-weight: 800;
+}
+.w-cal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.w-cal-day-name {
+  margin: 0 0 0.3em;
+  color: var(--w-accent, currentColor);
+  font-size: 1.05em;
+  font-weight: 800;
+}
+.w-cal-day {
+  margin-bottom: 0.8em;
+}
+.w-cal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.w-cal-event {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 0.35em;
+}
+.w-cal-time {
+  flex: none;
+  min-width: 6.2em;
+  margin-inline-end: 0.7em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.w-cal-what {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.w-cal-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.w-cal-place {
+  font-size: 0.8em;
+  opacity: 0.85;
+}
+.w-cal-none {
+  margin: 0;
+  font-size: 1.2em;
+  opacity: 0.9;
+}
+.w-cal-more {
+  font-size: 0.8em;
+  opacity: 0.85;
+}
+/* Week: seven columns; time above the name in each. */
+.w-cal-week .w-cal-body {
+  display: flex;
+}
+.w-cal-col {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0.4em;
+  font-size: 0.75em;
+  border-inline-start: 0.06em solid rgba(255, 255, 255, 0.25);
+}
+.w-cal-col:first-child {
+  border-inline-start: 0;
+}
+.w-cal-today {
+  border-radius: 0.3em;
+  background: rgba(255, 255, 255, 0.08);
+}
+.w-cal-week .w-cal-event {
+  display: block;
+  margin-bottom: 0.6em;
+}
+.w-cal-week .w-cal-time {
+  display: block;
+  min-width: 0;
+  margin: 0;
+}

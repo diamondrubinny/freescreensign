@@ -31,6 +31,9 @@ export class InvalidManifestError extends Error {
   }
 }
 
+/** The answer to a booking action: done, or the server's error code (or NETWORK). */
+export type RoomResult = { ok: true } | { ok: false; code: string };
+
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 /** HTTP client for the player API. The device token is sent as a Bearer token (no cookies). */
@@ -141,6 +144,49 @@ export class PlayerApi {
     if (res.ok) return 'done';
     // A malformed batch would fail forever; anything else is worth another try.
     return res.status === 400 || res.status === 413 ? 'done' : 'retry';
+  }
+
+  /** "Book now" at a room's screen (see rooms.ts). */
+  async bookRoom(token: string, roomId: string, minutes: number, pin: string): Promise<RoomResult> {
+    return this.#roomCall(token, `/rooms/${encodeURIComponent(roomId)}/bookings`, { minutes, pin });
+  }
+
+  /** Ends a meeting booked at a screen (frees the room). */
+  async endRoomBooking(
+    token: string,
+    roomId: string,
+    bookingId: string,
+    pin: string,
+  ): Promise<RoomResult> {
+    return this.#roomCall(
+      token,
+      `/rooms/${encodeURIComponent(roomId)}/bookings/${encodeURIComponent(bookingId)}/end`,
+      { pin },
+    );
+  }
+
+  async #roomCall(token: string, path: string, body: object): Promise<RoomResult> {
+    let res: Response;
+    try {
+      res = await this.fetcher(`${this.base}${path}`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+        credentials: 'omit',
+      });
+    } catch {
+      return { ok: false, code: 'NETWORK' };
+    }
+    if (res.status === 401) throw new UnauthorizedError();
+    if (res.ok) return { ok: true };
+    let code = 'ERROR';
+    try {
+      const data = (await res.json()) as { error?: { code?: unknown } };
+      if (typeof data.error?.code === 'string') code = data.error.code;
+    } catch {
+      // keep the generic code
+    }
+    return { ok: false, code };
   }
 
   /** Answers a screenshot request with a JPEG from the native wrapper. */

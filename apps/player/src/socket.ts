@@ -8,7 +8,9 @@ export type ServerEvent =
   | { type: 'manifest.changed' }
   | { type: 'reload' }
   | { type: 'revoked' }
-  | { type: 'screenshot'; requestId: string };
+  | { type: 'screenshot'; requestId: string }
+  /** A booking of this room changed (room widgets fetch their status again). */
+  | { type: 'room.changed'; roomId: string };
 
 /**
  * WebSocket client with exponential reconnect. The token is sent in the first

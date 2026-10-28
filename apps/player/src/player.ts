@@ -60,6 +60,8 @@ export interface PlayerDeps {
   playLog: PlayLog;
   /** The native wrapper bridge, when running inside one (see native.ts). */
   native?: RubinnyNativeBridge | null;
+  /** A booking of a room changed (room widgets refresh; see rooms.ts). */
+  onRoomChanged?: (roomId: string) => void;
 }
 
 export const SYNC_INTERVAL_MS = 5 * 60 * 1000;
@@ -199,6 +201,7 @@ export class Player {
         if (event.type === 'manifest.changed') void this.sync();
         if (event.type === 'reload') this.deps.reload();
         if (event.type === 'screenshot') void this.#screenshot(event.requestId);
+        if (event.type === 'room.changed') this.deps.onRoomChanged?.(event.roomId);
       },
       () => {
         void this.#unpair();

@@ -4,7 +4,7 @@
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { expectAccessible, totp } from './helpers';
 
 const SETUP_TOKEN = process.env.E2E_SETUP_TOKEN ?? '';
@@ -671,8 +671,105 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   await device.close();
 });
 
+/**
+ * A meeting room: an admin sets it up with the PIN, it is booked at its screen and in the
+ * dashboard. Runs inside a signed-in test: each sign-in uses a two-step code, and those are
+ * limited per user (10 in 15 minutes).
+ */
+async function meetingRoomJourney(page: Page, browser: Browser) {
+  // An admin adds a room and the PIN for booking at screens.
+  await openPage(page, 'חדרי ישיבות');
+  const orgId = /\/orgs\/([^/]+)\/rooms/.exec(page.url())?.[1] ?? '';
+  expect(orgId).not.toBe('');
+  await expect(page.getByText('עדיין אין חדרים')).toBeVisible();
+  await page.getByRole('button', { name: 'הוספת חדר' }).click();
+  const roomDialog = page.getByRole('dialog', { name: 'הוספת חדר' });
+  await roomDialog.getByRole('textbox', { name: /^שם החדר/ }).fill('חדר ישיבות גדול');
+  await roomDialog.getByRole('spinbutton', { name: /^מספר מקומות/ }).fill('10');
+  await roomDialog.getByRole('button', { name: 'שמירה' }).click();
+  await expect(page.getByText('החדר נשמר.')).toBeVisible();
+  await page.getByLabel(/^קוד חדש/).fill('246810');
+  await page.getByRole('button', { name: 'שמירת הקוד' }).click();
+  await expect(page.getByText('פעיל: יש קוד להזמנה מהמסך.')).toBeVisible();
+  await expectAccessible(page, 'rooms');
+
+  // A room widget on a screen next to the room.
+  const api = `/api/v1/orgs/${orgId}`;
+  const roomId = (
+    (await (await page.request.get(`${api}/rooms`)).json()) as { rooms: { id: string }[] }
+  ).rooms[0]!.id;
+  const widget = await page.request.post(`${api}/widgets`, {
+    data: { type: 'room', name: 'דלת חדר הישיבות', config: { roomId } },
+  });
+  expect(widget.status()).toBe(201);
+  const widgetId = ((await widget.json()) as { widget: { id: string } }).widget.id;
+  const playlist = (
+    (await (await page.request.post(`${api}/playlists`, { data: { name: 'דלת' } })).json()) as {
+      playlist: { id: string };
+    }
+  ).playlist.id;
+  await page.request.put(`${api}/playlists/${playlist}/items`, {
+    data: { items: [{ widgetId, durationMs: null }] },
+  });
+  const device = await browser.newContext({ ignoreHTTPSErrors: true, hasTouch: true });
+  const player = await device.newPage();
+  await player.goto('/player/');
+  const code = (await player.getByTestId('pairing-code').textContent({ timeout: 15_000 }))?.trim();
+  const paired = await page.request.post(`${api}/screens`, {
+    data: { code, name: 'מסך חדר הישיבות', playlistId: playlist },
+  });
+  expect(paired.status()).toBe(201);
+
+  // The screen shows the room free; booking needs the PIN (a wrong one is refused).
+  await expect(player.locator('.w-room-state')).toHaveText('פנוי', { timeout: 20_000 });
+  await expect(player.locator('.w-room-place')).toHaveText('10 מקומות');
+  await player.getByRole('button', { name: 'הזמנת החדר ל-15 דקות' }).click();
+  const pad = player.getByRole('dialog', { name: 'הקלידו את קוד ההזמנה' });
+  await expect(pad).toBeVisible();
+  const press = async (digits: string) => {
+    for (const digit of digits) await pad.getByRole('button', { name: `ספרה ${digit}` }).click();
+    await pad.getByRole('button', { name: 'אישור' }).click();
+  };
+  await press('111111');
+  await expect(pad.getByRole('alert')).toHaveText('הקוד שגוי. נסו שוב.');
+  await press('246810');
+  await expect(pad).toBeHidden();
+  await expect(player.locator('.w-room-state')).toHaveText('תפוס', { timeout: 10_000 });
+  await expect(player.getByRole('button', { name: 'סיום הפגישה עכשיו' })).toBeVisible();
+
+  // The dashboard shows it, booked at the screen (by no one); a member books a later meeting,
+  // and the screen lists it at once (titles stay hidden on the screen).
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1, name: 'חדרי ישיבות' })).toBeVisible();
+  await expect(page.getByText('הוזמן במסך')).toBeVisible();
+  const later = new Date(Math.ceil((Date.now() + 2 * 3_600_000) / 300_000) * 300_000);
+  const end = new Date(later.getTime() + 30 * 60_000);
+  const two = (n: number) => String(n).padStart(2, '0');
+  const dayOf = (d: Date) =>
+    `${String(d.getFullYear())}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
+  const timeOf = (d: Date) => `${two(d.getHours())}:${two(d.getMinutes())}`;
+  await page.getByRole('button', { name: 'הזמנת חדר ישיבות גדול' }).click();
+  const booking = page.getByRole('dialog', { name: 'הזמנת חדר' });
+  await booking.getByLabel(/^תאריך/).fill(dayOf(later));
+  await booking.getByLabel(/^משעה/).fill(timeOf(later));
+  // Across midnight the meeting ends the next day: keep it on one day for this test.
+  await booking.getByLabel(/^עד שעה/).fill(dayOf(end) === dayOf(later) ? timeOf(end) : '23:59');
+  await booking.getByRole('textbox', { name: /^כותרת/ }).fill('תכנון רבעוני');
+  await expectAccessible(page, 'booking dialog');
+  await booking.getByRole('button', { name: 'שמירה' }).click();
+  await expect(page.getByText('החדר הוזמן.')).toBeVisible();
+  await expect(player.locator('.w-room-next-list')).toContainText('פגישה', { timeout: 15_000 });
+  await expect(player.locator('.w-room-next-list')).not.toContainText('תכנון רבעוני');
+
+  // Ending the meeting at the screen frees the room.
+  await player.getByRole('button', { name: 'סיום הפגישה עכשיו' }).click();
+  await press('246810');
+  await expect(player.locator('.w-room-state')).toHaveText('פנוי', { timeout: 10_000 });
+  await device.close();
+}
+
 test('operations: what a screen shows, proof of play and CSV export', async ({ page, browser }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   await signIn(page, ADMIN, true);
 
   // A playlist with a short image, on a fresh screen.
@@ -755,6 +852,10 @@ test('operations: what a screen shows, proof of play and CSV export', async ({ p
   expect(csv.startsWith('\uFEFF"started_at","time_zone","duration_seconds","screen"')).toBe(true);
   expect(csv).toContain('"מסך ניטור","main","media","מבצע השבוע"');
   await device.close();
+
+  await test.step('a meeting room, booked at its screen and in the dashboard', async () => {
+    await meetingRoomJourney(page, browser);
+  });
 });
 
 test('admin invites a teacher (mail disabled: link shown to admin)', async ({ page }) => {

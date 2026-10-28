@@ -87,6 +87,7 @@ describe('parseWidgetConfig', () => {
       'menu',
       'design',
       'room',
+      'calendar',
     ]);
   });
 });

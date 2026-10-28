@@ -219,6 +219,29 @@ export function formatMenuPrice(
   }).format(value);
 }
 
+/** An iCal (.ics) link; "webcal://" links (as calendar apps share them) mean https. */
+const calendarUrl = z.preprocess(
+  (value) =>
+    typeof value === 'string' ? value.trim().replace(/^webcal:\/\//i, 'https://') : value,
+  feedUrl,
+);
+
+/** Upcoming events from a public calendar (iCal), as a list or a week. */
+export const calendarConfigSchema = z.object({
+  url: calendarUrl,
+  title: z.string().trim().max(200).optional(),
+  view: z.enum(['agenda', 'week']).default('agenda'),
+  /** Agenda: how many events to show. */
+  maxEvents: z.number().int().min(1).max(20).default(6),
+  /** How many days ahead to look. */
+  days: z.number().int().min(1).max(60).default(14),
+  locale: z.enum(['he', 'en']).default('he'),
+  format: z.enum(['24h', '12h']).default('24h'),
+  textColor: color.default('#f8fafc'),
+  background: color.default('#0f172a'),
+  accent: color.default('#f59e0b'),
+});
+
 /** A meeting room's screen: free or busy, the current and next meetings, "Book now". */
 export const roomConfigSchema = z.object({
   roomId: z.uuid(),
@@ -241,6 +264,7 @@ export const WIDGET_CONFIG_SCHEMAS = {
   menu: menuConfigSchema,
   design: designConfigSchema,
   room: roomConfigSchema,
+  calendar: calendarConfigSchema,
 } as const;
 
 export type WidgetType = keyof typeof WIDGET_CONFIG_SCHEMAS;
@@ -252,6 +276,7 @@ export const DATA_WIDGET_TYPES = [
   'rss',
   'weather',
   'table',
+  'calendar',
 ] as const satisfies readonly WidgetType[];
 
 /**
@@ -295,6 +320,22 @@ export interface WeatherData {
   current: { temperature: number; weatherCode: number };
   daily: { date: string; min: number; max: number; weatherCode: number }[];
   attribution: string;
+}
+
+export interface CalendarEvent {
+  title: string;
+  /** ISO 8601; for all-day events, the day's date (YYYY-MM-DD). */
+  start: string;
+  end: string;
+  allDay: boolean;
+  location: string | null;
+}
+
+export interface CalendarData {
+  /** The calendar's own name (X-WR-CALNAME), if any. */
+  title: string | null;
+  /** Events from now to the configured number of days ahead, by start (at most 200). */
+  events: CalendarEvent[];
 }
 
 export interface TableData {

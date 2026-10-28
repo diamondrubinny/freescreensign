@@ -30,6 +30,17 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
+## 0.7 → 0.8 (next release)
+
+- **One database extension:** meeting rooms use `btree_gist` (so two bookings can never
+  overlap). It is part of PostgreSQL's standard contrib modules and of the official images,
+  and the migration creates it. On a managed database where the server's user cannot create
+  extensions, the server stops at startup with a message saying so: run
+  `CREATE EXTENSION btree_gist;` once in the database as an administrator, then start it
+  again. **Check your provider's documentation that the extension is allowed** (most list it).
+- **Nothing else to do:** rooms, bookings and the PIN start empty; booking at screens stays off
+  until an admin sets a PIN.
+
 ## 0.7.0 → 0.7.1
 
 - **Nothing to do:** no migrations and no new settings. Screens update their player on their

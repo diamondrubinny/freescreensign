@@ -44,6 +44,32 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
           .end('﻿מנה;מחיר;הערה\r\n"שקשוקה";42;"חריף, ""מומלץ"""\r\nסלט;38;\r\n');
         return;
       }
+      if (request.url === '/events.ics') {
+        // Starts tomorrow at 10:00 UTC and repeats daily for three days.
+        const day = new Date(Date.now() + 24 * 3_600_000)
+          .toISOString()
+          .slice(0, 10)
+          .replace(/-/g, '');
+        response
+          .writeHead(200, { 'content-type': 'text/calendar; charset=utf-8' })
+          .end(
+            [
+              'BEGIN:VCALENDAR',
+              'VERSION:2.0',
+              'X-WR-CALNAME:Community',
+              'BEGIN:VEVENT',
+              'UID:daily@test',
+              `DTSTART:${day}T100000Z`,
+              `DTEND:${day}T110000Z`,
+              'RRULE:FREQ=DAILY;COUNT=3',
+              'SUMMARY:חוג קרמיקה',
+              'LOCATION:סטודיו',
+              'END:VEVENT',
+              'END:VCALENDAR',
+            ].join('\r\n'),
+          );
+        return;
+      }
       if (request.url === '/rows.json') {
         response.writeHead(200, { 'content-type': 'application/json' }).end(
           JSON.stringify({
@@ -170,6 +196,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'menu',
       'design',
       'room',
+      'calendar',
     ]);
 
     const clock = await createWidget('clock', {});
@@ -422,6 +449,26 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       config: { source: 'json', url: `${feedBase}/rows.json`, jsonPath: '../etc' },
     });
     expect(bad.json()).toMatchObject({ error: { fields: [{ path: 'config.jsonPath' }] } });
+  });
+
+  it('turns an iCal calendar into upcoming events for the player', async () => {
+    const calendar = await createWidget('calendar', { url: `${feedBase}/events.ics`, days: 7 });
+    expect(calendar.config).toMatchObject({ view: 'agenda', maxEvents: 6, days: 7 });
+    const { deviceToken } = await pair();
+    const res = await playerGet(`/player/v1/widgets/${calendar.id}/data`, deviceToken);
+    expect(res.statusCode, res.body).toBe(200);
+    const body = res.json<{ type: string; data: { title: string; events: { title: string }[] } }>();
+    expect(body.type).toBe('calendar');
+    expect(body.data.title).toBe('Community');
+    expect(body.data.events.map((e) => e.title)).toEqual([
+      'חוג קרמיקה',
+      'חוג קרמיקה',
+      'חוג קרמיקה',
+    ]);
+    expect(body.data.events[0]).toMatchObject({ allDay: false, location: 'סטודיו' });
+    // Not a calendar: the widget answers "source failed" (nothing cached yet).
+    const html = await createWidget('calendar', { url: `${feedBase}/nothing.ics` });
+    expect((await viewer.get(api(`/widgets/${html.id}/data`))).statusCode).toBe(502);
   });
 
   it('fetches feed data through the server with caching and stale fallback', async () => {

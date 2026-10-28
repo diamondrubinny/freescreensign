@@ -17,6 +17,7 @@ import { CacheStorageBlobStore, MediaCache } from './media-cache';
 import { Player } from './player';
 import { DomRenderer } from './renderer';
 import { PlayerSocket } from './socket';
+import { roomHost } from './rooms';
 import { store } from './store';
 import { WidgetDataClient } from './widget-data';
 import { BUILT_IN_WIDGETS } from './widgets';
@@ -79,6 +80,25 @@ player = new Player({
   },
   playLog: new PlayLog(localPlayLogStorage),
   native: detectNative(),
+  onRoomChanged: (roomId) => {
+    roomHost.changed(roomId);
+  },
+});
+
+// Booking at a room's screen (the room widget), with the device token.
+roomHost.connect({
+  book: (roomId, minutes, pin) => {
+    const token = store.token();
+    return token
+      ? api.bookRoom(token, roomId, minutes, pin)
+      : Promise.resolve({ ok: false, code: 'NETWORK' });
+  },
+  end: (roomId, bookingId, pin) => {
+    const token = store.token();
+    return token
+      ? api.endRoomBooking(token, roomId, bookingId, pin)
+      : Promise.resolve({ ok: false, code: 'NETWORK' });
+  },
 });
 
 void player.start();

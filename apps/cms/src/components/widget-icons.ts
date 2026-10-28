@@ -5,8 +5,10 @@
 
 import {
   CalendarClock,
+  CalendarDays,
   Clock,
   CloudSun,
+  DoorOpen,
   Globe,
   Palette,
   Puzzle,
@@ -35,6 +37,8 @@ export const WIDGET_ICONS: Record<
   table: { icon: Table2, tone: 'green' },
   menu: { icon: UtensilsCrossed, tone: 'amber' },
   design: { icon: Palette, tone: 'rose' },
+  room: { icon: DoorOpen, tone: 'green' },
+  calendar: { icon: CalendarDays, tone: 'sky' },
 };
 
 export const widgetIcon = (type: string) =>

@@ -239,13 +239,33 @@ export interface AlertItem {
   createdAt: string;
 }
 
+export interface RoomItem {
+  id: string;
+  name: string;
+  location: string | null;
+  capacity: number | null;
+  showTitles: boolean;
+}
+
+export interface RoomBookingItem {
+  id: string;
+  roomId: string;
+  startsAt: string;
+  endsAt: string;
+  title: string | null;
+  bookedBy: { id: string; name: string | null } | null;
+  /** Booked at a room's screen ("Book now"). */
+  atScreen: boolean;
+  canEdit: boolean;
+}
+
 export interface WidgetTypes {
   types: { type: string; available: boolean; serverData: boolean }[];
   weather: { enabled: boolean; attribution: string };
 }
 
 export interface WidgetData {
-  type: 'rss' | 'weather' | 'table';
+  type: 'rss' | 'weather' | 'table' | 'calendar';
   data: unknown;
   fetchedAt: string;
   stale: boolean;

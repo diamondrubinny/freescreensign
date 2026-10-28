@@ -4,6 +4,40 @@ All notable changes to Rubinny. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/) (0.x: anything may still change).
 
+## [Unreleased]
+
+### Added
+
+- Meeting rooms (docs/phases/18-rooms-directory-calendar-zmanim.md):
+  - a "Meeting rooms" page: rooms with location and seats, a day board, booking in a form
+    (any member; members change their own bookings, admins anyone's), "only my bookings";
+  - two bookings of a room can never overlap, even at the same moment (a database
+    constraint); bookings last up to 12 hours and are deleted 90 days after they end;
+  - a "Meeting room" widget for the screen next to a room: free or busy (in words, an icon and
+    a color), until when, the next meetings; it updates at once when a booking changes;
+  - on touch screens, "Book now" for 15, 30 or 60 minutes and "End the meeting now", with the
+    organization's PIN (4–8 digits, stored hashed; 5 wrong tries lock that screen for 15
+    minutes; failures are in the audit log). Screens never show who booked, and meeting
+    titles only when the room allows it.
+- An "Events calendar" widget: upcoming events from a public iCal link (Google Calendar,
+  Outlook and others; `webcal://` links too), as a list by day or a week. The server fetches
+  the calendar every 10 minutes (with the same protections as feeds) and expands recurring
+  events with their exceptions and cancellations, in the calendar's time zones; screens get
+  only each event's title, time and place.
+
+### Security
+
+- Electron 44.10.0 for the desktop player (CVE-2026-115570 in 44.9.0).
+- The web image: Caddy built with go-jose 4.1.6 (CVE-2026-116587), and the base image's
+  packages upgraded (brotli CVE-2026-111497, curl CVE-2026-92392).
+
+### Upgrading
+
+- The database needs the PostgreSQL extension `btree_gist` (in the standard contrib modules,
+  included in the official images). With a managed database where the server's user cannot
+  create extensions, run `CREATE EXTENSION btree_gist;` once as an administrator before
+  upgrading (docs/UPGRADING.md).
+
 ## [0.7.1] - 2026-10-23
 
 The attribution "Powered by Rubinny · Open source" in every part of Rubinny, fixes, and updated

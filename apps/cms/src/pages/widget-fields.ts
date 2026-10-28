@@ -29,6 +29,8 @@ export type WidgetFieldSpec = { key: string; label: FieldLabel; hint?: FieldLabe
   | { kind: 'color' }
   /** Menu sections and items (pages/widgets/MenuSectionsEditor), sent as JSON. */
   | { kind: 'menuSections' }
+  /** One of the organization's meeting rooms (a select loaded from the server). */
+  | { kind: 'room'; required: true }
 );
 
 const colors = (text: 'textColor' | 'foreground' = 'textColor'): WidgetFieldSpec[] => [
@@ -47,6 +49,55 @@ const locale: WidgetFieldSpec = {
 };
 
 export const WIDGET_FIELDS: Record<WidgetType, WidgetFieldSpec[]> = {
+  calendar: [
+    {
+      key: 'url',
+      label: 'calendarUrl',
+      hint: 'calendarUrlHint',
+      kind: 'url',
+      required: true,
+      maxLength: 2000,
+      ltr: true,
+    },
+    { key: 'title', label: 'calendarTitle', kind: 'text', maxLength: 200 },
+    {
+      key: 'view',
+      label: 'calendarView',
+      kind: 'select',
+      options: [
+        { value: 'agenda', label: 'viewAgenda' },
+        { value: 'week', label: 'viewWeek' },
+      ],
+    },
+    { key: 'maxEvents', label: 'maxEvents', kind: 'number', min: 1, max: 20, step: 1 },
+    { key: 'days', label: 'daysAhead', kind: 'number', min: 1, max: 60, step: 1 },
+    {
+      key: 'format',
+      label: 'format',
+      kind: 'select',
+      options: [
+        { value: '24h', label: 'format24' },
+        { value: '12h', label: 'format12' },
+      ],
+    },
+    locale,
+    ...colors(),
+    { key: 'accent', label: 'calendarAccent', kind: 'color' },
+  ],
+  room: [
+    { key: 'roomId', label: 'room', hint: 'roomHint', kind: 'room', required: true },
+    { key: 'allowBooking', label: 'allowBooking', kind: 'checkbox' },
+    {
+      key: 'format',
+      label: 'format',
+      kind: 'select',
+      options: [
+        { value: '24h', label: 'format24' },
+        { value: '12h', label: 'format12' },
+      ],
+    },
+    locale,
+  ],
   clock: [
     {
       key: 'format',

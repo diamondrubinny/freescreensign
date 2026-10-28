@@ -9,6 +9,7 @@ import {
   CalendarClock,
   ChartColumn,
   ClipboardCheck,
+  DoorOpen,
   Siren,
   Images,
   LayoutDashboard,
@@ -206,6 +207,7 @@ export function AppShell({ session }: { session: SessionInfo }) {
                 <NavItem to={`${org}/screens`} icon={Monitor} label={t('screens.nav')} />
                 <NavItem to={`${org}/reports`} icon={ChartColumn} label={t('reports.nav')} />
                 <NavItem to={`${org}/alerts`} icon={Siren} label={t('alerts.nav')} />
+                <NavItem to={`${org}/rooms`} icon={DoorOpen} label={t('rooms.nav')} />
               </NavGroup>
             </>
           )}

@@ -10,13 +10,14 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import {
   DATA_WIDGET_TYPES,
   isWidgetType,
+  type CalendarData,
   type RssData,
   type TableData,
   type WeatherData,
   type WidgetType,
 } from '@rubinny/shared';
 import { del, get, patch, post } from '../api/client';
-import type { WidgetData, WidgetItem, WidgetTypes } from '../api/types';
+import type { RoomItem, WidgetData, WidgetItem, WidgetTypes } from '../api/types';
 import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/Dialog';
@@ -42,6 +43,42 @@ import {
 
 const inputClass =
   'rounded-md border px-3 py-2 text-gray-900 dark:bg-gray-900 dark:text-gray-100 border-gray-500';
+
+/** The organization's meeting rooms, for a room widget (rooms are made on the rooms page). */
+function RoomSelect({
+  common,
+  initial,
+}: {
+  common: { id: string; name: string; 'aria-describedby': string | undefined };
+  initial: string;
+}) {
+  const { t } = useTranslation();
+  const { orgId = '' } = useParams();
+  const rooms = useQuery({
+    queryKey: ['rooms', orgId],
+    queryFn: () => get<{ rooms: RoomItem[]; pinSet: boolean }>(`/api/v1/orgs/${orgId}/rooms`),
+  });
+  if (rooms.isPending) return <Loading />;
+  if (!rooms.data || rooms.data.rooms.length === 0) {
+    return (
+      <p>
+        {t('widgets.fields.noRooms')}{' '}
+        <Link to={`/orgs/${orgId}/rooms`} className="text-brand-700 underline dark:text-brand-300">
+          {t('rooms.nav')}
+        </Link>
+      </p>
+    );
+  }
+  return (
+    <select {...common} required defaultValue={initial} className={`${inputClass} bg-white`}>
+      {rooms.data.rooms.map((room) => (
+        <option key={room.id} value={room.id}>
+          {room.name}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function ConfigField({
   field,
@@ -99,7 +136,9 @@ function ConfigField({
   }
 
   let control;
-  if (field.kind === 'select') {
+  if (field.kind === 'room') {
+    control = <RoomSelect common={common} initial={text} />;
+  } else if (field.kind === 'select') {
     control = (
       <select {...common} defaultValue={text} className={`${inputClass} bg-white`}>
         {field.options.map((option) => (
@@ -239,6 +278,7 @@ function DataPreview({ orgId, widget }: { orgId: string; widget: WidgetItem }) {
             {result.type === 'rss' && <RssPreview data={result.data as RssData} />}
             {result.type === 'weather' && <WeatherPreview data={result.data as WeatherData} />}
             {result.type === 'table' && <TablePreview data={result.data as TableData} />}
+            {result.type === 'calendar' && <CalendarPreview data={result.data as CalendarData} />}
           </div>
         )}
       </div>
@@ -266,6 +306,42 @@ function RssPreview({ data }: { data: RssData }) {
           ))}
         </ul>
       )}
+    </>
+  );
+}
+
+function CalendarPreview({ data }: { data: CalendarData }) {
+  const { t, i18n } = useTranslation();
+  if (data.events.length === 0) return <p>{t('widgets.calendarEmpty')}</p>;
+  const locale = i18n.language === 'he' ? 'he-IL' : 'en-GB';
+  const when = (event: CalendarData['events'][number]) =>
+    event.allDay
+      ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(
+          new Date(`${event.start}T00:00:00Z`),
+        )
+      : new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
+          new Date(event.start),
+        );
+  return (
+    <>
+      {data.title && (
+        <p className="font-semibold" dir="auto">
+          {data.title}
+        </p>
+      )}
+      <ul className="list-disc ps-6">
+        {data.events.slice(0, 20).map((event, index) => (
+          <li key={String(index)}>
+            <span className="tabular-nums">{when(event)}</span> · <bdi>{event.title}</bdi>
+            {event.location && (
+              <>
+                {' '}
+                · <bdi>{event.location}</bdi>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }
@@ -445,6 +521,9 @@ export function WidgetEditorPage() {
       {widgetType === 'rss' && <p className="mb-4 max-w-2xl text-sm">{t('widgets.rssPrivacy')}</p>}
       {widgetType === 'table' && (
         <p className="mb-4 max-w-2xl text-sm">{t('widgets.tablePrivacy')}</p>
+      )}
+      {widgetType === 'calendar' && (
+        <p className="mb-4 max-w-2xl text-sm">{t('widgets.calendarPrivacy')}</p>
       )}
 
       <Form

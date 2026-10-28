@@ -4,11 +4,13 @@
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
 import type { WidgetDefinition } from '@rubinny/widget-sdk';
+import { calendarWidget } from './calendar';
 import { clockWidget } from './clock';
 import { countdownWidget } from './countdown';
 import { designWidget } from './design';
 import { menuWidget } from './menu';
 import { qrWidget } from './qr';
+import { roomWidget } from './room';
 import { rssWidget } from './rss';
 import { tableWidget } from './table';
 import { textWidget } from './text';
@@ -31,6 +33,8 @@ export const BUILT_IN_WIDGETS: ReadonlyMap<string, WidgetDefinition<unknown>> = 
       tableWidget,
       menuWidget,
       designWidget,
+      roomWidget,
+      calendarWidget,
     ] as WidgetDefinition<unknown>[]
   ).map((widget) => [widget.type, widget]),
 );
