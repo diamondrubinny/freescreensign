@@ -48,7 +48,7 @@ export function SacredField({
         onChange={(event) => {
           onChange((event.target.value || null) as SacredMode | null);
         }}
-        className={`${inputClass} px-2! py-1.5! sm:w-60`}
+        className={`${inputClass} max-w-full px-2! py-1.5! sm:w-60`}
       >
         <option value="">{t('sacred.modes.always')}</option>
         <option value="only">{t('sacred.modes.only')}</option>

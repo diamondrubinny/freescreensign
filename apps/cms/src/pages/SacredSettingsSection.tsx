@@ -189,7 +189,7 @@ function SacredForm({ orgId, settings }: { orgId: string; settings: SacredSettin
           save.mutate(toBody(draft));
         }}
       >
-        <fieldset disabled={!canEdit} className="flex flex-col gap-4">
+        <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-4">
           <legend className="sr-only">{t('sacred.title')}</legend>
           <Labelled label={t('widgets.zmanim.city')}>
             {(props) => (
@@ -208,7 +208,7 @@ function SacredForm({ orgId, settings }: { orgId: string; settings: SacredSettin
                     israel: city.israel,
                   });
                 }}
-                className={`${inputClass} bg-white sm:w-72`}
+                className={`${inputClass} max-w-full bg-white sm:w-72`}
               >
                 <option value="">{t('widgets.zmanim.cityChoose')}</option>
                 {ZMANIM_CITIES.map((city, index) => (
@@ -324,7 +324,7 @@ function SacredForm({ orgId, settings }: { orgId: string; settings: SacredSettin
                   onChange={(event) => {
                     set({ havdalah: event.target.value as Draft['havdalah'] });
                   }}
-                  className={`${inputClass} bg-white sm:w-72`}
+                  className={`${inputClass} max-w-full bg-white sm:w-72`}
                 >
                   {HAVDALAH_METHODS.map((method) => (
                     <option key={method} value={method}>
