@@ -371,7 +371,9 @@ jobs:
           python3 .github/zap/session.py login yossi@example.com 'green turtles sing in the rain' > "$RUNNER_TEMP/zap-session.env"
           . "$RUNNER_TEMP/zap-session.env"
           pnpm --filter @rubinny/server exec tsx test/security/openapi.ts https://localhost "$ZAP_ORG" > zap/openapi.json
-          rm "$RUNNER_TEMP/zap-session.env" && chmod -R 777 zap
+          rm "$RUNNER_TEMP/zap-session.env"
+          # The folder is writable already (the baseline step); its reports belong to the ZAP user.
+          chmod 644 zap/openapi.json
           docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.16.1 \
             zap-api-scan.py -t /zap/wrk/openapi.json -f openapi -S -c rules.tsv -I -J zap-api.json -r zap-api.html \
             -z "-config replacer.full_list(0).description=session -config replacer.full_list(0).enabled=true -config replacer.full_list(0).matchtype=REQ_HEADER -config replacer.full_list(0).matchstr=Cookie -config replacer.full_list(0).regex=false -config replacer.full_list(0).replacement=$ZAP_COOKIE"
