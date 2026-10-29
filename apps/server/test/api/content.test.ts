@@ -704,6 +704,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       'community',
       'synagogue',
       'meeting-room',
+      'shabbat-closed',
     ]);
     // A meeting room screen needs a room: an editor is told to ask an admin; an admin's kit
     // adds a sample room.
@@ -755,6 +756,7 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
         // Once as an admin (adding the room), then by the editor with the room in place.
         ['חדר ישיבות', 2],
         ['Meeting room', 2],
+        ['סגור בשבת', 1],
       ].sort(),
     );
     expect((await viewer.post(api('/starter-kits/lobby'), {})).statusCode).toBe(403);
