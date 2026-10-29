@@ -1011,6 +1011,11 @@ export const en: Messages = {
         description:
           'Times of the day and prayers, the weekly portion, candle lighting and havdalah, classes and notices.',
       },
+      'shabbat-closed': {
+        name: 'Closed on Shabbat',
+        description:
+          'Shabbat Shalom with candles, for a shop closed on Shabbat and holidays. Add a schedule rule with "Only on Shabbat and holidays" and this layout.',
+      },
       'meeting-room': {
         name: 'Meeting room',
         description:

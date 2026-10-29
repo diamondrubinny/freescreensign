@@ -30,6 +30,14 @@ done
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
 
+## 0.9.0 → 0.10.0
+
+- **Nothing to do:** the migration adds the Shabbat and holiday settings (empty) and the new
+  condition on schedule rules. Nothing changes until an admin sets a place.
+- **Older players:** a player from before 0.10.0 ignores the new condition. The server asks
+  each screen to reload when it reports an older player (within about a minute), so a rule
+  with the condition may briefly show as if it had none right after the upgrade.
+
 ## 0.8.1 → 0.9.0
 
 - **Nothing to do:** the migration adds the tables for API keys and webhooks. No keys or webhooks

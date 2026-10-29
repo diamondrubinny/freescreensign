@@ -19,8 +19,8 @@ import {
 
 /**
  * Starter kits by trade (docs/phases/15-showcase.md): restaurant, café, cinema, shop, office
- * lobby, hotel and community; and a synagogue and a meeting room
- * (docs/phases/18-rooms-directory-calendar-zmanim.md). Names of places are invented; links
+ * lobby, hotel and community; a synagogue and a meeting room
+ * (docs/phases/18-rooms-directory-calendar-zmanim.md); closed on Shabbat (phase 20). Names of places are invented; links
  * point at example.org.
  * Colors are chosen for contrast (checked in the tests).
  */
@@ -1908,6 +1908,123 @@ const synagogue = (): StarterKit => ({
   },
 });
 
+// ---- Closed on Shabbat ---------------------------------------------------------------------
+
+/**
+ * A shop's screen for Shabbat and holidays, to show with a schedule rule "Only on Shabbat and
+ * holidays" (docs/phases/20-shabbat-holiday-scheduling.md). Candles drawn with shapes.
+ */
+const shabbatClosed = (): StarterKit => {
+  const main = zoneSize('fullscreen', 'main');
+  return {
+    id: 'shabbat-closed',
+    template: 'fullscreen',
+    name: L('סגור בשבת', 'Closed on Shabbat'),
+    background: '#0b1430',
+    widgets: [
+      {
+        key: 'closed',
+        type: 'design',
+        name: L('שבת שלום — סגור', 'Shabbat Shalom — closed'),
+        config: both((locale) => {
+          const textX = startX(locale, main.w, 1000, 130);
+          const candlesX = endX(locale, main.w, 420, 220);
+          const candle = (index: number): ReturnType<typeof shape>[] => {
+            const x = candlesX + 60 + index * 200;
+            return [
+              shape({
+                x,
+                y: 470,
+                w: 100,
+                h: 380,
+                fill: '#fdf6e3',
+                radius: 14,
+                ...drop('66'),
+                ...enter('slide-up', 200 + index * 150),
+              }),
+              shape({
+                shape: 'ellipse',
+                x: x + 22,
+                y: 330,
+                w: 56,
+                h: 110,
+                fill: '#fbbf24',
+                ...glow('#f59e0b', 70),
+                ...enter('fade', 700 + index * 150, 'pulse', 1200),
+              }),
+            ];
+          };
+          return design(main, '#0b1430', [
+            shape({
+              shape: 'ellipse',
+              x: candlesX - 180,
+              y: 120,
+              w: 780,
+              h: 780,
+              fill: '#16224a',
+              ...enter('fade', 0, 'float', 2000),
+            }),
+            ...candle(0),
+            ...candle(1),
+            shape({
+              x: candlesX,
+              y: 850,
+              w: 420,
+              h: 48,
+              fill: '#d4a017',
+              radius: 24,
+              ...drop('66'),
+              ...enter('fade', 100),
+            }),
+            text({
+              text: pick(locale, 'שבת שלום', 'Shabbat Shalom'),
+              x: textX,
+              y: 250,
+              w: 1000,
+              h: 220,
+              font: headline(locale),
+              fontSize: locale === 'he' ? 170 : 150,
+              fontWeight: 400,
+              color: '#facc15',
+              align: 'start',
+              ...drop('99'),
+              ...enter('slide-up'),
+            }),
+            text({
+              text: pick(locale, 'החנות סגורה בשבת ובחגים', 'Closed on Shabbat and holidays'),
+              x: textX,
+              y: 500,
+              w: 1000,
+              h: 100,
+              fontSize: 64,
+              fontWeight: 800,
+              color: '#ffffff',
+              align: 'start',
+              ...drop('99'),
+              ...enter('fade', 500),
+            }),
+            text({
+              text: pick(locale, 'נשמח לראותכם במוצאי שבת', 'See you after Shabbat'),
+              x: textX,
+              y: 620,
+              w: 1000,
+              h: 80,
+              fontSize: 46,
+              fontWeight: 400,
+              color: '#cbd5e1',
+              align: 'start',
+              ...enter('fade', 900),
+            }),
+          ]);
+        }),
+      },
+    ],
+    zones: {
+      main: { playlist: L('סגור בשבת', 'Closed on Shabbat'), widgets: ['closed'] },
+    },
+  };
+};
+
 // ---- Meeting room ------------------------------------------------------------------------
 
 /**
@@ -1965,4 +2082,5 @@ export const INDUSTRY_KITS: readonly StarterKit[] = [
   community(),
   synagogue(),
   meetingRoom(),
+  shabbatClosed(),
 ];

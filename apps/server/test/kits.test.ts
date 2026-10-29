@@ -156,6 +156,7 @@ describe('starter kits', () => {
       'community',
       'synagogue',
       'meeting-room',
+      'shabbat-closed',
     ]);
   });
 

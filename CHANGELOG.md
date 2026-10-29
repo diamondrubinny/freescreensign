@@ -6,6 +6,32 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+Scheduling by Shabbat and holidays, and a "Closed on Shabbat" starter kit. Upgrading from
+0.9.0: see [docs/UPGRADING.md](docs/UPGRADING.md#090--0100) (nothing to do).
+
+### Added
+
+- Shabbat and holidays (docs/phases/20-shabbat-holiday-scheduling.md):
+  - in the organization settings (admins): the place (a list of cities, or coordinates and
+    a time zone), Israel or abroad, candle lighting minutes, the havdalah method, and
+    optional margins (start up to 180 minutes before candle lighting, end up to 180 minutes
+    after havdalah), with the coming periods listed;
+  - a "Shabbat and holidays" condition in every schedule rule and in a playlist item's time
+    window: "Only on Shabbat and holidays" or "Not on Shabbat and holidays", combined with the
+    dates, days and hours. Shabbat and Yom Tov count (with the second days abroad), not Chol
+    HaMoed, Chanukah, Purim or fasts; a holiday next to Shabbat is one period;
+  - the server computes 60 days of periods (with @hebcal/core, as the zmanim widget) and
+    sends them to screens that use the condition; screens decide offline. Without data
+    (no place set, or a screen offline for over 60 days) "only" does not show and "not on"
+    does;
+  - the weekly timeline marks Shabbat and holidays with a striped band and the times in
+    words, and shows what plays in them.
+    These times are not a halachic ruling: check the place and the method with a rabbi.
+- Starter kit "Closed on Shabbat" (Shabbat Shalom with candles), for a schedule rule with
+  "Only on Shabbat and holidays".
+- API: `GET|PUT /api/v1/orgs/:orgId/settings/sacred` and
+  `GET /api/v1/orgs/:orgId/sacred-times`.
+
 ## [0.9.0] - 2026-10-28
 
 Integrations: API keys for other systems (alerts from a fire panel, text from a queue system,

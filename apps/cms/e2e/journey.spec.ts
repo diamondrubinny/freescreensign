@@ -586,6 +586,48 @@ test('a schedule switches what a screen shows, live', async ({ page, browser }) 
   await expect(player.locator('.w-clock-time')).toHaveText(/^\d{2}:\d{2}$/, { timeout: 20_000 });
   await expect(player.locator('.zone')).toHaveCount(2);
 
+  // Shabbat and holidays: first the place, in the organization settings.
+  await openPage(page, 'הגדרות ארגון');
+  const sacred = page.getByRole('region', { name: 'שבת וחגים' });
+  await sacred.getByLabel('עיר להתחלה (לא חובה)').selectOption({ label: 'ירושלים' });
+  await sacred.getByRole('button', { name: 'שמירת ההגדרה' }).click();
+  await expect(sacred.getByText('ההגדרה נשמרה. המסכים יקבלו את הזמנים החדשים.')).toBeVisible();
+  await expect(sacred.getByRole('list')).toContainText('שבת');
+  await expectAccessible(page, 'organization settings (Shabbat and holidays)');
+
+  // The entry again, but not on Shabbat: the timeline marks Shabbat, and the screen decides
+  // by itself from the periods in its manifest.
+  await openPage(page, 'תזמון');
+  await page.getByRole('link', { name: 'עריכה אירועים' }).click();
+  const shabbatEntry = page.getByRole('group', { name: /^שורה 1:/ });
+  await shabbatEntry.getByRole('checkbox', { name: 'פעילה' }).check();
+  await shabbatEntry.getByLabel('שבת וחג').selectOption({ label: 'לא בשבת וחג' });
+  await expect(timeline.getByText(/^שבת: \d{2}:\d{2}–\d{2}:\d{2}$/).first()).toBeVisible();
+  await expectAccessible(page, 'schedule editor (Shabbat and holidays)');
+  await page.getByRole('button', { name: 'שמירת הלוח' }).click();
+  await expect(page.getByText('הלוח נשמר. המסכים מתעדכנים.')).toBeVisible();
+  const orgId = /\/orgs\/([^/]+)\//.exec(page.url())?.[1] ?? '';
+  const periods = (
+    (await (await page.request.get(`/api/v1/orgs/${orgId}/sacred-times?days=2`)).json()) as {
+      times: { periods: { start: string; end: string }[] };
+    }
+  ).times.periods;
+  const now = Date.now();
+  if (periods.some((p) => Date.parse(p.start) <= now && now < Date.parse(p.end))) {
+    // Run on Shabbat or a holiday in Jerusalem: the layout stays.
+    await expect(player.locator('.zone')).toHaveCount(2);
+  } else {
+    await expect(player.locator('.w-ticker')).toContainText('ברוכים הבאים לבית הספר', {
+      timeout: 20_000,
+    });
+  }
+  await shabbatEntry.getByLabel('שבת וחג').selectOption({ label: 'תמיד' });
+  await shabbatEntry.getByRole('checkbox', { name: 'פעילה' }).uncheck();
+  await page.getByRole('button', { name: 'שמירת הלוח' }).click();
+  await expect(page.getByText('הלוח נשמר. המסכים מתעדכנים.')).toBeVisible();
+  await expect(player.locator('.w-clock-time')).toHaveText(/^\d{2}:\d{2}$/, { timeout: 20_000 });
+  await expect(player.locator('.zone')).toHaveCount(2);
+
   // An emergency alert to this screen only: on screen within seconds, over the content.
   await openPage(page, 'התראות חירום');
   await expect(page.getByText('אין התראות פעילות')).toBeVisible();

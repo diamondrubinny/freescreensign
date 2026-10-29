@@ -36,16 +36,18 @@ English, and every picture in it is original art drawn for the project
 |                        ![Hotel: a welcome with check-in times, a reception bell and a clock with the Hebrew date](docs/screenshots/kits/hotel-en.webp)                         | ![Community center: a family festival poster with balloons and confetti, and an updates ticker](docs/screenshots/kits/community-en.webp) |
 |                                                                                 **Synagogue**                                                                                  |                                                             **Meeting room**                                                             |
 | ![Synagogue: the Hebrew date and weekly portion, times of the day and prayers with the next one marked, candle lighting and havdalah](docs/screenshots/kits/synagogue-en.webp) |    ![Meeting room: "Busy until 10:30" in red with the current meeting and the next ones](docs/screenshots/kits/meeting-room-en.webp)     |
+|                                                                             **Closed on Shabbat**                                                                              |                                                                                                                                          |
+|                   ![Closed on Shabbat: "Shabbat Shalom" with two lit candles, closed on Shabbat and holidays](docs/screenshots/kits/shabbat-closed-en.webp)                    |                                                                                                                                          |
 
 <details>
 <summary>The same kits in Hebrew</summary>
 
-|   ![The restaurant kit in Hebrew](docs/screenshots/kits/restaurant-he.webp)    |    ![The cinema kit in Hebrew](docs/screenshots/kits/cinema-he.webp)    |
-| :----------------------------------------------------------------------------: | :---------------------------------------------------------------------: |
-|         ![The café kit in Hebrew](docs/screenshots/kits/cafe-he.webp)          |    ![The retail kit in Hebrew](docs/screenshots/kits/retail-he.webp)    |
-|       ![The office kit in Hebrew](docs/screenshots/kits/office-he.webp)        |     ![The hotel kit in Hebrew](docs/screenshots/kits/hotel-he.webp)     |
-| ![The community center kit in Hebrew](docs/screenshots/kits/community-he.webp) | ![The synagogue kit in Hebrew](docs/screenshots/kits/synagogue-he.webp) |
-| ![The meeting room kit in Hebrew](docs/screenshots/kits/meeting-room-he.webp)  |                                                                         |
+|   ![The restaurant kit in Hebrew](docs/screenshots/kits/restaurant-he.webp)    |          ![The cinema kit in Hebrew](docs/screenshots/kits/cinema-he.webp)           |
+| :----------------------------------------------------------------------------: | :----------------------------------------------------------------------------------: |
+|         ![The café kit in Hebrew](docs/screenshots/kits/cafe-he.webp)          |          ![The retail kit in Hebrew](docs/screenshots/kits/retail-he.webp)           |
+|       ![The office kit in Hebrew](docs/screenshots/kits/office-he.webp)        |           ![The hotel kit in Hebrew](docs/screenshots/kits/hotel-he.webp)            |
+| ![The community center kit in Hebrew](docs/screenshots/kits/community-he.webp) |       ![The synagogue kit in Hebrew](docs/screenshots/kits/synagogue-he.webp)        |
+| ![The meeting room kit in Hebrew](docs/screenshots/kits/meeting-room-he.webp)  | ![The closed on Shabbat kit in Hebrew](docs/screenshots/kits/shabbat-closed-he.webp) |
 
 </details>
 
@@ -99,6 +101,9 @@ English, and every picture in it is original art drawn for the project
 - **Scheduling**: switch layouts or playlists by days, hours and dates (a breakfast menu until
   11:00, a one-week sale, Fridays). Entries are ordered by priority, evaluated on each screen's
   own clock, and a weekly timeline shows what will play — and which entries never will.
+  **Shabbat and holidays**: a rule or a playlist item can show only on Shabbat and holidays, or
+  never on them, from candle lighting to havdalah at the organization's place (computed on the
+  server, decided by each screen offline).
 - **Operations**: a page per screen with what each zone shows right now, 24 h / 7 day uptime and
   a clock check (players correct a wrong device clock with the server time); e-mail alerts when a
   screen goes offline and when it is back; **proof-of-play reports** per content and date range,
@@ -108,8 +113,8 @@ English, and every picture in it is original art drawn for the project
   emergency alerts from a fire panel, update a text from a queue system, read screen status),
   and signed webhooks when a screen goes offline, an alert starts or a change waits for
   approval.
-- **Ready-made kits**: one click creates a designed screen: nine by trade (restaurant, café,
-  cinema, retail, office, hotel, community center, synagogue, meeting room) and three general ones (lobby, menu board,
+- **Ready-made kits**: one click creates a designed screen: ten by trade (restaurant, café,
+  cinema, retail, office, hotel, community center, synagogue, meeting room, closed on Shabbat) and three general ones (lobby, menu board,
   notice board), in Hebrew or English.
 - **Secure media library**: uploads are quarantined, scanned by ClamAV, re-encoded and stripped
   of metadata (EXIF/GPS) before use.

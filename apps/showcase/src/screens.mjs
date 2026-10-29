@@ -33,6 +33,7 @@ const PICTURES = {
   community: 0,
   synagogue: 0,
   'meeting-room': 0,
+  'shabbat-closed': 0,
 };
 
 rmSync(work, { recursive: true, force: true });
