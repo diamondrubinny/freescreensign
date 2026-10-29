@@ -83,6 +83,10 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
         );
         return;
       }
+      if (request.url?.startsWith('/moved-forecast')) {
+        response.writeHead(302, { location: '/forecast' }).end();
+        return;
+      }
       if (request.url?.startsWith('/forecast')) {
         response.writeHead(200, { 'content-type': 'application/json' }).end(
           JSON.stringify({
@@ -277,6 +281,29 @@ describe.runIf(integrationEnabled)('layouts, widgets and the content manifest', 
       });
     } finally {
       await plain.close();
+    }
+  });
+
+  it('does not follow redirects from the weather endpoint (security review, B2)', async () => {
+    // Private addresses are allowed for the operator's endpoint, so a redirect could lead
+    // anywhere inside the network.
+    const moved = await createHarness({ WEATHER_API_URL: `${feedBase}/moved-forecast` });
+    try {
+      const ownerId = await insertUser(moved.db, 'o@example.com');
+      const org = await insertOrg(moved.db, ownerId, 'O', false);
+      const owner = await login(moved.app, 'o@example.com');
+      const created = await owner.post(`/api/v1/orgs/${org}/widgets`, {
+        type: 'weather',
+        name: 'W',
+        config: { latitude: 32, longitude: 34, locationName: 'TLV' },
+      });
+      expect(created.statusCode, created.body).toBe(201);
+      const { widget } = created.json<{ widget: { id: string } }>();
+      const data = await owner.get(`/api/v1/orgs/${org}/widgets/${widget.id}/data`);
+      expect(data.statusCode).toBe(502);
+      expect(data.json()).toMatchObject({ error: { code: 'UPSTREAM_FAILED' } });
+    } finally {
+      await moved.close();
     }
   });
 

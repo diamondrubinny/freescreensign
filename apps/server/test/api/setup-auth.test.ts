@@ -241,8 +241,10 @@ describe.runIf(integrationEnabled)('registration and email verification', () => 
     });
     expect(blocked.json()).toMatchObject({ error: { code: 'EMAIL_NOT_VERIFIED' } });
 
-    const mail = h.mailer.lastTo('new@example.com');
-    expect(mail?.subject).toBe('Verify your Rubinny email address');
+    // Sent after the answer (finding A1).
+    await vi.waitFor(() => {
+      expect(h.mailer.lastTo('new@example.com')?.subject).toBe('Verify your Rubinny email address');
+    });
     const token = tokenFromMail(h.mailer, 'new@example.com');
     expect((await client.post('/api/v1/auth/verify-email', { token })).statusCode).toBe(200);
     expect((await client.post('/api/v1/auth/verify-email', { token })).statusCode).toBe(400);
@@ -297,6 +299,22 @@ describe.runIf(integrationEnabled)('registration and email verification', () => 
       .where('email', '=', 'fresh@example.com')
       .executeTakeFirstOrThrow();
     expect(user.email_verified_at).toBeNull();
+    // It gets a link to prove it (alerts go only to verified addresses).
+    await vi.waitFor(() => {
+      expect(h.mailer.lastTo('fresh@example.com')?.subject).toBe(
+        'אימות כתובת האימייל שלך ב-Rubinny',
+      );
+    });
+    const client = new Client(h.app);
+    const token = tokenFromMail(h.mailer, 'fresh@example.com');
+    expect((await client.post('/api/v1/auth/verify-email', { token })).statusCode).toBe(200);
+    await client.post('/api/v1/auth/login', {
+      email: 'fresh@example.com',
+      password: STRONG_PASSWORD,
+    });
+    expect((await client.get('/api/v1/auth/session')).json()).toMatchObject({
+      user: { emailVerified: true },
+    });
   });
 
   it('resend does not reveal account existence', async () => {

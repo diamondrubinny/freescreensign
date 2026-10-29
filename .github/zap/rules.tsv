@@ -1,2 +1,3 @@
 # ZAP baseline rules: <rule id>\t<IGNORE|WARN|FAIL>\t<reason>
 # Every IGNORE needs a reason. Unlisted rules are WARN; the CI summary fails on Medium/High.
+10116	IGNORE	(ZAP is Out of Date) The ZAP image is pinned to a version on purpose; updates come through review.

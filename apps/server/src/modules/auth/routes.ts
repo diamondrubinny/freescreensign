@@ -210,15 +210,21 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
       ipHmac: ipKey(request),
     });
 
-    if (!canSignIn) {
-      const token = await issueToken(ctx, user.id, 'verify_email');
-      await ctx.mailer.send(user.email, locale, {
-        kind: 'verify-email',
-        url: appLink(ctx, '/verify-email', token),
+    // An unproven address gets a link to prove it, also where it may sign in without one
+    // (alerts go only to verified addresses). Sent after the answer, as for an existing
+    // address, so the timing does not tell them apart (finding A1).
+    if (!verified && ctx.mailer.delivers) {
+      afterReply(request, async () => {
+        const token = await issueToken(ctx, user.id, 'verify_email');
+        await ctx.mailer.send(user.email, locale, {
+          kind: 'verify-email',
+          url: appLink(ctx, '/verify-email', token),
+        });
       });
-      return reply.status(202).send({ status: 'verification_required' });
     }
-    return reply.status(201).send({ status: 'registered' });
+    return canSignIn
+      ? reply.status(201).send({ status: 'registered' })
+      : reply.status(202).send({ status: 'verification_required' });
   });
 
   // ------------------------------------------------------------ verify email
