@@ -17,6 +17,7 @@ import { Loading } from '../components/Loading';
 import { PageHeading } from '../components/PageHeading';
 import { useFormErrors } from '../lib/use-form-errors';
 import { AiSettingsSection } from './AiSettingsSection';
+import { SacredSettingsSection } from './SacredSettingsSection';
 
 export function OrgSettingsPage() {
   const { t } = useTranslation();
@@ -138,6 +139,7 @@ export function OrgSettingsPage() {
         </Button>
         {save.isSuccess && <Alert variant="success">{t('common.saved')}</Alert>}
       </Form>
+      <SacredSettingsSection orgId={orgId} />
       <AiSettingsSection orgId={orgId} />
     </>
   );

@@ -440,7 +440,7 @@ export class Player {
       // Every zone plays its own playlist until the content or the schedule changes.
       const synced = Boolean(manifest.screen.wall);
       const showing = (item: PlayableItem) =>
-        itemShowing(item, this.now(), manifest.screen.timezone);
+        itemShowing(item, this.now(), manifest.screen.timezone, manifest.sacredTimes);
       await Promise.all(
         zones.map((zone) =>
           synced

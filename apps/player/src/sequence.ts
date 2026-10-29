@@ -11,6 +11,7 @@ import {
   type ManifestPlaylist,
   type ManifestV1,
   type ManifestWidget,
+  type SacredTimes,
 } from '@rubinny/shared';
 import { activeLayoutId } from './schedule';
 
@@ -33,9 +34,17 @@ export type PlayableItem = (
   windows?: ItemWindow[];
 };
 
-/** Whether the item shows now, on the screen's wall clock. */
-export function itemShowing(item: PlayableItem, now: Date, timeZone: string): boolean {
-  return (item.windows ?? []).every((window) => windowActive(window, now, timeZone));
+/**
+ * Whether the item shows now, on the screen's wall clock (and, for windows limited to or kept
+ * off Shabbat and holidays, by the periods in the manifest).
+ */
+export function itemShowing(
+  item: PlayableItem,
+  now: Date,
+  timeZone: string,
+  sacred?: SacredTimes,
+): boolean {
+  return (item.windows ?? []).every((window) => windowActive(window, now, timeZone, sacred));
 }
 
 const MAX_DEPTH = 8;

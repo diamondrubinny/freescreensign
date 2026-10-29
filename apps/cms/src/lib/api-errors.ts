@@ -17,6 +17,7 @@ const REASON_KEYS = [
   'out_of_bounds',
   'own_origin',
   'unavailable',
+  'sacred_unavailable',
 ] as const;
 type ReasonKey = (typeof REASON_KEYS)[number];
 

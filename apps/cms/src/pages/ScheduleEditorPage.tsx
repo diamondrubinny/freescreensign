@@ -20,11 +20,13 @@ import { Alert } from '../components/Alert';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/Dialog';
 import { Loading } from '../components/Loading';
+import { SacredField } from '../components/SacredField';
 import { PageHeading } from '../components/PageHeading';
 import { Card, inputClass, linkClass } from '../components/ui';
 import { useDuplicate } from '../lib/use-duplicate';
 import { useFormErrors } from '../lib/use-form-errors';
 import { useOrgRole } from '../lib/use-org-role';
+import { useSacredSettings } from '../lib/use-sacred';
 import { ScheduleTimeline, entryColor } from './schedule/ScheduleTimeline';
 
 /** An entry being edited; `key` keeps React state stable while entries move. */
@@ -48,6 +50,7 @@ const toInput = (entry: ScheduleEntryInput): ScheduleEntryInput => ({
   daysOfWeek: entry.daysOfWeek,
   timeFrom: entry.timeFrom,
   timeTo: entry.timeTo,
+  sacred: entry.sacred,
   enabled: entry.enabled,
 });
 
@@ -83,6 +86,8 @@ export function ScheduleEditorPage() {
     queryKey: ['playlists', orgId],
     queryFn: () => get<{ playlists: PlaylistSummary[] }>(`/api/v1/orgs/${orgId}/playlists`),
   });
+  const sacredSettings = useSacredSettings(orgId);
+  const sacredAvailable = sacredSettings.data ? sacredSettings.data.settings !== null : undefined;
 
   // Local editable copy (null = show the server version); saved in one PATCH.
   const [edited, setEdited] = useState<Draft | null>(null);
@@ -451,6 +456,17 @@ export function ScheduleEditorPage() {
                           </div>
                         </div>
 
+                        <SacredField
+                          id={id('sacred')}
+                          orgId={orgId}
+                          value={entry.sacred}
+                          available={sacredAvailable}
+                          error={fieldError(`${prefix}.sacred`)}
+                          onChange={(sacred) => {
+                            updateEntry(index, { sacred });
+                          }}
+                        />
+
                         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-3 dark:border-gray-800">
                           <label className="inline-flex min-h-11 items-center gap-2 font-medium">
                             <input
@@ -522,6 +538,7 @@ export function ScheduleEditorPage() {
                             daysOfWeek: [],
                             timeFrom: '08:00',
                             timeTo: '12:00',
+                            sacred: null,
                             enabled: true,
                           },
                         ],
@@ -549,6 +566,7 @@ export function ScheduleEditorPage() {
         </form>
 
         <ScheduleTimeline
+          orgId={orgId}
           rules={draft.entries}
           names={draft.entries.map((entry) => entry.name)}
           timeZone={timeZone}

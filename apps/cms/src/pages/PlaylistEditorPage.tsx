@@ -21,6 +21,7 @@ import { PageHeading } from '../components/PageHeading';
 import { formatDuration } from '../lib/format-bytes';
 import { useDuplicate } from '../lib/use-duplicate';
 import { useFormErrors } from '../lib/use-form-errors';
+import { useSacredSettings } from '../lib/use-sacred';
 import { ALWAYS, ItemWindowFields, useWindowSummary } from './playlist/ItemWindowFields';
 
 const DEFAULT_IMAGE_MS = 10_000;
@@ -63,6 +64,8 @@ export function PlaylistEditorPage() {
     queryFn: () => get<{ widgets: WidgetItem[] }>(`/api/v1/orgs/${orgId}/widgets`),
     enabled: canEdit,
   });
+  const sacredSettings = useSacredSettings(orgId);
+  const sacredAvailable = sacredSettings.data ? sacredSettings.data.settings !== null : undefined;
 
   // Local, editable copy of the items (null = show the server version); saved in one atomic PUT.
   const [items, setItems] = useState<PlaylistEntry[] | null>(null);
@@ -192,6 +195,7 @@ export function PlaylistEditorPage() {
                 'timeFrom',
                 'timeTo',
                 'daysOfWeek',
+                'sacred',
               ].some((field) => windowError(field));
               const open = windowOpen === index || hasWindowError;
               const when = summary(item.window);
@@ -335,6 +339,8 @@ export function PlaylistEditorPage() {
                       {open && (
                         <ItemWindowFields
                           idPrefix={`window-${String(index)}`}
+                          orgId={orgId}
+                          sacredAvailable={sacredAvailable}
                           name={item.name}
                           window={item.window ?? ALWAYS}
                           fieldError={windowError}

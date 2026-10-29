@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
-import type { ItemWindow, Locale, Role } from '@rubinny/shared';
+import type { ItemWindow, Locale, Role, SacredMode } from '@rubinny/shared';
 
 export interface User {
   id: string;
@@ -339,6 +339,8 @@ export interface ScheduleEntryInput {
   daysOfWeek: number[];
   timeFrom: string | null;
   timeTo: string | null;
+  /** Only on Shabbat and holidays, or not on them (null: always). */
+  sacred: SacredMode | null;
   enabled: boolean;
 }
 

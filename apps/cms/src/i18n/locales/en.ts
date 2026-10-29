@@ -101,6 +101,7 @@ export const en: Messages = {
     out_of_bounds: 'The zone extends beyond the canvas.',
     own_origin: 'This address belongs to this system and cannot be shown on a screen.',
     unavailable: 'Not available on this server.',
+    sacred_unavailable: 'Set a place for Shabbat and holidays in the organization settings first.',
     summary: 'Please fix the highlighted fields:',
   },
   errors: {
@@ -312,6 +313,42 @@ export const en: Messages = {
     offlineAlertMinutes: 'Minutes without a connection',
     offlineAlertMinutesHint: 'Between 5 and 1440 minutes.',
     create: 'Create a new organization',
+  },
+  sacred: {
+    title: 'Shabbat and holidays',
+    intro:
+      'Schedule rules and playlist items can show only on Shabbat and holidays, or not on them. The times come from the place: from candle lighting to the end of Shabbat or the holiday, including Yom Tov (not Chol HaMoed, Chanukah, Purim or fasts).',
+    disclaimer:
+      'These times are not a halachic ruling. Check the place, candle lighting minutes and havdalah method with a rabbi.',
+    statusOff: 'Not set. Set a place to use the "Shabbat and holidays" condition in rules.',
+    statusOn: 'Set for {{place}}.',
+    startOffset: 'Start before candle lighting (minutes)',
+    startOffsetHint: 'For example 30, to change the content before Shabbat. 0 to 180.',
+    endOffset: 'Continue after Shabbat ends (minutes)',
+    endOffsetHint: '0 to 180.',
+    save: 'Save setting',
+    saved: 'Saved. Screens will get the new times.',
+    remove: 'Turn off',
+    removeConfirm:
+      'Turn off Shabbat and holidays? Rules set to "Only on Shabbat and holidays" will not show, and rules set to "Not on Shabbat and holidays" will always show.',
+    removed: 'Turned off.',
+    upcoming: 'Coming up ({{zone}} time)',
+    upcomingEmpty: 'No Shabbat or holiday in the coming days.',
+    range: '{{from}} to {{to}}',
+    shabbat: 'Shabbat',
+    holiday: 'Holiday',
+    field: 'Shabbat and holidays',
+    fieldHint:
+      'Show only on Shabbat and holidays, or not on them. Combines with the days, hours and dates.',
+    modes: {
+      always: 'Always',
+      only: 'Only on Shabbat and holidays',
+      skip: 'Not on Shabbat and holidays',
+    },
+    needsPlace: 'To choose a condition, set a place for Shabbat and holidays.',
+    needsPlaceLink: 'Organization settings',
+    bandLegend: 'Striped band: Shabbat and holidays, from the organization settings.',
+    band: '{{label}}: {{from}}–{{to}}',
   },
   audit: {
     title: 'Audit log',

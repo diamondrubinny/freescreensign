@@ -11,6 +11,8 @@ import {
   weekStart,
   weekTimeline,
   winningRule,
+  zonedTime,
+  type SacredPeriod,
   type ScheduleRule,
 } from '@rubinny/shared';
 import { useEffect, useState } from 'react';
@@ -18,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert } from '../../components/Alert';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/ui';
+import { periodLabel, useSacredSettings, useSacredTimes } from '../../lib/use-sacred';
 
 /** Decorative entry colors (the entry name is always shown as text too). */
 export const ENTRY_COLORS = [
@@ -41,15 +44,30 @@ const utcDate = (date: string) => {
   return new Date(Date.UTC(y, m - 1, d));
 };
 
+/** The parts of Shabbat and holiday periods on a date, in minutes of that day. */
+function sacredBands(periods: readonly SacredPeriod[], date: string, timeZone: string) {
+  const dayStart = zonedTime(date, 0, timeZone);
+  const dayEnd = zonedTime(addDays(date, 1), 0, timeZone);
+  return periods.flatMap((period) => {
+    const start = Math.max(Date.parse(period.start), dayStart);
+    const end = Math.min(Date.parse(period.end), dayEnd);
+    if (start >= end) return [];
+    const minutes = (at: number) => localTime(new Date(at), timeZone).minutes;
+    return [{ period, from: minutes(start), to: end === dayEnd ? 1440 : minutes(end) }];
+  });
+}
+
 /**
  * The week as it will play: one row per day with a decorative bar and, below it, the same
  * information as text. Uses the shared scheduling rules, so it matches the player exactly.
  */
 export function ScheduleTimeline({
+  orgId,
   rules,
   names,
   timeZone,
 }: {
+  orgId: string;
   rules: readonly (ScheduleRule & { enabled: boolean })[];
   names: readonly string[];
   timeZone: string;
@@ -68,11 +86,16 @@ export function ScheduleTimeline({
 
   const local = localTime(now, timeZone);
   const start = addDays(weekStart(local.date), weekOffset * 7);
-  const days = weekTimeline(rules, start);
+  // Shabbat and holidays of the week (a day more on each side: the place's dates may differ).
+  const sacredSet = Boolean(useSacredSettings(orgId).data?.settings);
+  const sacredTimes = useSacredTimes(orgId, addDays(start, -1), 9, sacredSet).data?.times ?? null;
+  const sacred = sacredSet && sacredTimes ? { times: sacredTimes, timeZone } : null;
+  const days = weekTimeline(rules, start, sacred);
   const unused = unusedRules(rules, days);
   const nameOf = (rule: number | null) =>
     rule === null ? t('schedules.defaultContent') : names[rule] || t('schedules.unnamed');
-  const current = winningRule(rules, local);
+  const current = winningRule(rules, local, sacred?.times);
+  const labels = { shabbat: t('sacred.shabbat'), holiday: t('sacred.holiday') };
 
   const dayName = new Intl.DateTimeFormat(i18n.language, { weekday: 'long', timeZone: 'UTC' });
   const shortDate = new Intl.DateTimeFormat(i18n.language, {
@@ -145,6 +168,13 @@ export function ScheduleTimeline({
         </Alert>
       )}
 
+      {sacred && (
+        <p className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <span aria-hidden="true" className="sacred-band h-2.5 w-6 shrink-0 rounded-sm" />
+          {t('sacred.bandLegend')}
+        </p>
+      )}
+
       <Card className="p-4">
         {/* Hour scale for the bars (decorative). It follows the page direction like the bars:
             in Hebrew, time runs from right to left. */}
@@ -162,6 +192,7 @@ export function ScheduleTimeline({
           {days.map((day) => {
             const isToday = day.date === local.date;
             const scheduled = day.segments.filter((segment) => segment.rule !== null);
+            const bands = sacred ? sacredBands(sacred.times.periods, day.date, timeZone) : [];
             return (
               <li key={day.date} className="flex flex-col gap-1 py-2 sm:flex-row sm:items-start">
                 <p className="w-32 shrink-0 font-medium">
@@ -198,7 +229,39 @@ export function ScheduleTimeline({
                       />
                     )}
                   </div>
+                  {bands.length > 0 && (
+                    <div aria-hidden="true" className="relative h-2 overflow-hidden rounded">
+                      {bands.map((band) => (
+                        <div
+                          key={band.period.start}
+                          className="sacred-band absolute inset-y-0"
+                          style={{
+                            insetInlineStart: percent(band.from),
+                            width: percent(band.to - band.from),
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                   <ul className="text-sm">
+                    {bands.map((band) => (
+                      <li
+                        key={`sacred-${band.period.start}`}
+                        className="flex items-center gap-2 font-medium"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="sacred-band size-2.5 shrink-0 rounded-sm"
+                        />
+                        <span dir="auto">
+                          {t('sacred.band', {
+                            label: periodLabel(band.period, labels),
+                            from: formatMinutes(band.from),
+                            to: formatMinutes(band.to),
+                          })}
+                        </span>
+                      </li>
+                    ))}
                     {scheduled.length === 0 && (
                       <li className="text-gray-700 dark:text-gray-300">
                         {t('schedules.defaultAllDay')}

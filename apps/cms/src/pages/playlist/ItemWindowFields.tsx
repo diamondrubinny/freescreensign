@@ -6,6 +6,7 @@
 import { useTranslation } from 'react-i18next';
 import { localTime, windowEnded, type ItemWindow } from '@rubinny/shared';
 import { Button } from '../../components/Button';
+import { SacredField } from '../../components/SacredField';
 import { inputClass } from '../../components/ui';
 
 const small = `${inputClass} px-2! py-1.5!`;
@@ -50,6 +51,7 @@ export function useWindowSummary() {
     } else if (window.dateTo) {
       parts.push(t('playlists.window.until', { date: formatDate(window.dateTo) }));
     }
+    if (window.sacred) parts.push(t(`sacred.modes.${window.sacred}`));
     const today = localTime(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone).date;
     return { text: parts.join(' · '), ended: windowEnded(window, today) };
   };
@@ -58,12 +60,17 @@ export function useWindowSummary() {
 /** Dates, days and hours in which one playlist item is shown. */
 export function ItemWindowFields({
   idPrefix,
+  orgId,
+  sacredAvailable,
   name,
   window,
   onChange,
   fieldError,
 }: {
   idPrefix: string;
+  orgId: string;
+  /** Whether the organization has set its place for Shabbat and holidays. */
+  sacredAvailable: boolean | undefined;
   /** The item's name, for accessible labels. */
   name: string;
   window: ItemWindow;
@@ -223,6 +230,17 @@ export function ItemWindowFields({
           {error('dateTo')}
         </div>
       </div>
+
+      <SacredField
+        id={id('sacred')}
+        orgId={orgId}
+        value={window.sacred}
+        available={sacredAvailable}
+        error={fieldError('sacred')}
+        onChange={(sacred) => {
+          update({ sacred });
+        }}
+      />
 
       <div>
         <Button

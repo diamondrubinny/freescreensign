@@ -36,6 +36,7 @@ const entry = (patch: Record<string, unknown>) => ({
   daysOfWeek: [],
   timeFrom: null,
   timeTo: null,
+  sacred: null,
   enabled: true,
   ...patch,
 });
@@ -157,6 +158,7 @@ describe('schedule editor', () => {
         daysOfWeek: [5],
         timeFrom: '08:00',
         timeTo: '12:00',
+        sacred: null,
         enabled: true,
       },
       expect.objectContaining({ name: 'Lunch', timeFrom: '11:00' }),

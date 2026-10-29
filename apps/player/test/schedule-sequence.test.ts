@@ -203,6 +203,80 @@ describe('flattenPlaylist', () => {
   });
 });
 
+describe('Shabbat and holidays', () => {
+  const zone = { id: 'z', x: 0, y: 0, w: 10, h: 10, z: 0, playlistId: null };
+  // Candle lighting to havdalah in Jerusalem, 6–7 November 2026.
+  const sacredTimes = {
+    periods: [
+      {
+        start: '2026-11-06T14:05:00.000Z',
+        end: '2026-11-07T15:23:00.000Z',
+        kinds: ['shabbat' as const],
+        names: [],
+      },
+    ],
+    until: '2026-12-01T00:00:00.000Z',
+  };
+  const friday = new Date('2026-11-06T10:00:00Z');
+  const saturday = new Date('2026-11-07T10:00:00Z');
+  const tz = 'Asia/Jerusalem';
+
+  it('switches the layout from the periods in the manifest, offline', () => {
+    const m = manifest({
+      layouts: [
+        { id: 'default', width: 10, height: 10, zones: [zone] },
+        { id: 'closed', width: 10, height: 10, zones: [zone] },
+      ],
+      schedule: {
+        defaultLayoutId: 'default',
+        entries: [{ id: 's', layoutId: 'closed', priority: 1, sacred: 'only' }],
+      },
+      sacredTimes,
+    });
+    m.screen.timezone = tz;
+    expect(activeLayoutId(m, friday)).toBe('default');
+    expect(activeLayoutId(m, saturday)).toBe('closed');
+    // Without the periods (an old server), "only" never shows.
+    expect(activeLayoutId({ ...m, sacredTimes: undefined }, saturday)).toBe('default');
+  });
+
+  it('shows or skips items, and treats a time past the known periods as unknown', () => {
+    const window = { dateFrom: null, dateTo: null, daysOfWeek: [], timeFrom: null, timeTo: null };
+    const m = manifest({
+      playlists: [
+        {
+          id: 'p',
+          items: [
+            {
+              kind: 'media',
+              ref: 'm1',
+              durationMs: 1000,
+              transition: 'none',
+              window: { ...window, sacred: 'skip' },
+            },
+            {
+              kind: 'media',
+              ref: 'm2',
+              durationMs: 1000,
+              transition: 'none',
+              window: { ...window, sacred: 'only' },
+            },
+          ],
+        },
+      ],
+    });
+    const [weekday, shabbat] = flattenPlaylist(m, 'p');
+    expect(itemShowing(weekday!, friday, tz, sacredTimes)).toBe(true);
+    expect(itemShowing(shabbat!, friday, tz, sacredTimes)).toBe(false);
+    expect(itemShowing(weekday!, saturday, tz, sacredTimes)).toBe(false);
+    expect(itemShowing(shabbat!, saturday, tz, sacredTimes)).toBe(true);
+    // After `until` nothing is known: "skip" shows, "only" does not.
+    const later = new Date('2026-12-05T10:00:00Z');
+    expect(itemShowing(weekday!, later, tz, sacredTimes)).toBe(true);
+    expect(itemShowing(shabbat!, later, tz, sacredTimes)).toBe(false);
+  });
+});
+
 describe('syncedPosition (video walls)', () => {
   const items = [{ durationMs: 10_000 }, { durationMs: 5_000 }, { durationMs: 1_000 }];
 

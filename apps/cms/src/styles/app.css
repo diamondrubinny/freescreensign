@@ -144,3 +144,9 @@
     @apply px-4 py-3;
   }
 }
+
+/* Shabbat and holiday periods on the schedule timeline: a striped amber band, so it is told
+   apart by pattern as well as color (the period is also written out as text). */
+.sacred-band {
+  background: repeating-linear-gradient(135deg, #b45309 0 4px, #f59e0b 4px 8px);
+}
