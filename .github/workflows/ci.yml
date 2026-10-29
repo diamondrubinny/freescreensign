@@ -364,6 +364,18 @@ jobs:
           docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.16.1 \
             zap-baseline.py -t https://localhost/ -c rules.tsv -I -J zap.json -r zap.html
           python3 .github/zap/summary.py zap/zap.json
+      - name: Dynamic scan of the API, signed in (OWASP ZAP, passive)
+        # Every route from the access policy table, with the session of the E2E teacher (a viewer by then).
+        # The active scan (attacks) runs weekly on its own stack: zap-active.yml.
+        run: |
+          python3 .github/zap/session.py login yossi@example.com 'green turtles sing in the rain' > "$RUNNER_TEMP/zap-session.env"
+          . "$RUNNER_TEMP/zap-session.env"
+          pnpm --filter @rubinny/server exec tsx test/security/openapi.ts https://localhost "$ZAP_ORG" > zap/openapi.json
+          rm "$RUNNER_TEMP/zap-session.env" && chmod -R 777 zap
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.16.1 \
+            zap-api-scan.py -t /zap/wrk/openapi.json -f openapi -S -c rules.tsv -I -J zap-api.json -r zap-api.html \
+            -z "-config replacer.full_list(0).description=session -config replacer.full_list(0).enabled=true -config replacer.full_list(0).matchtype=REQ_HEADER -config replacer.full_list(0).matchstr=Cookie -config replacer.full_list(0).regex=false -config replacer.full_list(0).replacement=$ZAP_COOKIE"
+          python3 .github/zap/summary.py zap/zap-api.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

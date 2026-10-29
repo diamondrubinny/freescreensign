@@ -1,0 +1,67 @@
+name: ZAP active scan
+
+# Attacks every API route (SQL injection, XSS, path traversal, ...) with an admin session, on a
+# throwaway stack built from this commit. Weekly and on demand; fails on High risk alerts.
+# docs/phases/21-security-review.md, S4.
+
+on:
+  schedule:
+    - cron: '41 2 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zap-active
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    name: OWASP ZAP active API scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@rubinny/server..."
+      - name: Start the stack
+        working-directory: deploy
+        run: |
+          ./generate-env.sh
+          sed -i 's/^HSTS_MAX_AGE=.*/HSTS_MAX_AGE=0/' .env
+          docker compose up -d --build --wait --wait-timeout 900
+      - name: Admin account and API description
+        run: |
+          mkdir -p zap && cp .github/zap/rules.tsv zap/
+          python3 .github/zap/session.py setup "$(grep '^SETUP_TOKEN=' deploy/.env | cut -d= -f2)" > "$RUNNER_TEMP/zap-session.env"
+          . "$RUNNER_TEMP/zap-session.env"
+          pnpm --filter @rubinny/server exec tsx test/security/openapi.ts https://localhost "$ZAP_ORG" > zap/openapi.json
+          chmod -R 777 zap
+      - name: Active scan
+        run: |
+          . "$RUNNER_TEMP/zap-session.env" && rm "$RUNNER_TEMP/zap-session.env"
+          # -I: the summary below decides (fails on High alerts not accepted in rules.tsv).
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.16.1 \
+            zap-api-scan.py -t /zap/wrk/openapi.json -f openapi -c rules.tsv -I -J zap-active.json -r zap-active.html -T 80 \
+            -z "-config replacer.full_list(0).description=session -config replacer.full_list(0).enabled=true -config replacer.full_list(0).matchtype=REQ_HEADER -config replacer.full_list(0).matchstr=Cookie -config replacer.full_list(0).regex=false -config replacer.full_list(0).replacement=$ZAP_COOKIE"
+          python3 .github/zap/summary.py zap/zap-active.json high
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: zap-active-report
+          path: |
+            zap/*.html
+            zap/*.json
+          retention-days: 30
+          if-no-files-found: ignore
+      - name: Server logs
+        if: failure()
+        working-directory: deploy
+        run: docker compose logs server worker web

@@ -1,4 +1,6 @@
-"""Prints the ZAP baseline alerts and fails on Medium or High risk ones.
+"""Prints the ZAP alerts and fails on those at or above a risk (Medium by default).
+
+  summary.py <report.json> [medium|high]
 
 Accepted alerts are set to IGNORE (with a reason) in rules.tsv, so they never reach here.
 """
@@ -7,9 +9,11 @@ import json
 import sys
 
 RISK = {"0": "Info", "1": "Low", "2": "Medium", "3": "High"}
+THRESHOLD = {"medium": 2, "high": 3}
 
 with open(sys.argv[1], encoding="utf-8") as report:
     data = json.load(report)
+fail_at = THRESHOLD[sys.argv[2] if len(sys.argv) > 2 else "medium"]
 
 blocking = 0
 for site in data.get("site", []):
@@ -19,8 +23,8 @@ for site in data.get("site", []):
         print(f"[{RISK.get(risk, risk)}] {alert.get('pluginid')} {alert.get('name')} ({len(urls)} URLs)")
         for url in urls[:5]:
             print(f"    {url}")
-        if int(risk) >= 2:
+        if int(risk) >= fail_at:
             blocking += 1
 
-print(f"\n{blocking} Medium/High alert(s).")
+print(f"\n{blocking} alert(s) at {RISK[str(fail_at)]} risk or above.")
 sys.exit(1 if blocking else 0)
