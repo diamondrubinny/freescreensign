@@ -10,6 +10,7 @@ import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MediaRejectedError, processImage, processVideo } from '../../src/worker/processors.js';
 import { hasFfmpeg, jpegWithExif, mp4, probeTags } from './fixtures.js';
+import { run } from '../../src/worker/exec.js';
 
 let dir: string;
 beforeEach(async () => {
@@ -24,6 +25,24 @@ async function write(name: string, data: Buffer) {
   await writeFile(path, data);
   return path;
 }
+
+describe('run (media tools)', () => {
+  it('gives the tools no secrets from the worker environment (security review, D1)', async () => {
+    process.env.RUBINNY_TEST_SECRET = 'must-not-leak';
+    try {
+      const { stdout } = await run('env', [], { timeoutMs: 5000 });
+      expect(stdout).not.toContain('must-not-leak');
+      expect(
+        stdout
+          .trim()
+          .split('\n')
+          .map((line) => line.split('=')[0]),
+      ).toEqual(['PATH']);
+    } finally {
+      delete process.env.RUBINNY_TEST_SECRET;
+    }
+  });
+});
 
 describe('processImage', () => {
   it('strips EXIF metadata and applies orientation', async () => {

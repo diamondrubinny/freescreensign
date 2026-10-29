@@ -78,8 +78,11 @@ export async function postWebhook(
   return response.status;
 }
 
+/** Shown to admins: a refused address reads like any failed connection (finding B3). */
 const failureText = (error: unknown) =>
-  error instanceof SafeFetchError ? error.message.slice(0, 200) : 'Request failed';
+  error instanceof SafeFetchError && error.reason !== 'blocked_address'
+    ? error.message.slice(0, 200)
+    : 'Request failed';
 
 async function tellAdmins(deps: Deps, orgId: string, name: string): Promise<void> {
   const admins = await deps.db

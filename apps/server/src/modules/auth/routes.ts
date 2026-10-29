@@ -93,7 +93,7 @@ async function findActiveUserByEmail(ctx: AppContext, email: string) {
 async function sendSecurityNotice(
   ctx: AppContext,
   user: User,
-  event: 'password-changed' | 'mfa-enabled' | 'mfa-disabled',
+  event: 'password-changed' | 'mfa-enabled' | 'mfa-disabled' | 'mfa-attempts',
 ) {
   await ctx.mailer.send(user.email, asLocale(user.locale), { kind: 'security-notice', event });
 }
@@ -330,11 +330,25 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('deleted_at', 'is', null)
       .executeTakeFirst();
     if (!user?.mfa_enabled_at) throw invalid;
+    // Wrong codes in a day, never reset: without it, someone with the password could keep
+    // guessing at a steady pace for months (security review, finding A5).
+    try {
+      await ctx.limiter.check(LIMITS.mfaFailuresUserDay, user.id);
+    } catch (error) {
+      // The first refusal of the day tells the owner: someone else knows the password.
+      const first = await ctx.limiter.hit(LIMITS.mfaLockNoticeUser, user.id).then(
+        () => true,
+        () => false,
+      );
+      if (first) afterReply(request, () => sendSecurityNotice(ctx, user, 'mfa-attempts'));
+      throw error;
+    }
 
     const ok = body.code
       ? await verifyUserTotp(ctx, user, body.code)
       : await consumeRecoveryCode(ctx, user.id, body.recoveryCode ?? '');
     if (!ok) {
+      await ctx.limiter.hit(LIMITS.mfaFailuresUserDay, user.id).catch(() => undefined);
       await audit(ctx.db, {
         action: 'auth.mfa.failure',
         actorUserId: user.id,

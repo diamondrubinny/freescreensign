@@ -9,7 +9,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import sharp from 'sharp';
 import { ScannerUnavailableError, scanStream } from '../../src/lib/clamav.js';
 import { HashingCounter, FileTooLargeError, sniffStream } from '../../src/lib/sniff.js';
-import { contentDisposition, displayName, sanitizeFilename } from '../../src/media/names.js';
+import {
+  contentDisposition,
+  displayName,
+  downloadName,
+  sanitizeFilename,
+} from '../../src/media/names.js';
 import { parseRange } from '../../src/media/range.js';
 import { pipeline } from 'node:stream/promises';
 import { Writable } from 'node:stream';
@@ -168,6 +173,14 @@ describe('file names', () => {
     expect(sanitizeFilename('a\u0000b\nc.png')).toBe('abc.png');
     expect(sanitizeFilename('   ')).toBe('file');
     expect(sanitizeFilename('x'.repeat(400))).toHaveLength(255);
+  });
+
+  it('names downloads by the real type (security review, D7)', () => {
+    expect(downloadName('report.html', 'video/mp4')).toBe('report.mp4');
+    expect(downloadName('תפריט בוקר.JPEG', 'image/jpeg')).toBe('תפריט בוקר.jpg');
+    expect(downloadName('photo', 'image/png')).toBe('photo.png');
+    expect(downloadName('.html', 'image/webp')).toBe('.html.webp');
+    expect(downloadName('x.svg', 'image/svg+xml')).toBe('x.bin');
   });
 
   it('derives display names and safe Content-Disposition values', () => {

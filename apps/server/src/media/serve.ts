@@ -5,7 +5,7 @@
 
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Storage } from '../lib/storage.js';
-import { contentDisposition } from './names.js';
+import { contentDisposition, downloadName } from './names.js';
 import { parseRange } from './range.js';
 
 export interface StoredFile {
@@ -29,7 +29,10 @@ export async function sendStoredFile(
     .header('content-type', file.contentType)
     .header('accept-ranges', 'bytes')
     .header('cache-control', file.cacheControl)
-    .header('content-disposition', contentDisposition(file.filename))
+    .header(
+      'content-disposition',
+      contentDisposition(downloadName(file.filename, file.contentType)),
+    )
     // Even if a browser opens the file directly, nothing in it may run.
     .header(
       'content-security-policy',

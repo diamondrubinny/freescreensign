@@ -10,7 +10,10 @@ export type MailTemplate =
   | { kind: 'reset-password'; url: string }
   | { kind: 'account-exists'; loginUrl: string; resetUrl: string }
   | { kind: 'invitation'; url: string; orgName: string; inviterName: string }
-  | { kind: 'security-notice'; event: 'password-changed' | 'mfa-enabled' | 'mfa-disabled' }
+  | {
+      kind: 'security-notice';
+      event: 'password-changed' | 'mfa-enabled' | 'mfa-disabled' | 'mfa-attempts';
+    }
   | { kind: 'screens-offline'; orgName: string; screens: string[]; minutes: number; url: string }
   | { kind: 'screens-online'; orgName: string; screens: string[]; url: string }
   | { kind: 'webhook-disabled'; orgName: string; webhook: string; url: string }
@@ -208,6 +211,10 @@ function copyFor(template: MailTemplate, locale: Locale): Copy {
         'mfa-disabled': {
           he: 'אימות דו-שלבי בוטל בחשבונך.',
           en: 'Two-factor authentication was disabled.',
+        },
+        'mfa-attempts': {
+          he: 'היו בחשבונך ניסיונות כושלים רבים להקליד קוד אימות דו-שלבי, אחרי סיסמה נכונה. הכניסה עם קוד חסומה עד מחר.',
+          en: 'There were many failed attempts at your two-factor code, after a correct password. Signing in with a code is blocked until tomorrow.',
         },
       } as const;
       return he

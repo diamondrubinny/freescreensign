@@ -16,6 +16,13 @@ export class ExecError extends Error {
 }
 
 /**
+ * Only what the tools need to start. The worker's own environment holds the database URL
+ * and storage keys: a parser exploited by an uploaded file must not find them (security
+ * review, finding D1).
+ */
+const TOOL_ENV = { PATH: process.env.PATH ?? '/usr/local/bin:/usr/bin:/bin' };
+
+/**
  * Runs a binary without a shell (no injection), with a hard timeout and bounded
  * output buffers. Arguments are passed as an array, never interpolated.
  */
@@ -26,7 +33,11 @@ export function run(
 ): Promise<{ stdout: string; stderr: string }> {
   const maxOutput = options.maxOutputBytes ?? 1024 * 1024;
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], shell: false });
+    const child = spawn(command, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: false,
+      env: TOOL_ENV,
+    });
     let stdout = '';
     let stderr = '';
     const timer = setTimeout(() => {

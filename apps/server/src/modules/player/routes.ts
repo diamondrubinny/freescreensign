@@ -240,8 +240,16 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
       socket.close(4401, 'authentication timeout');
     }, WS_AUTH_TIMEOUT_MS);
 
+    // One authentication message per connection: further messages before the answer would
+    // each cost a database lookup (security review, finding C3).
+    let authenticating = false;
     socket.on('message', (raw: Buffer) => {
       if (screenId) return; // players only listen after authenticating
+      if (authenticating) {
+        socket.close(4401, 'unauthorized');
+        return;
+      }
+      authenticating = true;
       void (async () => {
         let token = '';
         try {

@@ -375,6 +375,17 @@ describe.runIf(integrationEnabled)('screens, pairing and the player API', () => 
     expect(await closing).toBe(4401);
   });
 
+  it('takes one authentication message per websocket (security review, C3)', async () => {
+    const { deviceToken } = await pair();
+    await h.app.ready();
+    const ws = await h.app.injectWS('/player/v1/ws');
+    const closing = closed(ws);
+    // A burst of messages: only the first is looked up, the second closes the socket.
+    ws.send(JSON.stringify({ type: 'auth', token: deviceToken }));
+    ws.send(JSON.stringify({ type: 'auth', token: deviceToken }));
+    expect(await closing).toBe(4401);
+  });
+
   it('isolates screens and playlists between organizations', async () => {
     const { screenId } = await pair();
     const playlist = (await editor.post(api('/playlists'), { name: 'Mine' })).json<{

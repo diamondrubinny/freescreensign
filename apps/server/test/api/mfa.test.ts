@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   Client,
   STRONG_PASSWORD,
@@ -107,6 +107,40 @@ describe.runIf(integrationEnabled)('two-factor authentication (TOTP)', () => {
     }
     expect(statuses.slice(0, 5)).toEqual([401, 401, 401, 401, 401]);
     expect(statuses.slice(5).every((s) => s === 429 || s === 401)).toBe(true);
+  });
+
+  it('caps wrong codes per day, then tells the owner once (security review, A5)', async () => {
+    const { secret } = await enableMfa(await login(h.app, 'dana@example.com'));
+    const first = await startLogin();
+    expect(
+      (
+        await first.client.post('/api/v1/auth/mfa/verify', {
+          mfaToken: first.mfaToken,
+          code: '000000',
+        })
+      ).statusCode,
+    ).toBe(401);
+    // As if 30 wrong codes had been typed today (they never reset).
+    const [key] = await h.redis.keys('*mfa-failures-user-day:*');
+    expect(await h.redis.get(key!)).toBe('1');
+    await h.redis.set(key!, '30', 'KEEPTTL');
+    const sentBefore = h.mailer.sent.length;
+    for (let i = 0; i < 2; i++) {
+      const next = await startLogin();
+      const res = await next.client.post('/api/v1/auth/mfa/verify', {
+        mfaToken: next.mfaToken,
+        code: currentCode(secret, 30_000),
+      });
+      // Even the right code waits until tomorrow.
+      expect(res.statusCode).toBe(429);
+    }
+    await vi.waitFor(() => {
+      expect(h.mailer.sent.length).toBe(sentBefore + 1);
+    });
+    expect(h.mailer.lastTo('dana@example.com')?.template).toEqual({
+      kind: 'security-notice',
+      event: 'mfa-attempts',
+    });
   });
 
   it('accepts each recovery code once', async () => {

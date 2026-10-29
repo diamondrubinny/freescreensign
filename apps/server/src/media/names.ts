@@ -23,6 +23,25 @@ export function displayName(filename: string): string {
   return (withoutExt || filename).slice(0, 200);
 }
 
+/** The extension a served file gets, by its actual (sniffed and re-encoded) type. */
+const EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+};
+
+/**
+ * The name to download a file as: the uploader's name with the extension of the file's real
+ * type, so "report.html" holding a video is saved as "report.mp4" and never opened as a web
+ * page (security review, finding D7).
+ */
+export function downloadName(filename: string, contentType: string): string {
+  const extension = EXTENSIONS[contentType] ?? 'bin';
+  return `${displayName(filename).replace(/\.+$/, '') || 'file'}.${extension}`;
+}
+
 /** RFC 6266 / RFC 5987 Content-Disposition value with an ASCII fallback. */
 export function contentDisposition(
   filename: string,

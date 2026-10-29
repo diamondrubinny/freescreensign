@@ -119,6 +119,14 @@ describe.runIf(integrationEnabled)('login and sessions', () => {
     // Only the hash is stored.
     const stored = await h.db.selectFrom('sessions').select('id_hash').execute();
     expect(stored.map((s) => s.id_hash)).not.toContain(cookie?.value);
+    // No cache keeps API answers (security review, E2).
+    expect(res.headers['cache-control']).toBe('no-store');
+    const me = await h.app.inject({
+      url: '/api/v1/me',
+      headers: { cookie: `rubinny_session=${cookie?.value ?? ''}` },
+    });
+    expect(me.statusCode).toBe(200);
+    expect(me.headers['cache-control']).toBe('no-store');
   });
 
   it('returns the same error for unknown users and wrong passwords', async () => {

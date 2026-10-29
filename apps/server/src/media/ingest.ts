@@ -88,7 +88,6 @@ export async function ingestMedia(
       'application/octet-stream',
     );
     if (input.truncated?.()) throw new FileTooLargeError();
-    assertQuota(ctx, await usedBytes(ctx, input.orgId, id), counter.bytes);
   } catch (error) {
     stream.resume();
     await discard();
@@ -100,17 +99,32 @@ export async function ingestMedia(
     throw error;
   }
 
-  const row = await ctx.db
-    .updateTable('media')
-    .set({
-      status: 'queued',
-      size_bytes: counter.bytes,
-      sha256: counter.digest(),
-      updated_at: new Date(),
-    })
-    .where('id', '=', id)
-    .returningAll()
-    .executeTakeFirstOrThrow();
+  // Uploads of one organization that finish together are checked one after another, each
+  // seeing the others' sizes: otherwise all of them pass a check made in parallel (security
+  // review, finding D2).
+  let row: Media;
+  try {
+    row = await ctx.db.transaction().execute(async (trx) => {
+      await sql`select pg_advisory_xact_lock(hashtext(${`media-quota:${input.orgId}`}))`.execute(
+        trx,
+      );
+      assertQuota(ctx, await usedBytes({ db: trx }, input.orgId, id), counter.bytes);
+      return trx
+        .updateTable('media')
+        .set({
+          status: 'queued',
+          size_bytes: counter.bytes,
+          sha256: counter.digest(),
+          updated_at: new Date(),
+        })
+        .where('id', '=', id)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+    });
+  } catch (error) {
+    await discard();
+    throw error;
+  }
   await queue.enqueue({ type: 'process', mediaId: id });
   await audit(ctx.db, {
     action: 'media.uploaded',
@@ -128,7 +142,7 @@ export async function ingestMedia(
 }
 
 /** Bytes used by an organization's live media (blocked and failed files don't count). */
-export async function usedBytes(ctx: AppContext, orgId: string, excludeId?: string) {
+export async function usedBytes(ctx: Pick<AppContext, 'db'>, orgId: string, excludeId?: string) {
   let query = ctx.db
     .selectFrom('media')
     .select(sql<string>`coalesce(sum(size_bytes), 0)`.as('total'))

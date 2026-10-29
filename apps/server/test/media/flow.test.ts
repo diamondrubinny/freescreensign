@@ -4,9 +4,12 @@
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
 import { randomUUID } from 'node:crypto';
+import { PassThrough } from 'node:stream';
 import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { AppContext } from '../../src/context.js';
 import { Storage } from '../../src/lib/storage.js';
+import { ingestMedia } from '../../src/media/ingest.js';
 import { processMediaJob } from '../../src/worker/media-job.js';
 import {
   type Client,
@@ -243,6 +246,46 @@ describe.runIf(mediaIntegrationEnabled)('media upload pipeline (S3 + ClamAV + wo
     const second = await editor.upload(mediaUrl(), 'two.png', big, 'image/png');
     expect(second.statusCode).toBe(403);
     expect(second.json()).toMatchObject({ error: { code: 'QUOTA_EXCEEDED' } });
+  }, 60_000);
+
+  it('checks the quota of uploads finishing together one by one (security review, D2)', async () => {
+    let captured: AppContext | undefined;
+    const image = await png();
+    h = await createHarness(
+      { MEDIA_ORG_QUOTA_BYTES: String(Math.round(image.length * 1.5)) },
+      {
+        media: true,
+        extraRoutes: (_app, ctx) => {
+          captured = ctx;
+        },
+      },
+    );
+    const userId = await insertUser(h.db, 'owner@example.com');
+    orgId = await insertOrg(h.db, userId, 'Org', false);
+    const ctx = captured!;
+    // Four uploads that finish at the same moment: each write to storage waits for the others.
+    const storage = ctx.media!.storage;
+    const put = storage.put.bind(storage);
+    let release: () => void = () => undefined;
+    const allStored = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let stored = 0;
+    storage.put = async (...args: Parameters<Storage['put']>) => {
+      await put(...args);
+      if (++stored === 4) release();
+      await allStored;
+    };
+    const streams = Array.from({ length: 4 }, () => new PassThrough());
+    const settled = Promise.allSettled(
+      streams.map((stream, i) =>
+        ingestMedia(ctx, ctx.media!, { orgId, userId, filename: `${String(i)}.png`, stream }),
+      ),
+    );
+    for (const stream of streams) stream.end(image);
+    const results = await settled;
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(await h.db.selectFrom('media').select('id').execute()).toHaveLength(1);
   }, 60_000);
 
   it('isolates organizations and enforces roles', async () => {

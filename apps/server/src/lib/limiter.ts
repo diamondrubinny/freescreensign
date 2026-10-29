@@ -113,6 +113,9 @@ export const LIMITS = {
   loginEmail: { name: 'login-email', max: 5, windowSeconds: 900 },
   mfaChallenge: { name: 'mfa-challenge', max: 5, windowSeconds: 300 },
   mfaUser: { name: 'mfa-user', max: 10, windowSeconds: 900 },
+  /** Wrong second-factor codes per user in a day (never reset), and one notice a day. */
+  mfaFailuresUserDay: { name: 'mfa-failures-user-day', max: 30, windowSeconds: 86_400 },
+  mfaLockNoticeUser: { name: 'mfa-lock-notice-user', max: 1, windowSeconds: 86_400 },
   registerIp: { name: 'register-ip', max: 5, windowSeconds: 3600 },
   emailSendIp: { name: 'email-send-ip', max: 10, windowSeconds: 3600 },
   emailSendAddress: { name: 'email-send-address', max: 3, windowSeconds: 3600 },

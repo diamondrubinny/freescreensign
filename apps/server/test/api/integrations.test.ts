@@ -567,3 +567,36 @@ describe.runIf(integrationEnabled)('integrations: API keys and webhooks', () => 
     expect(removed.webhookDeliveries).toBe(1);
   });
 });
+
+describe.runIf(integrationEnabled)('webhooks to refused addresses', () => {
+  it('reads like any failed connection, so internal names cannot be probed (security review, B3)', async () => {
+    const h = await createHarness();
+    try {
+      const orgId = await insertOrg(
+        h.db,
+        await insertUser(h.db, 'owner@hooks.example'),
+        'H',
+        false,
+      );
+      const owner = await login(h.app, 'owner@hooks.example');
+      const keys = new KeyRing(h.env.ENCRYPTION_KEY);
+      const id = crypto.randomUUID();
+      await h.db
+        .insertInto('webhooks')
+        .values({
+          id,
+          org_id: orgId,
+          name: 'Internal',
+          // Resolves to a loopback address: refused by the outbound request guard.
+          url: 'https://localhost/hook',
+          events: ['alert.started'],
+          secret_enc: keys.encrypt('whsec_x', secretAad(id)),
+        })
+        .execute();
+      const res = await owner.post(`/api/v1/orgs/${orgId}/webhooks/${id}/test`);
+      expect(res.json()).toEqual({ ok: false, status: null, error: 'network' });
+    } finally {
+      await h.close();
+    }
+  });
+});

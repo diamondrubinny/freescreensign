@@ -131,6 +131,11 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     reply.header('x-request-id', request.id);
     // The attribution (LICENSING.md); no version, so it tells attackers nothing.
     reply.header('x-powered-by', POWERED_BY_HEADER);
+    // API answers hold account data, keys shown once and the like: no browser or proxy
+    // cache keeps them, unless a route chose its own (media files; security review, E2).
+    if (request.url.startsWith('/api/') && !reply.hasHeader('cache-control')) {
+      reply.header('cache-control', 'no-store');
+    }
   });
 
   await app.register(helmet, {

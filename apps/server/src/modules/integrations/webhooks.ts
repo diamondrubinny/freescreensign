@@ -231,10 +231,14 @@ export function webhookRoutes(app: FastifyInstance, ctx: AppContext) {
       );
       return { ok: true, status, error: null };
     } catch (error) {
+      // "Address not allowed" would tell which internal names exist: it is reported as a
+      // failed connection, and the real reason is only logged (security review, B3).
+      const reason = error instanceof SafeFetchError ? error.reason : 'network';
+      if (reason === 'blocked_address') request.log.info({ reason }, 'webhook test refused');
       return {
         ok: false,
         status: error instanceof SafeFetchError ? (error.status ?? null) : null,
-        error: error instanceof SafeFetchError ? error.reason : 'network',
+        error: reason === 'blocked_address' ? 'network' : reason,
       };
     }
   });

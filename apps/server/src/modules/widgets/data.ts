@@ -112,8 +112,10 @@ async function fetchFresh(
   if (!endpoint) throw new HttpError(404, 'NOT_FOUND', 'Weather is not configured');
   const weather = config as WidgetConfig<'weather'>;
   const response = await safeFetch(weatherRequestUrl(endpoint, weather, ctx.env.WEATHER_API_KEY), {
-    // The endpoint is chosen by the operator (it may be a self-hosted instance).
+    // The endpoint is chosen by the operator (it may be a self-hosted instance). Private
+    // addresses are allowed for it, so it may not redirect anywhere (security review, B2).
     allowPrivate: true,
+    maxRedirects: 0,
     accept: 'application/json',
   });
   return parseWeather(JSON.parse(response.body.toString('utf8')) as unknown, weather);

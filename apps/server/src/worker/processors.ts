@@ -37,6 +37,22 @@ export interface ProcessedMedia {
 sharp.concurrency(1);
 sharp.cache({ memory: 64, files: 0, items: 50 });
 
+/** Seconds one image operation may take (a small file can hold a huge solid image). */
+const SHARP_TIMEOUT_SECONDS = 60;
+/** At most this long for one remux, whatever duration the file claims. */
+const MAX_REMUX_MS = 10 * 60_000;
+
+/**
+ * Arguments for an ffmpeg/ffprobe input: the sniffed container only, and local files only
+ * (no network, no playlists pointing at other files; security review, finding D3).
+ */
+const readOnlyInput = (demuxer: 'mov' | 'matroska') => [
+  '-protocol_whitelist',
+  'file',
+  '-f',
+  demuxer,
+];
+
 /**
  * Re-encodes an image: applies EXIF orientation, strips all metadata (EXIF/GPS/XMP)
  * and rejects decompression bombs via limitInputPixels.
@@ -67,13 +83,14 @@ export async function processImage(
   const thumbnailPath = join(workDir, 'thumbnail.webp');
   try {
     // sharp drops metadata by default (no .keepMetadata()).
-    const pipeline = open().rotate();
+    const pipeline = open().rotate().timeout({ seconds: SHARP_TIMEOUT_SECONDS });
     if (mime === 'image/png') await pipeline.png({ compressionLevel: 9 }).toFile(outputPath);
     else if (mime === 'image/webp') await pipeline.webp({ quality: 90 }).toFile(outputPath);
     else await pipeline.jpeg({ quality: 90, mozjpeg: true }).toFile(outputPath);
 
     const info = await sharp(outputPath).metadata();
     await sharp(outputPath)
+      .timeout({ seconds: SHARP_TIMEOUT_SECONDS })
       .resize({ width: THUMBNAIL_WIDTH, withoutEnlargement: true })
       .webp({ quality: 75 })
       .toFile(thumbnailPath);
@@ -103,11 +120,22 @@ export async function processVideo(
   workDir: string,
   outputExt: 'mp4' | 'webm',
 ): Promise<ProcessedMedia> {
+  // The container the upload was sniffed as (MP4 and MOV share a demuxer).
+  const demuxer = outputExt === 'mp4' ? 'mov' : 'matroska';
   let probe: { streams?: ProbeStream[]; format?: { duration?: string } };
   try {
     const { stdout } = await run(
       'ffprobe',
-      ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', inputPath],
+      [
+        '-v',
+        'error',
+        ...readOnlyInput(demuxer),
+        '-print_format',
+        'json',
+        '-show_streams',
+        '-show_format',
+        inputPath,
+      ],
       { timeoutMs: 60_000 },
     );
     probe = JSON.parse(stdout) as typeof probe;
@@ -131,7 +159,8 @@ export async function processVideo(
   const outputPath = join(workDir, `output.${outputExt}`);
   const framePath = join(workDir, 'frame.png');
   const thumbnailPath = join(workDir, 'thumbnail.webp');
-  const timeoutMs = Math.max(120_000, durationMs / 4);
+  // The duration comes from the file itself: the time allowed is capped (finding D4).
+  const timeoutMs = Math.min(Math.max(120_000, durationMs / 4), MAX_REMUX_MS);
   try {
     await run(
       'ffmpeg',
@@ -141,6 +170,7 @@ export async function processVideo(
         '-loglevel',
         'error',
         '-y',
+        ...readOnlyInput(demuxer),
         '-i',
         inputPath,
         // Keep first video + optional first audio stream only; drop data/subtitle streams.
@@ -170,6 +200,7 @@ export async function processVideo(
         '-y',
         '-ss',
         seek,
+        ...readOnlyInput(demuxer),
         '-i',
         outputPath,
         '-frames:v',
@@ -179,6 +210,7 @@ export async function processVideo(
       { timeoutMs: 60_000 },
     );
     await sharp(framePath, { limitInputPixels: MAX_IMAGE_PIXELS })
+      .timeout({ seconds: SHARP_TIMEOUT_SECONDS })
       .resize({ width: THUMBNAIL_WIDTH, withoutEnlargement: true })
       .webp({ quality: 75 })
       .toFile(thumbnailPath);
