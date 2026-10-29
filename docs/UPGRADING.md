@@ -21,7 +21,7 @@ by the release workflow of this repository. To verify them before running:
 
 ```bash
 for image in server worker web; do
-  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.9.0" \
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.10.0" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@'
 done

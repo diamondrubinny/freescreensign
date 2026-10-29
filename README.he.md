@@ -205,7 +205,7 @@ curl -k https://localhost/health  # {"status":"ok"}
 - [שלב 6 — תזמון](docs/phases/06-scheduling.md) · [שלב 7 — תפעול](docs/phases/07-ops.md) · [שלב 8 — נגנים לכל מכשיר](docs/phases/08-wrappers.md) · [שלב 9 — הקשחה ושחרור](docs/phases/09-release.md) · [התקנת נגנים](docs/players.he.md) · [שדרוג התקנה קיימת](docs/UPGRADING.md)
 - [תרומה לפרויקט](CONTRIBUTING.md) · [אבטחה](SECURITY.md) · [רישוי](LICENSING.md)
 
-**עכשיו:** גרסה v0.9.0. נוספו בה אינטגרציות: מפתחות API למערכות אחרות ו-Webhooks חתומים ([מדריך](docs/INTEGRATIONS.md)). ב-0.8.0 נוספו חדרי ישיבות עם הזמנה במסך, יומן אירועים, מדריך בניין וזמני תפילה, ושתי ערכות חדשות ([תוכנית ותוצאות](docs/phases/18-rooms-directory-calendar-zmanim.md)).
+**עכשיו:** גרסה v0.10.0. נוסף בה תזמון לפי שבת וחג: תוכן שמוצג רק בשבת ובחג, או לא מוצג בהם, לפי המקום של הארגון, וערכת "סגור בשבת" ([תוכנית ותוצאות](docs/phases/20-shabbat-holiday-scheduling.md)). ב-0.9.0 נוספו אינטגרציות: מפתחות API למערכות אחרות ו-Webhooks חתומים ([מדריך](docs/INTEGRATIONS.md)). ב-0.8.0 נוספו חדרי ישיבות עם הזמנה במסך, יומן אירועים, מדריך בניין וזמני תפילה, ושתי ערכות חדשות ([תוכנית ותוצאות](docs/phases/18-rooms-directory-calendar-zmanim.md)).
 
 ב-0.7.1 נוסף הקרדיט "מופעל על ידי Rubinny · קוד פתוח" בכל חלקי המערכת ([תוכנית ותוצאות](docs/phases/16-attribution.md)).
 

@@ -210,8 +210,10 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-Now: v0.9.0, which adds integrations: API keys for other systems and signed webhooks
-([guide](docs/INTEGRATIONS.md)). v0.8.0 added meeting rooms with booking at the screen, an events calendar, a
+Now: v0.10.0, which adds scheduling by Shabbat and holidays (content only on them, or never on
+them, by the organization's place) and a "Closed on Shabbat" kit
+([plan and results](docs/phases/20-shabbat-holiday-scheduling.md)). v0.9.0 added integrations: API
+keys for other systems and signed webhooks ([guide](docs/INTEGRATIONS.md)). v0.8.0 added meeting rooms with booking at the screen, an events calendar, a
 building directory and synagogue times, with two new kits
 ([plan and results](docs/phases/18-rooms-directory-calendar-zmanim.md)). 0.7.1 added the
 attribution "Powered by Rubinny · Open source" in every part of Rubinny
