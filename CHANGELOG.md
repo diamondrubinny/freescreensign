@@ -6,6 +6,45 @@ All notable changes to Rubinny. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-29
+
+Security fixes from an internal security review, and dynamic scans of every API route.
+Upgrading from 0.10.0: see [docs/UPGRADING.md](docs/UPGRADING.md#0100--0110) (room PINs,
+verified addresses).
+
+### Security
+
+- An internal review of 0.10.0 (docs/SECURITY-REVIEW.md, docs/phases/21-security-review.md):
+  1 high, 9 medium and 16 low findings; all high and medium ones are fixed, each with a test.
+  It is not a penetration test, which is still required before v1.0.
+- A calendar feed can no longer freeze the server with a recurrence rule that never matches,
+  nor a feed title with a long run of `<`.
+- Sign-up, password reset and resending the verification e-mail answer the same, in the same
+  time, whether or not the address has an account.
+- An address counts as verified only when it was proven; where verification is not required
+  to sign in, registering still sends the link.
+- Turning two-step verification on or off ends the user's other sessions; at most 30 wrong
+  second-factor codes a day, with an e-mail to the owner.
+- Room PINs: new ones have 6 to 8 digits, and wrong PINs are counted per screen and per
+  organization without being reset by a right one. The limit on new pairing codes can no
+  longer be skipped with a changed URL.
+- Media: ffmpeg and ffprobe run with only `PATH` in their environment, on local files with
+  the expected format, and time bounded; the storage quota holds under parallel uploads;
+  downloads are named with the real type's extension.
+- Weather requests do not follow redirects; webhook errors no longer tell an internal address
+  from an unreachable one; one sign-in message per player websocket; `Cache-Control:
+no-store` on API answers.
+- `fast-uri` 4.2.3 and 3.1.9 (GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr and two low ones).
+
+### Added
+
+- An access policy for every server route, in code, and an authorization matrix generated
+  from it that runs on every commit (401, 403 and 404 across roles, organizations, screens
+  and API keys). A route without a policy fails CI.
+- OWASP ZAP: a signed-in passive scan of every API route on every commit, and a weekly (and
+  on demand) active scan with an admin session on a throwaway stack
+  (`.github/workflows/zap-active.yml`).
+
 ## [0.10.0] - 2026-10-29
 
 Scheduling by Shabbat and holidays, and a "Closed on Shabbat" starter kit. Upgrading from
@@ -409,6 +448,7 @@ external penetration tester, accessibility auditor or lawyer: see
 - Not tested yet on physical Raspberry Pi, Android TV or Windows devices.
 - Row-level security in PostgreSQL is planned for 0.2 (see docs/phases/09-release.md).
 
+[0.11.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.11.0
 [0.10.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.10.0
 [0.9.0]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.9.0
 [0.8.1]: https://github.com/diamondrubinny/freescreensign/releases/tag/v0.8.1

@@ -210,8 +210,9 @@ free image library) are described in [`deploy/.env.example`](deploy/.env.example
 | `deploy/`             | Docker Compose: Caddy, PostgreSQL, Valkey, SeaweedFS (S3), ClamAV; Raspberry Pi kiosk installer | AGPL-3.0 |
 | `docs/`               | Specification, phase plans and results, screenshots                                             | —        |
 
-Now: v0.10.0, which adds scheduling by Shabbat and holidays (content only on them, or never on
-them, by the organization's place) and a "Closed on Shabbat" kit
+Now: v0.11.0, with the fixes of an internal security review and dynamic scans of every API route
+([findings](docs/SECURITY-REVIEW.md)). v0.10.0 added scheduling by Shabbat and holidays (content
+only on them, or never on them, by the organization's place) and a "Closed on Shabbat" kit
 ([plan and results](docs/phases/20-shabbat-holiday-scheduling.md)). v0.9.0 added integrations: API
 keys for other systems and signed webhooks ([guide](docs/INTEGRATIONS.md)). v0.8.0 added meeting rooms with booking at the screen, an events calendar, a
 building directory and synagogue times, with two new kits

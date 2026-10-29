@@ -21,7 +21,7 @@ by the release workflow of this repository. To verify them before running:
 
 ```bash
 for image in server worker web; do
-  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.10.0" \
+  cosign verify "ghcr.io/diamondrubinny/rubinny/$image:0.11.0" \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-identity-regexp '^https://github\.com/diamondrubinny/freescreensign/\.github/workflows/release\.yml@'
 done
@@ -29,6 +29,27 @@ done
 
 A successful check prints the verified signature. If it fails, do not run the image. Each
 release also lists its image digests (`images.txt`), SBOMs and `SHA256SUMS`.
+
+## 0.10.0 → 0.11.0
+
+Security fixes from the internal review ([SECURITY-REVIEW.md](SECURITY-REVIEW.md)). No
+migration. Behavior that changes:
+
+- **Room PINs:** new or changed PINs need 6 to 8 digits. Existing PINs of 4 or 5 digits keep
+  working until they are changed; change them to longer ones.
+- **Verified addresses:** with open registration and `REQUIRE_EMAIL_VERIFICATION=false`, a new
+  account is no longer marked as verified until its owner clicks the link sent at
+  registration. Alerts about offline screens and disabled webhooks go only to verified
+  addresses. Accounts created
+  before the upgrade keep their state.
+- **Two-step verification:** turning it on or off signs the user out of every other session.
+- **Wrong second-factor codes:** at most 30 a day per user; the owner gets an e-mail when the
+  limit is reached. The count clears 24 hours after the first wrong code.
+- **Storage quota:** still unlimited by default. On a server with several organizations or
+  open registration, set `MEDIA_ORG_QUOTA_BYTES`
+  ([PRODUCTION-CHECKLIST.md](PRODUCTION-CHECKLIST.md)).
+- **Calendar feeds** whose recurrence rules need more than 100,000 candidate dates are
+  refused as invalid (a normal calendar needs a few hundred).
 
 ## 0.9.0 → 0.10.0
 
