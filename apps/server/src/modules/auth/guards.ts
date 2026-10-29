@@ -144,6 +144,16 @@ export function orgGuard(
   return Object.assign(guard, { [ORG_GUARD]: minRole });
 }
 
+/** The minimum role of a route's orgGuard, or null for a route without one. */
+export function orgGuardRole(route: Pick<RouteOptions, 'preHandler'>): Role | null {
+  for (const handler of [route.preHandler].flat()) {
+    if (typeof handler === 'function' && ORG_GUARD in handler) {
+      return (handler as unknown as Record<typeof ORG_GUARD, Role>)[ORG_GUARD];
+    }
+  }
+  return null;
+}
+
 /**
  * Tenant isolation cannot be forgotten: registering a route under /api/v1/orgs/:orgId without
  * an orgGuard preHandler fails at startup (used as an onRoute hook).

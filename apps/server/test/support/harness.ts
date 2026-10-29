@@ -7,6 +7,7 @@ import { randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { Redis } from 'ioredis';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
+import type { Role } from '@rubinny/shared';
 import { buildApp } from '../../src/app.js';
 import type { AiClientFactory } from '../../src/lib/ai.js';
 import type { HealthCheck } from '../../src/lib/health-checks.js';
@@ -39,7 +40,7 @@ export interface Harness {
   events: RedisScreenEvents;
   storage?: Storage;
   /** Every route the app registered (method + url). */
-  routes: { method: string; url: string }[];
+  routes: { method: string; url: string; orgRole: Role | null }[];
   close(): Promise<void>;
 }
 
@@ -106,7 +107,7 @@ export async function createHarness(
   const events = new RedisScreenEvents(redis, subscriber, `rubinny:screen-events:${schema}`);
   await events.start();
 
-  const routes: { method: string; url: string }[] = [];
+  const routes: { method: string; url: string; orgRole: Role | null }[] = [];
   const app = await buildApp({
     env,
     logger: false,

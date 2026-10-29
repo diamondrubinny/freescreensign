@@ -6,7 +6,7 @@
 import { randomUUID } from 'node:crypto';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
 import helmet from '@fastify/helmet';
-import { ATTRIBUTION, POWERED_BY_HEADER } from '@rubinny/shared';
+import { ATTRIBUTION, POWERED_BY_HEADER, type Role } from '@rubinny/shared';
 import rateLimit from '@fastify/rate-limit';
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
@@ -26,7 +26,7 @@ import { registerErrorHandling } from './plugins/errors.js';
 import { healthRoutes } from './routes/health.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { oidcRoutes } from './modules/auth/oidc.js';
-import { assertOrgRouteGuarded, registerAuth } from './modules/auth/guards.js';
+import { assertOrgRouteGuarded, orgGuardRole, registerAuth } from './modules/auth/guards.js';
 import { sessionCookieName } from './modules/auth/sessions.js';
 import { rateLimitKey, type CredentialCheck } from './lib/rate-limit-key.js';
 import { meRoutes } from './modules/me/routes.js';
@@ -71,7 +71,7 @@ export interface BuildAppOptions {
   /** Runs timers such as offline alerts (the server process; tests call jobs directly). */
   backgroundJobs?: boolean;
   /** Called for every route as it is registered (tests and diagnostics). */
-  onRoute?: (route: { method: string; url: string }) => void;
+  onRoute?: (route: { method: string; url: string; orgRole: Role | null }) => void;
   /** Tests: replaces the server status probes (ClamAV versions, disk). */
   operator?: OperatorProbes;
   /** Tests: extra routes registered with the same context as the application's. */
@@ -182,6 +182,14 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
   await app.register(cookie);
 
   registerErrorHandling(app);
+  // Before any route, so every route is reported (the access policy test lists them all).
+  const { onRoute } = options;
+  if (onRoute) {
+    app.addHook('onRoute', (route) => {
+      const orgRole = orgGuardRole(route);
+      for (const method of [route.method].flat()) onRoute({ method, url: route.url, orgRole });
+    });
+  }
   healthRoutes(app, { checks: options.checks ?? [] });
   // Public: what this software is and where its source code is (no version, no settings).
   app.get('/api/v1/about', () => ({
@@ -236,12 +244,6 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     };
     // Before any route: an organization route without orgGuard stops the server from starting.
     app.addHook('onRoute', assertOrgRouteGuarded);
-    const { onRoute } = options;
-    if (onRoute) {
-      app.addHook('onRoute', (route) => {
-        for (const method of [route.method].flat()) onRoute({ method, url: route.url });
-      });
-    }
     registerAuth(app, ctx);
     setupRoutes(app, ctx);
     authRoutes(app, ctx);
