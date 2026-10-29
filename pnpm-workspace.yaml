@@ -11,3 +11,7 @@ onlyBuiltDependencies:
 # which would otherwise duplicate vitest's types and break test matchers).
 overrides:
   '@types/node': 22.20.5
+  # Security fixes (GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr and others) for a dependency of
+  # Fastify's and electron-builder's ajv; remove once both pull the fixed versions themselves.
+  'fast-uri@>=4.0.0 <4.2.3': 4.2.3
+  'fast-uri@>=3.0.0 <3.1.9': 3.1.9
