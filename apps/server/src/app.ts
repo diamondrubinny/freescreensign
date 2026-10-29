@@ -47,6 +47,7 @@ import { createAnthropicAi, type AiClientFactory } from './lib/ai.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { approvalRoutes } from './modules/approvals/routes.js';
 import { startOfflineAlerts } from './modules/ops/alerts.js';
+import { sacredRoutes } from './modules/sacred/routes.js';
 import { integrationApiRoutes } from './modules/integrations/api.js';
 import { startWebhookDispatcher } from './modules/integrations/delivery.js';
 import { apiKeyRoutes } from './modules/integrations/keys.js';
@@ -257,6 +258,7 @@ export async function buildApp(options: BuildAppOptions): Promise<FastifyInstanc
     widgetRoutes(app, ctx);
     layoutRoutes(app, ctx);
     scheduleRoutes(app, ctx);
+    sacredRoutes(app, ctx);
     alertRoutes(app, ctx);
     approvalRoutes(app, ctx);
     apiKeyRoutes(app, ctx);

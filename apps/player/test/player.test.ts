@@ -407,6 +407,7 @@ describe('Player', () => {
       daysOfWeek: [5],
       timeFrom: null,
       timeTo: null,
+      sacred: null,
     };
     items[1]!.window = {
       dateFrom: '2026-10-15',
@@ -414,6 +415,7 @@ describe('Player', () => {
       daysOfWeek: [],
       timeFrom: '12:00',
       timeTo: '14:00',
+      sacred: null,
     };
     const ctx = setup({
       store: memoryStore({ token: 't' }),
@@ -442,6 +444,7 @@ describe('Player', () => {
               daysOfWeek: [],
               timeFrom: '08:00',
               timeTo: '09:00',
+              sacred: null,
             },
           },
         ],

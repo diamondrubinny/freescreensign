@@ -12,8 +12,19 @@ describe('localTime', () => {
   it('uses the screen time zone', () => {
     // 2026-10-15 is a Thursday. 21:30 UTC = 00:30 Friday in Jerusalem (UTC+3).
     const now = new Date('2026-10-15T21:30:00Z');
-    expect(localTime(now, 'UTC')).toEqual({ date: '2026-10-15', day: 4, minutes: 21 * 60 + 30 });
-    expect(localTime(now, 'Asia/Jerusalem')).toEqual({ date: '2026-10-16', day: 5, minutes: 30 });
+    const at = now.getTime();
+    expect(localTime(now, 'UTC')).toEqual({
+      date: '2026-10-15',
+      day: 4,
+      minutes: 21 * 60 + 30,
+      at,
+    });
+    expect(localTime(now, 'Asia/Jerusalem')).toEqual({
+      date: '2026-10-16',
+      day: 5,
+      minutes: 30,
+      at,
+    });
   });
 
   it('falls back to the device clock for unknown zones', () => {
@@ -107,7 +118,7 @@ describe('activeLayoutId', () => {
 
 describe('flattenPlaylist', () => {
   it('carries time windows, and a nested list’s window applies to all its items', () => {
-    const always = { dateFrom: null, dateTo: null, timeFrom: null, timeTo: null };
+    const always = { dateFrom: null, dateTo: null, timeFrom: null, timeTo: null, sacred: null };
     const m = manifest({
       playlists: [
         {

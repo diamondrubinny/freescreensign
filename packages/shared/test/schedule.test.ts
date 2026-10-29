@@ -53,6 +53,7 @@ describe('dates', () => {
       date: '2026-10-16',
       day: 5,
       minutes: 30,
+      at: Date.parse('2026-10-15T21:30:00Z'),
     });
     // Israel is UTC+2 in winter: 2026-12-01 10:00 UTC → 12:00.
     expect(localTime(new Date('2026-12-01T10:00:00Z'), 'Asia/Jerusalem').minutes).toBe(12 * 60);

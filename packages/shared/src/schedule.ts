@@ -4,6 +4,7 @@
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
 import { z } from 'zod';
+import { SACRED_MODES, sacredRuleActive, type SacredMode, type SacredTimes } from './sacred.js';
 import { hour23, hourOf } from './time.js';
 
 /**
@@ -44,6 +45,8 @@ export interface ScheduleRule {
   daysOfWeek?: readonly number[] | null | undefined;
   timeFrom?: string | null | undefined;
   timeTo?: string | null | undefined;
+  /** Only during Shabbat and holidays, or never during them (docs/phases/20-…). */
+  sacred?: SacredMode | null | undefined;
 }
 
 /** Dates, days of week and hours: the fields a schedule entry and a playlist item share. */
@@ -57,6 +60,7 @@ const ruleFields = {
     .transform((days) => [...new Set(days)].sort((a, b) => a - b)),
   timeFrom: timeOfDaySchema.nullable().default(null),
   timeTo: timeOfDaySchema.nullable().default(null),
+  sacred: z.enum(SACRED_MODES).nullable().default(null),
 };
 
 function checkRule(
@@ -120,7 +124,8 @@ export function normalizeWindow(window: ItemWindow | null | undefined): ItemWind
     !window.dateTo &&
     window.daysOfWeek.length === 0 &&
     !window.timeFrom &&
-    !window.timeTo;
+    !window.timeTo &&
+    !window.sacred;
   return empty ? null : window;
 }
 
@@ -129,8 +134,9 @@ export function windowActive(
   window: ScheduleRule | null | undefined,
   now: Date,
   timeZone: string,
+  sacred?: SacredTimes | null,
 ): boolean {
-  return !window || ruleActiveAt(window, localTime(now, timeZone));
+  return !window || ruleActiveAt(window, localTime(now, timeZone), sacred);
 }
 
 /** The window is over for good on `date` (YYYY-MM-DD, local): it will never show again. */
@@ -163,6 +169,8 @@ export interface LocalTime {
   day: number;
   /** Minutes since local midnight (0–1439). */
   minutes: number;
+  /** The moment itself (ms), for Shabbat and holiday periods; unknown when missing. */
+  at?: number;
 }
 
 const WEEKDAYS: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -173,6 +181,7 @@ function deviceLocalTime(now: Date): LocalTime {
     date: `${String(now.getFullYear())}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
     day: now.getDay(),
     minutes: now.getHours() * 60 + now.getMinutes(),
+    at: now.getTime(),
   };
 }
 
@@ -200,7 +209,46 @@ export function localTime(now: Date, timeZone: string): LocalTime {
     date: `${get('year')}-${get('month')}-${get('day')}`,
     day,
     minutes: hourOf(get('hour')) * 60 + Number(get('minute')),
+    at: now.getTime(),
   };
+}
+
+/** The zone's offset from UTC (ms) at `utc`; 0 for an unknown zone. */
+function zoneOffset(utc: number, timeZone: string): number {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      ...hour23(),
+    }).formatToParts(new Date(utc));
+  } catch {
+    return 0;
+  }
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const local = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    hourOf(String(get('hour'))),
+    get('minute'),
+    get('second'),
+  );
+  return local - (utc - (utc % 1000));
+}
+
+/** The moment (ms) of a wall-clock time (date, minutes since midnight) in `timeZone`. */
+export function zonedTime(date: string, minutes: number, timeZone: string): number {
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  const guess = Date.UTC(y, m - 1, d) + minutes * 60_000;
+  // Two passes: the offset at the guess, then at the corrected moment (daylight saving).
+  const first = guess - zoneOffset(guess, timeZone);
+  return guess - zoneOffset(first, timeZone);
 }
 
 /** Adds whole days to a YYYY-MM-DD date. */
@@ -233,7 +281,11 @@ export const formatMinutes = (minutes: number): string =>
  * (22:00–02:00) belongs to the day it starts on: its dates and days of week are
  * checked against that day.
  */
-export function ruleActiveAt(rule: ScheduleRule, at: LocalTime): boolean {
+export function ruleActiveAt(
+  rule: ScheduleRule,
+  at: LocalTime,
+  sacred?: SacredTimes | null,
+): boolean {
   let { date, day } = at;
   if (rule.timeFrom && rule.timeTo) {
     const from = toMinutes(rule.timeFrom);
@@ -253,15 +305,16 @@ export function ruleActiveAt(rule: ScheduleRule, at: LocalTime): boolean {
   if (rule.daysOfWeek && rule.daysOfWeek.length > 0 && !rule.daysOfWeek.includes(day)) {
     return false;
   }
-  return true;
+  return sacredRuleActive(rule.sacred, at.at ?? Number.NaN, sacred);
 }
 
 /** Index of the first (highest-priority) enabled rule active at `at`, or null. */
 export function winningRule(
   rules: readonly (ScheduleRule & { enabled?: boolean })[],
   at: LocalTime,
+  sacred?: SacredTimes | null,
 ): number | null {
-  const index = rules.findIndex((rule) => rule.enabled !== false && ruleActiveAt(rule, at));
+  const index = rules.findIndex((rule) => rule.enabled !== false && ruleActiveAt(rule, at, sacred));
   return index === -1 ? null : index;
 }
 
@@ -285,13 +338,35 @@ export interface TimelineDay {
 }
 
 /**
+ * Shabbat and holiday periods for the timeline, on the wall clock of the place they were
+ * computed for (the organization's).
+ */
+export interface TimelineSacred {
+  times: SacredTimes;
+  timeZone: string;
+}
+
+/** Minutes of `date` (0–1440) where Shabbat and holiday periods begin or end. */
+function sacredBounds(sacred: TimelineSacred, date: string): number[] {
+  const bounds: number[] = [];
+  for (const period of sacred.times.periods) {
+    for (const edge of [period.start, period.end]) {
+      const local = localTime(new Date(edge), sacred.timeZone);
+      if (local.date === date) bounds.push(local.minutes);
+    }
+  }
+  return bounds;
+}
+
+/**
  * What plays on a date, as consecutive segments covering the whole day. Rules are in
- * priority order (index 0 wins). Exact: activity only changes at midnight and at the
- * rules' own window boundaries.
+ * priority order (index 0 wins). Exact: activity only changes at midnight, at the rules' own
+ * window boundaries, and where Shabbat and holiday periods begin and end.
  */
 export function dayTimeline(
   rules: readonly (ScheduleRule & { enabled?: boolean })[],
   date: string,
+  sacred?: TimelineSacred | null,
 ): TimelineSegment[] {
   const bounds = new Set<number>([0]);
   for (const rule of rules) {
@@ -300,12 +375,20 @@ export function dayTimeline(
       bounds.add(toMinutes(rule.timeTo));
     }
   }
+  if (sacred && rules.some((rule) => rule.sacred)) {
+    for (const minute of sacredBounds(sacred, date)) bounds.add(minute);
+  }
   const starts = [...bounds].filter((m) => m < 1440).sort((a, b) => a - b);
   const day = dayOfWeek(date);
   const segments: TimelineSegment[] = [];
   starts.forEach((from, i) => {
     const to = starts[i + 1] ?? 1440;
-    const rule = winningRule(rules, { date, day, minutes: from });
+    const at = sacred ? zonedTime(date, from, sacred.timeZone) : undefined;
+    const rule = winningRule(
+      rules,
+      { date, day, minutes: from, ...(at !== undefined ? { at } : {}) },
+      sacred?.times,
+    );
     const last = segments[segments.length - 1];
     if (last && last.rule === rule) last.to = to;
     else segments.push({ from, to, rule });
@@ -317,10 +400,11 @@ export function dayTimeline(
 export function weekTimeline(
   rules: readonly (ScheduleRule & { enabled?: boolean })[],
   start: string,
+  sacred?: TimelineSacred | null,
 ): TimelineDay[] {
   return Array.from({ length: 7 }, (_, i) => {
     const date = addDays(start, i);
-    return { date, day: dayOfWeek(date), segments: dayTimeline(rules, date) };
+    return { date, day: dayOfWeek(date), segments: dayTimeline(rules, date, sacred) };
   });
 }
 

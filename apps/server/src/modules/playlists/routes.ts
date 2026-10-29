@@ -16,6 +16,7 @@ import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
 import { nameSchema } from '../auth/schemas.js';
 import { DEFAULT_IMAGE_DURATION_MS, defaultWidgetDurationMs } from '../player/manifest.js';
 import { notifyPlaylistScreens, notifyScreens, screensForPlaylists } from '../screens/notify.js';
+import { assertSacredAvailable } from '../sacred/routes.js';
 
 const playlistParams = z.object({ orgId: z.uuid(), playlistId: z.uuid() });
 const notFound = () => new HttpError(404, 'NOT_FOUND', 'Resource not found');
@@ -287,6 +288,13 @@ export function playlistRoutes(app: FastifyInstance, ctx: AppContext) {
     });
     if (invalid.length > 0)
       throw new HttpError(400, 'VALIDATION_FAILED', 'Some items are not available', invalid);
+    await assertSacredAvailable(
+      ctx.db,
+      org.id,
+      items.flatMap((item, index) =>
+        item.window?.sacred ? [`items.${String(index)}.window.sacred`] : [],
+      ),
+    );
 
     await ctx.db.transaction().execute(async (trx) => {
       await trx.deleteFrom('playlist_items').where('playlist_id', '=', playlistId).execute();

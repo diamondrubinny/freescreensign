@@ -267,18 +267,25 @@ const clockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:MM'
  * or relative to a time of the day). Computed by the Rubinny server for the coming two weeks; no
  * outside service.
  */
+/** A place for halachic times: coordinates, time zone, and Israel or the diaspora. */
+export const zmanimPlaceSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  /** Meters above sea level; used for sunrise and sunset when set. */
+  elevation: z.number().min(-500).max(9000).optional(),
+  timezone: z.string().max(64).refine(isValidTimeZone, 'Unknown time zone'),
+  /** Israel or the diaspora (holidays and Torah portions differ). */
+  israel: z.boolean().default(true),
+});
+export type ZmanimPlace = z.infer<typeof zmanimPlaceSchema>;
+
+/** How havdalah (the end of Shabbat or a holiday) is set. */
+export const HAVDALAH_METHODS = ['tzeit', '42', '50', '72'] as const;
+
 export const zmanimConfigSchema = z.object({
   title: z.string().trim().max(100).optional(),
-  place: z.object({
-    name: z.string().trim().min(1).max(60),
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-    /** Meters above sea level; used for sunrise and sunset when set. */
-    elevation: z.number().min(-500).max(9000).optional(),
-    timezone: z.string().max(64).refine(isValidTimeZone, 'Unknown time zone'),
-    /** Israel or the diaspora (holidays and Torah portions differ). */
-    israel: z.boolean().default(true),
-  }),
+  place: zmanimPlaceSchema,
   times: z
     .array(z.enum(ZMANIM_KEYS))
     .max(ZMANIM_KEYS.length)
@@ -296,7 +303,7 @@ export const zmanimConfigSchema = z.object({
   /** Minutes before sunset (18 by custom; 40 in Jerusalem). */
   candleMinutes: z.number().int().min(0).max(60).default(18),
   /** Havdalah: when 3 stars appear (8.5° below the horizon), or fixed minutes after sunset. */
-  havdalah: z.enum(['tzeit', '42', '50', '72']).default('tzeit'),
+  havdalah: z.enum(HAVDALAH_METHODS).default('tzeit'),
   prayers: z
     .array(
       z

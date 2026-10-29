@@ -93,7 +93,7 @@ describe.runIf(integrationEnabled)('server status for the operator', () => {
     });
     await enableMfa(operator);
     const body = await status(operator);
-    expect(body.version.migration).toMatch(/^0022_integrations$/);
+    expect(body.version.migration).toMatch(/^0023_sacred_times$/);
     expect(body.version.server).toMatch(/^\d+\.\d+\.\d+/);
     expect(body.usage).toMatchObject({ organizations: 1, users: 2, screens: 0, online: 0 });
     // No names or addresses, only numbers.

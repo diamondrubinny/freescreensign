@@ -10,6 +10,7 @@ import type {
   PlayerCapability,
   PlayerPlatform,
   Role,
+  SacredSettings,
   Wall,
 } from '@rubinny/shared';
 
@@ -99,6 +100,8 @@ export interface OrganizationsTable {
   room_pin_hash: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
+  /** Place and method for Shabbat and holiday scheduling (shared sacredSettingsSchema). */
+  sacred_settings: ColumnType<SacredSettings | null, string | null | undefined, string | null>;
   deleted_at: NullableTimestamp;
 }
 
@@ -293,6 +296,12 @@ export interface ScheduleEntriesTable {
   time_from: string | null;
   time_to: string | null;
   enabled: Generated<boolean>;
+  /** Only during Shabbat and holidays, or never during them; null: always. */
+  sacred: ColumnType<
+    'only' | 'skip' | null,
+    'only' | 'skip' | null | undefined,
+    'only' | 'skip' | null
+  >;
 }
 
 export interface ScreenUptimeDaysTable {

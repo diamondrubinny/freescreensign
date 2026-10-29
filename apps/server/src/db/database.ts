@@ -28,6 +28,7 @@ import * as m0019 from './migrations/0019_screen_groups.js';
 import * as m0020 from './migrations/0020_operator.js';
 import * as m0021 from './migrations/0021_rooms.js';
 import * as m0022 from './migrations/0022_integrations.js';
+import * as m0023 from './migrations/0023_sacred_times.js';
 
 export type Db = Kysely<Database>;
 
@@ -71,6 +72,7 @@ export const MIGRATIONS: readonly (readonly [name: string, migration: Migration]
   ['0020_operator', m0020],
   ['0021_rooms', m0021],
   ['0022_integrations', m0022],
+  ['0023_sacred_times', m0023],
 ];
 
 /**

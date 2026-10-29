@@ -22,6 +22,7 @@ describe('playlist item windows', () => {
       daysOfWeek: [],
       timeFrom: null,
       timeTo: null,
+      sacred: null,
     });
     expect(normalizeWindow(parse({}))).toBeNull();
     expect(normalizeWindow(null)).toBeNull();

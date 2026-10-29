@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import { wallSchema } from './layouts.js';
+import { SACRED_MODES, sacredTimesSchema, type SacredTimes } from './sacred.js';
 import { itemWindowSchema, localDateSchema, localTime, ruleActiveAt } from './schedule.js';
 
 /**
@@ -120,6 +121,8 @@ export const scheduleEntrySchema = z
     daysOfWeek: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     timeFrom: timeOfDay.optional(),
     timeTo: timeOfDay.optional(),
+    /** Only during Shabbat and holidays, or never (see `sacredTimes`); older players ignore it. */
+    sacred: z.enum(SACRED_MODES).optional(),
   })
   .refine((e) => !e.startsAt || !e.endsAt || Date.parse(e.startsAt) < Date.parse(e.endsAt), {
     message: 'startsAt must be before endsAt',
@@ -192,6 +195,8 @@ export const manifestV1Schema = z
     }),
     /** Optional, so players and servers of different versions still understand each other. */
     alert: manifestAlertSchema.nullable().optional(),
+    /** Shabbat and holiday periods, sent when a rule or item depends on them. */
+    sacredTimes: sacredTimesSchema.optional(),
   })
   .superRefine((manifest, ctx) => {
     const report = (message: string, path: (string | number)[]) => {
@@ -319,10 +324,11 @@ export function scheduleEntryActive(
   entry: ManifestScheduleEntry,
   now: Date,
   timeZone: string,
+  sacred?: SacredTimes | null,
 ): boolean {
   if (entry.startsAt && now < new Date(entry.startsAt)) return false;
   if (entry.endsAt && now >= new Date(entry.endsAt)) return false;
-  return ruleActiveAt(entry, localTime(now, timeZone));
+  return ruleActiveAt(entry, localTime(now, timeZone), sacred);
 }
 
 /**
@@ -334,7 +340,7 @@ export function activeLayoutId(manifest: ManifestV1, now: Date): string | null {
   for (const entry of manifest.schedule.entries) {
     if (
       (!best || entry.priority > best.priority) &&
-      scheduleEntryActive(entry, now, manifest.screen.timezone)
+      scheduleEntryActive(entry, now, manifest.screen.timezone, manifest.sacredTimes)
     ) {
       best = entry;
     }

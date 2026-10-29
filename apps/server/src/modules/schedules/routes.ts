@@ -19,6 +19,7 @@ import { HttpError } from '../../lib/http-error.js';
 import { parse } from '../../lib/validation.js';
 import { approvalGate } from '../approvals/routes.js';
 import { orgGuard, requireAuth, requireOrg } from '../auth/guards.js';
+import { assertSacredAvailable } from '../sacred/routes.js';
 import { notifyScreens, screensForSchedule } from '../screens/notify.js';
 
 const scheduleParams = z.object({ orgId: z.uuid(), scheduleId: z.uuid() });
@@ -91,6 +92,11 @@ export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
     if (invalid.length > 0) {
       throw new HttpError(400, 'VALIDATION_FAILED', 'Unknown layout or playlist', invalid);
     }
+    await assertSacredAvailable(
+      ctx.db,
+      orgId,
+      entries.flatMap((entry, index) => (entry.sacred ? [`entries.${String(index)}.sacred`] : [])),
+    );
   }
 
   async function replaceEntries(
@@ -115,6 +121,7 @@ export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
           time_from: entry.timeFrom,
           time_to: entry.timeTo,
           enabled: entry.enabled,
+          sacred: entry.sacred,
         })),
       )
       .execute();
@@ -139,6 +146,7 @@ export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
         'schedule_entries.time_from',
         'schedule_entries.time_to',
         'schedule_entries.enabled',
+        'schedule_entries.sacred',
       ])
       .where('schedule_entries.schedule_id', '=', scheduleId)
       .orderBy('schedule_entries.position')
@@ -169,6 +177,7 @@ export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
           timeFrom: entry.time_from,
           timeTo: entry.time_to,
           enabled: entry.enabled,
+          sacred: entry.sacred,
         })),
       },
     };
@@ -314,6 +323,7 @@ export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
             'time_from',
             'time_to',
             'enabled',
+            'sacred',
           ])
           .expression((eb) =>
             eb
@@ -330,6 +340,7 @@ export function scheduleRoutes(app: FastifyInstance, ctx: AppContext) {
                 'time_from',
                 'time_to',
                 'enabled',
+                'sacred',
               ])
               .where('schedule_id', '=', scheduleId),
           )

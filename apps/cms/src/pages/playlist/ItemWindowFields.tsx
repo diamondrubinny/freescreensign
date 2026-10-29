@@ -16,6 +16,7 @@ export const ALWAYS: ItemWindow = {
   daysOfWeek: [],
   timeFrom: null,
   timeTo: null,
+  sacred: null,
 };
 
 /** Short day names, Sunday first, in the interface language. */

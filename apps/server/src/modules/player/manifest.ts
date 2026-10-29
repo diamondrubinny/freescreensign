@@ -20,6 +20,8 @@ import type { Screen } from '../../db/schema.js';
 import { ACCEPTED_TYPES } from '../../media/types.js';
 import { alertForScreen } from '../alerts/active.js';
 import { zoneAction } from '../layouts/routes.js';
+import { computeSacredTimes } from '../sacred/periods.js';
+import { orgSacredSettings } from '../sacred/routes.js';
 
 export const DEFAULT_IMAGE_DURATION_MS = 10_000;
 export const DEFAULT_WIDGET_DURATION_MS = 15_000;
@@ -59,6 +61,7 @@ interface ScheduleRow {
   days_of_week: number[];
   time_from: string | null;
   time_to: string | null;
+  sacred: 'only' | 'skip' | null;
 }
 
 /** Settings the manifest depends on beyond the database. */
@@ -146,6 +149,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
         'schedule_entries.days_of_week',
         'schedule_entries.time_from',
         'schedule_entries.time_to',
+        'schedule_entries.sacred',
       ])
       .where('schedules.id', '=', screen.schedule_id)
       .where('schedules.org_id', '=', screen.org_id)
@@ -367,7 +371,17 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
       ...(entry.time_from && entry.time_to
         ? { timeFrom: entry.time_from, timeTo: entry.time_to }
         : {}),
+      ...(entry.sacred ? { sacred: entry.sacred } : {}),
     }));
+
+  // Shabbat and holiday periods, only when something depends on them (so the manifest of an
+  // organization that does not use them does not change every day).
+  const usesSacred =
+    entries.some((entry) => 'sacred' in entry) ||
+    [...playlists.values()].some((playlist) =>
+      playlist.items.some((item) => Boolean(item.window?.sacred)),
+    );
+  const sacredSettings = usesSacred ? await orgSacredSettings(db, screen.org_id) : null;
 
   const body = {
     schemaVersion: 1 as const,
@@ -384,6 +398,7 @@ export async function buildManifest(db: Db, screen: Screen, env: ManifestEnv): P
     layouts,
     schedule: { defaultLayoutId: defaultLayout.id, entries },
     alert: await alertForScreen(db, screen),
+    ...(sacredSettings ? { sacredTimes: computeSacredTimes(sacredSettings) } : {}),
   };
 
   // The version identifies the content only (not the generation time).

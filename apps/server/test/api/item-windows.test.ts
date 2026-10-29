@@ -93,6 +93,7 @@ describe.runIf(integrationEnabled)('playlist items shown only in a time window',
       daysOfWeek: [0, 4],
       timeFrom: '11:30',
       timeTo: '13:30',
+      sacred: null,
     });
     expect(items[1]?.window).toBeNull();
 

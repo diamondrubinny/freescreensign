@@ -22,7 +22,14 @@ const session = {
   },
   memberships: [{ orgId: ORG, orgName: 'Org', role: 'EDITOR' }],
 };
-const always = { dateFrom: null, dateTo: null, daysOfWeek: [], timeFrom: null, timeTo: null };
+const always = {
+  dateFrom: null,
+  dateTo: null,
+  daysOfWeek: [],
+  timeFrom: null,
+  timeTo: null,
+  sacred: null,
+};
 const widgetItem = (widgetId: string, name: string, window: unknown) => ({
   kind: 'widget',
   widgetId,
