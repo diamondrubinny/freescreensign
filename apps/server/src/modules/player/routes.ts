@@ -65,7 +65,9 @@ export function playerRoutes(app: FastifyInstance, ctx: AppContext) {
   }
 
   app.addHook('onRequest', async (request) => {
-    if (request.method === 'POST' && request.url === '/player/v1/pair/start') {
+    // The matched route, not the raw URL: "?x" or a trailing slash must not skip the limit
+    // (security review, finding C1).
+    if (request.method === 'POST' && request.routeOptions.url === '/player/v1/pair/start') {
       await ctx.limiter.hit(LIMITS.pairStartIp, ctx.keys.hashIp(clientIp(request)));
     }
   });

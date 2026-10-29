@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // https://github.com/diamondrubinny/freescreensign · The attribution must be kept (LICENSING.md).
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   Client,
   STRONG_PASSWORD,
@@ -257,13 +257,38 @@ describe.runIf(integrationEnabled)('registration and email verification', () => 
     });
     expect(res.statusCode).toBe(202);
     expect(res.json()).toEqual({ status: 'verification_required' });
-    expect(h.mailer.lastTo('taken@example.com')?.template.kind).toBe('account-exists');
+    // The owner is told, after the answer (so the answer takes no longer: finding A1).
+    await vi.waitFor(() => {
+      expect(h.mailer.lastTo('taken@example.com')?.template.kind).toBe('account-exists');
+    });
     const users = await h.db
       .selectFrom('users')
       .select('id')
       .where('email', '=', 'taken@example.com')
       .execute();
     expect(users).toHaveLength(1);
+  });
+
+  it('answers the same for a taken address when verification is not required (A2)', async () => {
+    h = await createHarness({ REGISTRATION_MODE: 'open', REQUIRE_EMAIL_VERIFICATION: 'false' });
+    await insertUser(h.db, 'taken@example.com');
+    const register = (email: string) =>
+      new Client(h.app).post('/api/v1/auth/register', {
+        email,
+        password: STRONG_PASSWORD,
+        name: 'Someone',
+      });
+    const fresh = await register('fresh@example.com');
+    const taken = await register('taken@example.com');
+    expect([fresh.statusCode, fresh.json()]).toEqual([201, { status: 'registered' }]);
+    expect([taken.statusCode, taken.json()]).toEqual([201, { status: 'registered' }]);
+    // The new address may sign in, but is not marked as proven (finding A3).
+    const user = await h.db
+      .selectFrom('users')
+      .select('email_verified_at')
+      .where('email', '=', 'fresh@example.com')
+      .executeTakeFirstOrThrow();
+    expect(user.email_verified_at).toBeNull();
   });
 
   it('resend does not reveal account existence', async () => {
@@ -298,6 +323,10 @@ describe.runIf(integrationEnabled)('password reset and change', () => {
     expect(
       (await client.post('/api/v1/auth/password/forgot', { email: 'dana@example.com' })).statusCode,
     ).toBe(202);
+    // Sent after the answer (finding A1).
+    await vi.waitFor(() => {
+      expect(h.mailer.lastTo('dana@example.com')).toBeDefined();
+    });
     const token = tokenFromMail(h.mailer, 'dana@example.com');
     expect(h.mailer.lastTo('dana@example.com')?.text).toContain('/reset-password#token=');
 

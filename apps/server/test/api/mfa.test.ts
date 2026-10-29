@@ -147,4 +147,33 @@ describe.runIf(integrationEnabled)('two-factor authentication (TOTP)', () => {
     expect(relogin.json()).toMatchObject({ mfaRequired: false });
     expect(await h.db.selectFrom('recovery_codes').selectAll().execute()).toHaveLength(0);
   });
+
+  it('ends the other sessions when MFA is turned on or off (security review, A4)', async () => {
+    // A session signed in with the password only (say, a stolen one) ...
+    const other = await login(h.app, 'dana@example.com', '198.51.100.60');
+    const client = await login(h.app, 'dana@example.com');
+    const { secret, recoveryCodes } = await enableMfa(client);
+    // ... does not become an MFA session when the owner turns MFA on.
+    expect((await other.get('/api/v1/auth/session')).statusCode).toBe(401);
+    expect((await client.get('/api/v1/auth/session')).statusCode).toBe(200);
+
+    const third = new Client(h.app, '198.51.100.61');
+    const challenge = await third.post('/api/v1/auth/login', {
+      email: 'dana@example.com',
+      password: STRONG_PASSWORD,
+    });
+    const verified = await third.post('/api/v1/auth/mfa/verify', {
+      mfaToken: challenge.json<{ mfaToken: string }>().mfaToken,
+      // A recovery code: each TOTP step works once, and disabling needs the next one.
+      recoveryCode: recoveryCodes[0],
+    });
+    expect(verified.statusCode, verified.body).toBe(200);
+    const off = await client.post('/api/v1/auth/mfa/totp/disable', {
+      password: STRONG_PASSWORD,
+      code: currentCode(secret, 30_000),
+    });
+    expect(off.statusCode, off.body).toBe(200);
+    expect((await third.get('/api/v1/auth/session')).statusCode).toBe(401);
+    expect((await client.get('/api/v1/auth/session')).statusCode).toBe(200);
+  });
 });

@@ -55,10 +55,14 @@ export const bookingInputSchema = z
   );
 export type BookingInput = z.infer<typeof bookingInputSchema>;
 
-/** The organization's PIN for booking at a screen: 4–8 digits, or null to turn it off. */
+/**
+ * The organization's PIN for booking at a screen: 6–8 digits (a 4-digit PIN could be guessed
+ * at a screen in days; security review, finding C2), or null to turn it off. Screens still
+ * accept a shorter PIN set before 0.11 until an admin changes it.
+ */
 export const roomPinSchema = z
   .string()
-  .regex(/^\d{4,8}$/, 'Expected 4 to 8 digits')
+  .regex(/^\d{6,8}$/, 'Expected 6 to 8 digits')
   .nullable();
 
 /** "Book now" at a screen. */

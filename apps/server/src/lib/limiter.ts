@@ -140,10 +140,13 @@ export const LIMITS = {
   operatorStatusUser: { name: 'operator-status-user', max: 60, windowSeconds: 60 },
   /** SSO starts and callbacks per address. */
   oidcIp: { name: 'oidc-ip', max: 30, windowSeconds: 600 },
-  // Booking at a room's screen: PIN attempts per screen and per organization (both reset
-  // after a correct PIN, so only consecutive failures count), and bookings per screen.
+  // Booking at a room's screen: PIN attempts per screen (reset after a correct PIN), wrong
+  // PINs per organization in 15 minutes and in a day (never reset: a correct PIN typed by
+  // someone else must not give a guesser more tries; security review, finding C2), and
+  // bookings per screen.
   roomPinScreen: { name: 'room-pin-screen', max: 5, windowSeconds: 900 },
   roomPinOrg: { name: 'room-pin-org', max: 30, windowSeconds: 900 },
+  roomPinOrgDay: { name: 'room-pin-org-day', max: 100, windowSeconds: 86_400 },
   roomBookScreen: { name: 'room-book-screen', max: 4, windowSeconds: 3600 },
   /** Integrations: requests per API key, and failed key checks per address. */
   apiKeyRequests: { name: 'api-key-requests', max: 300, windowSeconds: 60 },

@@ -182,6 +182,15 @@ describe.runIf(integrationEnabled)('screens, pairing and the player API', () => 
       statuses.push((await player.post('/player/v1/pair/start')).statusCode);
     expect(statuses.slice(0, 20).every((s) => s === 200)).toBe(true);
     expect(statuses[20]).toBe(429);
+    // The same route by another spelling counts too (security review, finding C1).
+    const other = new Client(h.app, '198.51.100.98');
+    const spelled: number[] = [];
+    for (const url of Array.from({ length: 21 }, (_, i) =>
+      i % 2 ? `/player/v1/pair/start?x=${String(i)}` : '/player/v1/pair/start/',
+    ))
+      spelled.push((await other.post(url)).statusCode);
+    expect(spelled.slice(0, 20).every((s) => s === 200)).toBe(true);
+    expect(spelled[20]).toBe(429);
   });
 
   it('serves a valid manifest with the playlist, ETag/304 and only ready media', async () => {

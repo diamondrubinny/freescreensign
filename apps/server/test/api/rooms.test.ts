@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { RoomStatusData } from '@rubinny/shared';
 import { runMaintenance } from '../../src/lib/maintenance.js';
+import { hashPassword } from '../../src/lib/password.js';
 import {
   Client,
   createHarness,
@@ -409,11 +410,39 @@ describe.runIf(integrationEnabled)('meeting rooms', () => {
   it('locks the PIN after five wrong tries, even for the right PIN', async () => {
     const room = await createRoom('Big room');
     const door = await roomScreen(room);
-    await admin.put(api('/settings/room-pin'), { pin: '4321' });
+    await admin.put(api('/settings/room-pin'), { pin: '654321' });
     for (let i = 0; i < 5; i++) {
-      expect((await door.book(15, '9999')).statusCode).toBe(403);
+      expect((await door.book(15, '999999')).statusCode).toBe(403);
     }
-    expect((await door.book(15, '4321')).statusCode).toBe(429);
+    expect((await door.book(15, '654321')).statusCode).toBe(429);
+  });
+
+  it('keeps counting wrong PINs for the organization after a right one (security review, C2)', async () => {
+    const room = await createRoom('Big room');
+    const door = await roomScreen(room);
+    // New PINs have 6 to 8 digits.
+    expect((await admin.put(api('/settings/room-pin'), { pin: '4321' })).statusCode).toBe(400);
+    await admin.put(api('/settings/room-pin'), { pin: '654321' });
+    for (let i = 0; i < 4; i++) {
+      expect((await door.book(15, '999999')).statusCode).toBe(403);
+    }
+    expect((await door.book(15, '654321')).statusCode).toBe(201);
+    const counts = async (name: string) => {
+      const keys = await h.redis.keys(`*${name}:${orgId}`);
+      return Number((await h.redis.get(keys[0] ?? 'none')) ?? 0);
+    };
+    // The guesser's four failures stay; a right PIN does not hand out more tries.
+    expect(await counts('room-pin-org')).toBe(4);
+    expect(await counts('room-pin-org-day')).toBe(4);
+
+    // A shorter PIN set before 0.11 still works at the screen until an admin changes it.
+    await h.db
+      .updateTable('organizations')
+      .set({ room_pin_hash: await hashPassword('4321') })
+      .where('id', '=', orgId)
+      .execute();
+    const otherDoor = await roomScreen(await createRoom('Small room'));
+    expect((await otherDoor.book(15, '4321')).statusCode).toBe(201);
   });
 
   it('refuses booking for rooms the screen does not show, or does not allow', async () => {

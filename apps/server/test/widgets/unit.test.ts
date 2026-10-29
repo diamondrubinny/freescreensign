@@ -206,6 +206,16 @@ describe('parseFeed', () => {
   });
 });
 
+describe('toPlainText', () => {
+  it('stays fast on a field full of "<" (security review, E1), and still drops tags', () => {
+    const started = Date.now();
+    expect(toPlainText('<'.repeat(1_000_000))).toMatch(/^<+…$/);
+    expect(toPlainText(`${'&lt;'.repeat(200_000)}x`).length).toBeLessThanOrEqual(300);
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(toPlainText('<b>Sale</b> <i>today</i>')).toBe('Sale today');
+  });
+});
+
 describe('weather', () => {
   const config = {
     latitude: 32.0853,

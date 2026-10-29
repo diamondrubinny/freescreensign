@@ -40,6 +40,9 @@ function decodeEntities(text: string): string {
   });
 }
 
+/** Characters of one field looked at, at most (the result keeps MAX_TITLE_LENGTH). */
+const MAX_SOURCE_LENGTH = 8192;
+
 /**
  * Plain text only: removes markup and control characters and collapses whitespace.
  * The player renders with textContent anyway; this keeps the output tidy.
@@ -51,8 +54,11 @@ export function toPlainText(value: unknown): string {
   else if (value && typeof value === 'object' && '#text' in value)
     return toPlainText(value['#text']);
   else return '';
-  text = decodeEntities(text.replace(/<[^>]*>/g, ' '));
-  text = text.replace(/<[^>]*>/g, ' ');
+  // Bounded before any pattern runs: a feed may put a megabyte in one title (security
+  // review, finding E1). A tag cannot contain "<", so the pattern stays linear on "<<<<".
+  text = text.slice(0, MAX_SOURCE_LENGTH);
+  text = decodeEntities(text.replace(/<[^<>]*>/g, ' '));
+  text = text.replace(/<[^<>]*>/g, ' ');
   // eslint-disable-next-line no-control-regex -- stripping control characters on purpose
   text = text.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ');
   text = text.replace(/\s+/g, ' ').trim();

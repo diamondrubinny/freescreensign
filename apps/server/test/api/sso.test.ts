@@ -135,11 +135,27 @@ describe.runIf(integrationEnabled)('sign-in through an OpenID Connect provider',
   });
 
   it('takes over an account whose address was never verified: old credentials stop working', async () => {
-    // Someone registered the address first (verification off, so they could sign in).
-    h = await harness({ REQUIRE_EMAIL_VERIFICATION: 'false' });
-    const userId = await insertUser(h.db, 'owner@school.example', { verified: false });
-    const squatter = await login(h.app, 'owner@school.example', '198.51.100.40');
-    expect((await squatter.get('/api/v1/auth/session')).statusCode).toBe(200);
+    // Someone registered the address first, through the API (verification off, so they could
+    // sign in). Registering does not prove the address (security review, finding A3).
+    h = await harness({ REQUIRE_EMAIL_VERIFICATION: 'false', REGISTRATION_MODE: 'open' });
+    const squatter = new Client(h.app, '198.51.100.40');
+    const registered = await squatter.post('/api/v1/auth/register', {
+      email: 'owner@school.example',
+      password: STRONG_PASSWORD,
+      name: 'Squatter',
+    });
+    expect(registered.statusCode, registered.body).toBe(201);
+    expect(
+      (
+        await squatter.post('/api/v1/auth/login', {
+          email: 'owner@school.example',
+          password: STRONG_PASSWORD,
+        })
+      ).statusCode,
+    ).toBe(200);
+    const session = await squatter.get('/api/v1/auth/session');
+    expect(session.json()).toMatchObject({ user: { emailVerified: false } });
+    const userId = session.json<{ user: { id: string } }>().user.id;
 
     op.signInAs({ sub: 'owner-1', email: 'owner@school.example', email_verified: true });
     const { browser } = await ssoSignIn();

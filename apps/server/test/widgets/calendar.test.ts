@@ -162,6 +162,46 @@ describe('parseCalendar', () => {
     expect(data.events.length).toBeLessThanOrEqual(200);
   });
 
+  it('skips a rule that can never match, instead of hanging the server', () => {
+    // February 30 never comes: ical.js would look for it forever (security review, B1).
+    const started = Date.now();
+    const data = parseCalendar(
+      ics(
+        event('never', [
+          'SUMMARY:Never',
+          'DTSTART:20260101T090000Z',
+          'DTEND:20260101T100000Z',
+          'RRULE:FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30',
+        ]),
+        event('never-too', [
+          'SUMMARY:Never either',
+          'DTSTART:20260101T090000Z',
+          'DTEND:20260101T100000Z',
+          'RRULE:FREQ=HOURLY;BYMONTH=2;BYMONTHDAY=31',
+        ]),
+        event('real', ['SUMMARY:Real', 'DTSTART:20261102T100000Z', 'DTEND:20261102T110000Z']),
+      ),
+      days(3),
+      NOW,
+    );
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(data.events.map((e) => e.title)).toEqual(['Real']);
+    // The next calendar gets a fresh budget.
+    const daily = parseCalendar(
+      ics(
+        event('daily', [
+          'SUMMARY:Daily',
+          'DTSTART:20000101T080000Z',
+          'DTEND:20000101T081500Z',
+          'RRULE:FREQ=DAILY',
+        ]),
+      ),
+      days(3),
+      NOW,
+    );
+    expect(daily.events.length).toBeGreaterThan(0);
+  });
+
   it('reaches today in series that started years ago, keeping their day and time', () => {
     const data = parseCalendar(
       ics(

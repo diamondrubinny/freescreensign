@@ -60,16 +60,21 @@ async function bookableRoom(ctx: AppContext, screen: Screen, roomId: string) {
  */
 async function countAttempt(ctx: AppContext, screen: Screen) {
   await ctx.limiter.hit(LIMITS.roomPinScreen, screen.id);
-  await ctx.limiter.hit(LIMITS.roomPinOrg, screen.org_id);
+  await ctx.limiter.check(LIMITS.roomPinOrg, screen.org_id);
+  await ctx.limiter.check(LIMITS.roomPinOrgDay, screen.org_id);
 }
 
-/** Checks the PIN (after countAttempt); a correct PIN clears the failure counts. */
+/**
+ * Checks the PIN (after countAttempt). A correct PIN clears this screen's count; a wrong one
+ * counts against the organization too, and those counts only expire.
+ */
 async function checkPin(ctx: AppContext, screen: Screen, pinHash: string, pin: string) {
   if (await verifyPassword(pinHash, pin)) {
     await ctx.limiter.reset(LIMITS.roomPinScreen, screen.id);
-    await ctx.limiter.reset(LIMITS.roomPinOrg, screen.org_id);
     return;
   }
+  await ctx.limiter.hit(LIMITS.roomPinOrg, screen.org_id).catch(() => undefined);
+  await ctx.limiter.hit(LIMITS.roomPinOrgDay, screen.org_id).catch(() => undefined);
   await audit(ctx.db, {
     action: 'room.pin_failed',
     orgId: screen.org_id,

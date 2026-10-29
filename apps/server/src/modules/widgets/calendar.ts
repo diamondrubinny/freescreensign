@@ -33,6 +33,27 @@ const BUILT_IN_ZONES = new Set(['UTC', 'Z', 'GMT']);
 const MAX_TEXT = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Candidate dates one parse may test, in all series together. ical.js looks for the next
+ * occurrence in a loop that never ends when a rule cannot match (DAILY with BYMONTH=2 and
+ * BYMONTHDAY=30): MAX_ITERATIONS counts occurrences, not the candidates inside one, so it
+ * cannot stop that loop (docs/phases/21-security-review.md, finding B1). The budget can.
+ */
+const MAX_CANDIDATES = 100_000;
+let candidates = 0;
+
+class RecurrenceTooExpensive extends Error {}
+
+/** Every candidate date of the loop is checked here: count them, and stop at the budget. */
+const recurPrototype = ICAL.RecurIterator.prototype as unknown as {
+  check_contracting_rules: (this: unknown) => boolean;
+};
+const checkContractingRules = recurPrototype.check_contracting_rules;
+recurPrototype.check_contracting_rules = function (this: unknown) {
+  if (++candidates > MAX_CANDIDATES) throw new RecurrenceTooExpensive('Recurrence too expensive');
+  return checkContractingRules.call(this);
+};
+
 /** What ICAL.Event#getOccurrenceDetails returns (its type definition is incomplete). */
 interface Occurrence {
   item: ICAL.Event;
@@ -104,6 +125,8 @@ export function parseCalendar(
     throw new CalendarParseError('Not an iCal calendar');
   }
   if (root.name !== 'vcalendar') throw new CalendarParseError('Not an iCal calendar');
+  // A fresh budget for this (synchronous) parse.
+  candidates = 0;
 
   // The calendar's own time zones, so TZID times convert correctly. ical.js keeps zones in
   // one registry for the whole process: they are registered for this (synchronous) parse

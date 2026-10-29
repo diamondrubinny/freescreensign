@@ -179,7 +179,7 @@ describe('meeting rooms page', () => {
     await user.type(pin, '12a');
     expect(pin).toHaveValue('12');
     await user.click(screen.getByRole('button', { name: 'שמירת הקוד' }));
-    expect(screen.getByText('יש להקליד 4 עד 8 ספרות.')).toBeVisible();
+    expect(screen.getByText('יש להקליד 6 עד 8 ספרות.')).toBeVisible();
     await user.type(pin, '3456');
     await user.click(screen.getByRole('button', { name: 'שמירת הקוד' }));
     expect(await screen.findByText('הקוד נשמר.')).toBeVisible();

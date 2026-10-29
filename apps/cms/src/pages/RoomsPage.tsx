@@ -805,7 +805,7 @@ function PinSection({
           className="flex flex-wrap items-end gap-3"
           onSubmit={(event) => {
             event.preventDefault();
-            const ok = /^\d{4,8}$/.test(pin);
+            const ok = /^\d{6,8}$/.test(pin);
             setInvalid(!ok);
             if (ok) save.mutate(pin);
           }}

@@ -44,10 +44,10 @@ describe('room schemas', () => {
     }
   });
 
-  it('takes a PIN of 4 to 8 digits, and only 15, 30 or 60 minutes at a screen', () => {
-    expect(roomPinSchema.safeParse('1234').success).toBe(true);
+  it('takes a new PIN of 6 to 8 digits, and only 15, 30 or 60 minutes at a screen', () => {
+    expect(roomPinSchema.safeParse('123456').success).toBe(true);
     expect(roomPinSchema.safeParse(null).success).toBe(true);
-    for (const pin of ['123', '123456789', '12a4', ' 1234']) {
+    for (const pin of ['1234', '12345', '123456789', '12a456', ' 123456']) {
       expect(roomPinSchema.safeParse(pin).success).toBe(false);
     }
     expect(screenBookingSchema.safeParse({ minutes: 30, pin: '1234' }).success).toBe(true);

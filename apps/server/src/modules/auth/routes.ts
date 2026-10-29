@@ -44,6 +44,19 @@ export function verificationEnforced(ctx: AppContext): boolean {
   return ctx.env.REQUIRE_EMAIL_VERIFICATION && ctx.mailer.delivers;
 }
 
+/**
+ * Work for an address that has an account (a token, an e-mail, an audit entry), done after
+ * the answer: the answer then takes the same time whether or not the account exists, so
+ * timing does not tell (docs/phases/21-security-review.md, finding A1).
+ */
+function afterReply(request: FastifyRequest, work: () => Promise<void>): void {
+  setImmediate(() => {
+    work().catch((err: unknown) => {
+      request.log.error({ err }, 'account e-mail work failed');
+    });
+  });
+}
+
 export async function listMemberships(ctx: AppContext, userId: string) {
   const rows = await ctx.db
     .selectFrom('memberships')
@@ -133,20 +146,27 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
     assertPasswordAcceptable(body.password, body.email);
 
     const locale = body.locale ?? 'he';
-    const existing = await findActiveUserByEmail(ctx, body.email);
-    if (existing) {
-      // Same work and the same response as a new registration: no account enumeration.
-      await hashPassword(body.password);
-      await ctx.mailer.send(existing.email, asLocale(existing.locale), {
-        kind: 'account-exists',
-        loginUrl: appLink(ctx, '/login'),
-        resetUrl: appLink(ctx, '/forgot-password'),
-      });
-      return reply.status(202).send({ status: 'verification_required' });
-    }
-
+    // An invitation sent by e-mail proves the address; nothing else here does.
     const verified = invitation?.delivered_by_email === true;
     const canSignIn = verified || !verificationEnforced(ctx);
+    const existing = await findActiveUserByEmail(ctx, body.email);
+    if (existing) {
+      // The same work and the same answer as a new registration would get, so the answer
+      // does not tell whether the address has an account (findings A1, A2). The owner gets
+      // an e-mail saying so.
+      await hashPassword(body.password);
+      afterReply(request, () =>
+        ctx.mailer.send(existing.email, asLocale(existing.locale), {
+          kind: 'account-exists',
+          loginUrl: appLink(ctx, '/login'),
+          resetUrl: appLink(ctx, '/forgot-password'),
+        }),
+      );
+      return canSignIn
+        ? reply.status(201).send({ status: 'registered' })
+        : reply.status(202).send({ status: 'verification_required' });
+    }
+
     const passwordHash = await hashPassword(body.password);
 
     const user = await ctx.db.transaction().execute(async (trx) => {
@@ -157,7 +177,10 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
           name: body.name,
           password_hash: passwordHash,
           locale,
-          email_verified_at: verified || !ctx.env.REQUIRE_EMAIL_VERIFICATION ? new Date() : null,
+          // Only a proven address is marked verified, even where verification is not
+          // required to sign in: single sign-on trusts this mark to link an account to its
+          // owner (finding A3).
+          email_verified_at: verified ? new Date() : null,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -219,10 +242,12 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
     await ctx.limiter.hit(LIMITS.emailSendAddress, sha256Hex(email));
     const user = await findActiveUserByEmail(ctx, email);
     if (user && !user.email_verified_at) {
-      const token = await issueToken(ctx, user.id, 'verify_email');
-      await ctx.mailer.send(user.email, asLocale(user.locale), {
-        kind: 'verify-email',
-        url: appLink(ctx, '/verify-email', token),
+      afterReply(request, async () => {
+        const token = await issueToken(ctx, user.id, 'verify_email');
+        await ctx.mailer.send(user.email, asLocale(user.locale), {
+          kind: 'verify-email',
+          url: appLink(ctx, '/verify-email', token),
+        });
       });
     }
     return reply.status(202).send({ status: 'accepted' });
@@ -371,15 +396,18 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
     await ctx.limiter.hit(LIMITS.emailSendAddress, sha256Hex(email));
     const user = await findActiveUserByEmail(ctx, email);
     if (user) {
-      const token = await issueToken(ctx, user.id, 'reset_password');
-      await ctx.mailer.send(user.email, asLocale(user.locale), {
-        kind: 'reset-password',
-        url: appLink(ctx, '/reset-password', token),
-      });
-      await audit(ctx.db, {
-        action: 'auth.password_reset_requested',
-        actorUserId: user.id,
-        ipHmac: ipKey(request),
+      const ipHmac = ipKey(request);
+      afterReply(request, async () => {
+        const token = await issueToken(ctx, user.id, 'reset_password');
+        await ctx.mailer.send(user.email, asLocale(user.locale), {
+          kind: 'reset-password',
+          url: appLink(ctx, '/reset-password', token),
+        });
+        await audit(ctx.db, {
+          action: 'auth.password_reset_requested',
+          actorUserId: user.id,
+          ipHmac,
+        });
       });
     }
     return reply.status(202).send({ status: 'accepted' });
@@ -467,7 +495,7 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
   });
 
   app.post('/api/v1/auth/mfa/totp/enable', async (request) => {
-    const { user } = requireAuth(request);
+    const { user, sessionIdHash } = requireAuth(request);
     await ctx.limiter.hit(LIMITS.mfaUser, user.id);
     const { code } = parse(z.object({ code: totpCodeSchema }), request.body);
     if (user.mfa_enabled_at || !user.mfa_pending_secret_enc) {
@@ -489,13 +517,16 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('id', '=', user.id)
       .execute();
     const recoveryCodes = await regenerateRecoveryCodes(ctx, user.id);
+    // Other sessions were signed in without this factor (or with the one now removed): they
+    // end, so none keeps admin rights it never proved (finding A4).
+    await revokeUserSessions(ctx, user.id, sessionIdHash);
     await audit(ctx.db, { action: 'auth.mfa.enabled', actorUserId: user.id });
     await sendSecurityNotice(ctx, user, 'mfa-enabled');
     return { recoveryCodes };
   });
 
   app.post('/api/v1/auth/mfa/totp/disable', async (request) => {
-    const { user } = requireAuth(request);
+    const { user, sessionIdHash } = requireAuth(request);
     await ctx.limiter.hit(LIMITS.mfaUser, user.id);
     const body = parse(z.object({ password: passwordSchema, code: totpCodeSchema }), request.body);
     if (!user.mfa_enabled_at)
@@ -516,6 +547,9 @@ export function authRoutes(app: FastifyInstance, ctx: AppContext) {
       .where('id', '=', user.id)
       .execute();
     await ctx.db.deleteFrom('recovery_codes').where('user_id', '=', user.id).execute();
+    // Other sessions were signed in without this factor (or with the one now removed): they
+    // end, so none keeps admin rights it never proved (finding A4).
+    await revokeUserSessions(ctx, user.id, sessionIdHash);
     await audit(ctx.db, { action: 'auth.mfa.disabled', actorUserId: user.id });
     await sendSecurityNotice(ctx, user, 'mfa-disabled');
     return { status: 'disabled' };

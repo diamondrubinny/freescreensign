@@ -15,3 +15,6 @@ apps/desktop/release/
 apps/tv/release/
 # Showcase pictures (work files)
 apps/showcase/.cache/
+
+# ZAP scan output (CI and local runs)
+/zap/
